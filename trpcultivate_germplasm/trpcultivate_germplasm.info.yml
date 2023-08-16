@@ -1,0 +1,8 @@
+name: Germplasm
+type: module
+description: Provides specialized Tripal fields and importers for germplasm.
+package: "TripalCultivate: Germplasm"
+core_version_requirement: ^9 || ^10
+dependencies:
+  - tripal
+  - tripal_chado

@@ -3,8 +3,8 @@ name: PHPUnit
 on: [push]
 
 env:
-  PKG_NAME: template
-  MODULES: "modulename"
+  PKG_NAME: TripalCultivate-Germplasm
+  MODULES: "trpcultivate_germplasm"
 
 jobs:
   run-tests:

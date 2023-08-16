@@ -13,8 +13,8 @@
          xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.3/phpunit.xsd">
   <coverage>
     <include>
-      <directory suffix=".php">modulename/src</directory>
-      <file>modulename/modulename.module</file>
+      <directory suffix=".php">trpcultivate_germplasm/src</directory>
+      <file>trpcultivate_germplasm/trpcultivate_germplasm.module</file>
     </include>
   </coverage>
   <php>
@@ -49,7 +49,7 @@
   </php>
   <testsuites>
     <testsuite name="core">
-      <directory>modulename/tests</directory>
+      <directory>trpcultivate_germplasm/tests</directory>
     </testsuite>
   </testsuites>
   <listeners>
