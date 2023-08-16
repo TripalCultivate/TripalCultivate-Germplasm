@@ -1,0 +1,8 @@
+name: Template Modulename
+type: module
+description: A template module which should never be available on a production site.
+package: "Placeholder"
+core_version_requirement: ^9 || ^10
+dependencies:
+  - tripal
+  - tripal_chado
