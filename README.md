@@ -66,9 +66,9 @@ The following compatibility is proven via automated testing workflows.
 | **PHP 8.0** | ![Grid1A-Badge] | ![Grid1B-Badge] | ![Grid1C-Badge] |  |
 | **PHP 8.1** | ![Grid2A-Badge] | ![Grid2B-Badge] | ![Grid2C-Badge] |  |
 
-[our CodeClimate project page]: https://github.com/TripalCultivate/TripalCultivate-Germplasm
-[MaintainabilityBadge]: https://api.codeclimate.com/v1/badges/5d139ad7af5a3e2564ab/maintainability
-[TestCoverageBadge]: https://api.codeclimate.com/v1/badges/5d139ad7af5a3e2564ab/test_coverage
+[our CodeClimate project page]: https://codeclimate.com/github/TripalCultivate/TripalCultivate-Germplasm
+[MaintainabilityBadge]: https://api.codeclimate.com/v1/badges/0619dcf991bd5e5114fb/maintainability
+[TestCoverageBadge]: https://api.codeclimate.com/v1/badges/0619dcf991bd5e5114fb/test_coverage
 
 [Grid1A-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-Grid1A.yml/badge.svg
 [Grid1B-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-Grid1B.yml/badge.svg
