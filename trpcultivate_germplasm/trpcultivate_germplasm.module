@@ -10,15 +10,14 @@ use Drupal\Core\Routing\RouteMatchInterface;
 /**
  * Implements hook_help().
  */
-function modulename_help($route_name, RouteMatchInterface $route_match) {
+function trpcultivate_germplasm_help($route_name, RouteMatchInterface $route_match) {
   switch ($route_name) {
     // Provides the module overview in the help tab.
-    case 'help.page.modulename':
+    case 'help.page.trpcultivate_germplasm':
       $output = '';
       $output .= '<h3>' . t('About') . '</h3>';
 
-      $output .= '<p>' . t('This is a template module which should never be
-      available on a production site') . '</p>';
+      $output .= '<p>' . t('This module provides specialized Tripal fields and importers for germplasm.') . '</p>';
 
       return $output;
 

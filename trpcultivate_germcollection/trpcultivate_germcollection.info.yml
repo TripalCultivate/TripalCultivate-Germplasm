@@ -1,0 +1,8 @@
+name: Germplasm Collection
+type: module
+description: Provides support for grouping germplasm into collections and specialized Tripal fields.
+package: "TripalCultivate: Germplasm Collection"
+core_version_requirement: ^9 || ^10
+dependencies:
+  - tripal
+  - tripal_chado

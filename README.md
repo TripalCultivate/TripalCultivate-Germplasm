@@ -1,32 +1,34 @@
-# Tripal Cultivate: DATATYPE
+# Tripal Cultivate: Germplasm
 
 **Developed by the University of Saskatchewan, Pulse Crop Bioinformatics team.**
 
-**NOTE: This package will replace the following Tripal v3 modules: ADD LINKS TO MODULES THIS WILL REPLACE.**
+**NOTE: This package will replace the following Tripal v3 module: [uofspb_germplasm](https://github.com/UofS-Pulse-Binfo/uofspb_germplasm/tree/7.x-3.x).**
 
 <!-- Summarize the main features of this package in point form below. -->
 
-- Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-- Pellentesque condimentum, lectus pretium auctor consequat, quam urna tempor ipsum, ac eleifend neque tellus sed arcu.
-
-    - Sed bibendum congue tortor, eget auctor est tempor ut.
-    - In euismod risus in consectetur auctor.
-
-- Pellentesque et tristique eros. Suspendisse ac venenatis orci. Etiam feugiat elit ante, at tempus tellus pellentesque viverra.
-- Suspendisse eu mollis eros. Pellentesque laoreet consequat tincidunt.
+- Germplasm importers
+    - bulk import of germplasm crosses and accessions into the database
+- Germplasm collections
+    - supports groupings of germplasm into collections
+    - a specialized field for a table listing of a germplasm collection
+    - a field to list germplasm collection(s) on a project page
+- RIL Summary
+    - provides a tabular germplasm matrix summarizing the number of RILs available for each species used as a parent
+    - A RIL listing for a specific species combination that includes the current progress of RIL development
+    - A field for RIL germplasm pages to summarize development progression
 
 ## Citation
 
 If you use this module in your Tripal site, please use this citation to reference our work any place where you described your resulting Tripal site. For example, if you publish your site in a journal then this citation should be in the reference section and anywhere functionality provided by this module is discussed in the above text should reference it.
 
-> AUTHORS (CURRENTYEAR). MODULE NAME WITH TAGLINE. Development Version. University of Saskatchewan, Pulse Crop Research Group, Saskatoon, SK, Canada.
+> Lacey-Anne Sanderson, Carolyn T Caron and Reynold Tan (2023). TripalCultivate Germplasm: Specialized Tripal fields and importers for germplasm. Development Version. University of Saskatchewan, Pulse Crop Research Group, Saskatoon, SK, Canada.
 
 ## Install
 
 Using composer, add this package to your Drupal site by using the following command in the root of your Drupal site:
 
 ```
-composer require tripalcultivate/MODULENAME
+composer require tripalcultivate/germplasm
 ```
 
 This will download the most recent release in the modules directory. You can see more information in [the Drupal Docs](https://www.drupal.org/docs/develop/using-composer/manage-dependencies).
@@ -34,7 +36,7 @@ This will download the most recent release in the modules directory. You can see
 Then you can install it using Drush or the Extensions page on your Drupal site.
 
 ```
-drush en modulename
+drush en trpcultivate_germplasm
 ```
 
 ## Technology Stack
@@ -59,20 +61,23 @@ maintainability issues and test coverage.
 
 The following compatibility is proven via automated testing workflows.
 
-| Drupal | 9.3.x | 9.4.x | 9.5.x | 10.0.x |
-|--------|-------|-------|-------|--------|
-| **PHP 8.0** | ![Grid1A-Badge] | ![Grid1B-Badge] | ![Grid1C-Badge] |  |
-| **PHP 8.1** | ![Grid2A-Badge] | ![Grid2B-Badge] | ![Grid2C-Badge] |  |
+| Drupal      | 9.4.x           | 9.5.x           | 10.0.x          | 10.1.x          |
+|-------------|-----------------|-----------------|-----------------|-----------------|
+| **PHP 8.0** | ![Grid1A-Badge] | ![Grid1B-Badge] |                 |                 |
+| **PHP 8.1** | ![Grid2A-Badge] | ![Grid2B-Badge] | ![Grid2C-Badge] | ![Grid2D-Badge] |
+| **PHP 8.2** |                 |                 | ![Grid3C-Badge] | ![Grid3D-Badge] |
 
-[our CodeClimate project page]: https://github.com/TripalCultivate/Template
-[MaintainabilityBadge]: https://api.codeclimate.com/v1/badges/5d139ad7af5a3e2564ab/maintainability
-[TestCoverageBadge]: https://api.codeclimate.com/v1/badges/5d139ad7af5a3e2564ab/test_coverage
+[our CodeClimate project page]: https://codeclimate.com/github/TripalCultivate/TripalCultivate-Germplasm
+[MaintainabilityBadge]: https://api.codeclimate.com/v1/badges/0619dcf991bd5e5114fb/maintainability
+[TestCoverageBadge]: https://api.codeclimate.com/v1/badges/0619dcf991bd5e5114fb/test_coverage
 
-[Grid1A-Badge]: https://github.com/TripalCultivate/Template/actions/workflows/MAIN-phpunit-Grid1A.yml/badge.svg
-[Grid1B-Badge]: https://github.com/TripalCultivate/Template/actions/workflows/MAIN-phpunit-Grid1B.yml/badge.svg
-[Grid1C-Badge]: https://github.com/TripalCultivate/Template/actions/workflows/MAIN-phpunit-Grid1C.yml/badge.svg
+[Grid1A-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-Grid1A.yml/badge.svg
+[Grid1B-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-Grid1B.yml/badge.svg
 
-[Grid2A-Badge]: https://github.com/TripalCultivate/Template/actions/workflows/MAIN-phpunit-Grid2A.yml/badge.svg
-[Grid2B-Badge]: https://github.com/TripalCultivate/Template/actions/workflows/MAIN-phpunit-Grid2B.yml/badge.svg
-[Grid2C-Badge]: https://github.com/TripalCultivate/Template/actions/workflows/MAIN-phpunit-Grid2C.yml/badge.svg
-[Grid2D-Badge]: https://github.com/TripalCultivate/Template/actions/workflows/MAIN-phpunit-Grid2D.yml/badge.svg
+[Grid2A-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-Grid2A.yml/badge.svg
+[Grid2B-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-Grid2B.yml/badge.svg
+[Grid2C-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-Grid2C.yml/badge.svg
+[Grid2D-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-Grid2D.yml/badge.svg
+
+[Grid3C-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-Grid3C.yml/badge.svg
+[Grid3D-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-Grid3D.yml/badge.svg
