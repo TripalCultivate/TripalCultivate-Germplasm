@@ -11,10 +11,12 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
       - name: Run Automated testing
-        uses: tripal/test-tripal-action@v1.0
+        uses: tripal/test-tripal-action@v1.1
         with:
           directory-name: 'TripalCultivate-Germplasm'
           modules: 'trpcultivate_germplasm'
+          build-image: TRUE
+          dockerfile: 'Dockerfile'
           php-version: '8.1'
           pgsql-version: '13'
           drupal-version: '9.5.x-dev'
