@@ -1,0 +1,42 @@
+{
+  "name": "tripalcultivate/germplasm",
+  "type": "drupal-module",
+  "description": "A Tripal extension module that provides specialized fields and importers for germplasm.",
+  "keywords": [
+    "tripal",
+    "drupal",
+    "biological-data",
+    "germplasm-data",
+    "visualization",
+    "data-import",
+    "data-collection"
+  ],
+  "homepage": "https://github.com/TripalCultivate/TripalCultivate-Germplasm",
+  "support": {
+    "issues": "https://github.com/TripalCultivate/TripalCultivate-Germplasm/issues"
+  },
+  "license": "GPL-3.0-or-later",
+  "minimum-stability": "dev",
+  "authors": [
+    {
+      "name": "Lacey-Anne Sanderson",
+      "homepage": "https://github.com/laceysanderson/",
+      "role": "Lead Developer"
+    },
+    {
+      "name": "Carolyn T Caron",
+      "homepage": "https://github.com/carolyncaron",
+      "role": "Lead Developer"
+    },
+    {
+      "name": "Reynold Tan",
+      "homepage": "https://github.com/reynoldtan",
+      "role": "Lead Developer"
+    }
+  ],
+  "require": {
+    "php": "^8.0",
+    "drupal/core": "^9.4",
+    "tripal/tripal": "^4.0-alpha1"
+  }
+}
