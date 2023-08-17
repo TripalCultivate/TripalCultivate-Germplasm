@@ -17,4 +17,4 @@ jobs:
           modules: 'trpcultivate_germplasm'
           php-version: '8.1'
           pgsql-version: '13'
-          drupal-version: '9.4.x-dev'
+          drupal-version: '9.5.x-dev'

@@ -15,6 +15,6 @@ jobs:
         with:
           directory-name: 'TripalCultivate-Germplasm'
           modules: 'trpcultivate_germplasm'
-          php-version: '8.0'
+          php-version: '8.2'
           pgsql-version: '13'
-          drupal-version: '9.5.x-dev'
+          drupal-version: '10.1.x-dev'
