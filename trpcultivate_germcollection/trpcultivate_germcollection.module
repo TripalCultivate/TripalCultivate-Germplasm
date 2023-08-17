@@ -1,0 +1,26 @@
+<?php
+
+/**
+ * @file
+ * Contains all hook implementations for this module.
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+
+/**
+ * Implements hook_help().
+ */
+function trpcultivate_germcollection_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Provides the module overview in the help tab.
+    case 'help.page.trpcultivate_germcollection':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+
+      $output .= '<p>' . t('This module provides support for grouping germplasm into collections and specialized Tripal fields.') . '</p>';
+
+      return $output;
+
+    default:
+  }
+}

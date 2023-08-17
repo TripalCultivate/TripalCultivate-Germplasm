@@ -14,7 +14,7 @@ jobs:
         uses: tripal/test-tripal-action@v1.1
         with:
           directory-name: 'TripalCultivate-Germplasm'
-          modules: 'trpcultivate_germplasm'
+          modules: 'trpcultivate_germplasm trpcultivate_germcollection'
           build-image: TRUE
           dockerfile: 'Dockerfile'
           php-version: '8.2'

@@ -8,5 +8,5 @@ WORKDIR /var/www/drupal9/web/modules/contrib/TripalCultivate-Germplasm
 
 RUN service postgresql restart \
   && drush trp-install-chado --schema-name=${chadoschema} \
-  && drush trp-prep-chado --schema-name=${chadoschema}
-##  && drush en trpgeno_genetics trpgeno_genotypes trpgeno_genomatrix trpgeno_qtl trpgeno_vcf --yes
+  && drush trp-prep-chado --schema-name=${chadoschema} \
+  && drush en trpcultivate_germplasm trpcultivate_germcollection --yes

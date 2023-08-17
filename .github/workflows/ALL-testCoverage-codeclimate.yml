@@ -4,7 +4,7 @@ on: [push]
 
 env:
   PKG_NAME: TripalCultivate-Germplasm
-  MODULES: "trpcultivate_germplasm"
+  MODULES: "trpcultivate_germplasm trpcultivate_germcollection"
   IMAGE_TAG: drupal9.5.x-dev-php8.1-pgsql13
   SIMPLETEST_BASE_URL: "http://localhost"
   SIMPLETEST_DB: "pgsql://drupaladmin:drupal9developmentonlylocal@localhost/sitedb"
