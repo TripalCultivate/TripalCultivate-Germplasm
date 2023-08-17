@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\Tests\trpgeno_genetics\Functional;
+namespace Drupal\Tests\trpcultivate_germplasm\Functional;
 
 use Drupal\Core\Url;
 use Drupal\Tests\tripal_chado\Functional\ChadoTestBrowserBase;
