@@ -8,12 +8,12 @@ use Drupal\Tests\tripal_chado\Functional\ChadoTestBrowserBase;
 /**
  * Simple test to ensure that main page loads with module enabled.
  *
- * @group TripGeno Genetics
+ * @group TripalCultivate-Germplasm
  * @group Installation
  */
 class InstallTest extends ChadoTestBrowserBase {
 
-  protected $defaultTheme = 'stable';
+  protected $defaultTheme = 'stark';
 
   /**
    * Modules to enable.
