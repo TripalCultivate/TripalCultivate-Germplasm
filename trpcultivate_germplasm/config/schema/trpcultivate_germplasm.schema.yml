@@ -29,7 +29,7 @@ trpcultivate_germplasm.settings:
           label: 'The cvterm ID of the pedigree information for a germplasm'
         country_of_origin_code:
           type: integer
-          label: 'The cvterm ID of a germplasm's country of origin'
+          label: 'The cvterm ID of the country of origin of a germplasm'
         synonym:
           type: integer
           label: 'The cvterm ID of a synonym of a germplasm name'
