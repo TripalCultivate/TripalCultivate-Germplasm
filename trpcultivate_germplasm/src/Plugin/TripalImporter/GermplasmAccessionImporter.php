@@ -56,7 +56,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       '#weight' => -99,
       '#markup' => '
         <h2>Load germplasm into database</h2>
-        <p>Upload file must be in TSV (tab-separated values) or TXT format. Please confirm the file format and column order before upload.</p>
+        <p>Please confirm the file format and column order before upload.</p>
       ',
     ];
 
@@ -83,7 +83,28 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
    * @see TripalImporter::run()
    */
   public function run(){
+    $arguments = $this->arguments['run_args'];
 
+    // Grab the file path
+    $file_path = $arguments['files'][0]['file_path'];
+    $genus_name = $arguments['genus_name'];
+
+    // Set up the ability to track progress so we can report it to the user
+    $filesize = filesize($file_path);
+    $this->setTotalItems($filesize);
+    $this->setItemsHandled(0);
+    $bytes_read = 0;
+
+    // Open the file and start iterating through each line
+    $GERMPLASM_FILE = fopen($file_path, 'r');
+    while (!feof($GERMPLASM_FILE)){
+      $current_line = fgetcsv($GERMPLASM_FILE, 0, "\t");
+
+      // Check for empty lines, comment lines and a header line
+      if (empty($current_line)) continue;
+      if (preg_match('/^#/', $current_line)) continue;
+      if (preg_match('/^Germplasm/', $current_line)) continue;
+    }
   }
 
   /*
