@@ -154,18 +154,43 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       // $breeding_method_DbId
       // $pedigree
 
-      // STEP 5: Load synonyms 
+      // STEP 5: Load synonyms
 
     }
   }
 
   /**
-   * Checks if an organism exists in Chado and returns the primary key, 
-   * otherwise throws an error if the organism does not exist
-   * 
+   * Checks if an organism exists in Chado and returns the primary key,
+   * otherwise throws an error if the organism does not exist or there
+   * are multiple matches
+   *
+   * @param string $genus_name
+   * @param string $germplasm_species
+   * @param string $germplasm_subtaxa
+   * @return int|false
+   *   The value of the primary key for the organism record in Chado.
+   *   If no single primary key can be retrieved, then FALSE is returned.
    */
-  public function getOrganismID() {
-    return 0;
+  public function getOrganismID($genus_name, $germplasm_species, $germplasm_subtaxa) {
+
+    $organism_name = $genus_name . ' ' . $germplasm_species;
+    if ($germplasm_subtaxa) {
+      $organism_name = $organism_name . ' ' . $germplasm_subtaxa;
+    }
+    $organism_array = chado_get_organism_id_from_scientific_name($organism_name);
+
+    if (!$organism_array) {
+      $this->logMessage("ERROR: Could not find an organism \"@organism_name\" in the database.", ['@organism_name' => $organism_name], TRIPAL_ERROR);
+      return false;
+    }
+    // We also want to check if we were given only one value back, as there is
+    // potential to retrieve multiple organism IDs
+    if (is_array($organism_array) && (count($organism_array) > 1)) {
+      $this->logMessage("ERROR: Found more than one organism ID for \"@organism_name\" when only 1 was expected.", ['@organism_name' => $organism_name], TRIPAL_ERROR);
+      return false;
+    }
+
+    return $organism_array[0];
   }
 
   /**
