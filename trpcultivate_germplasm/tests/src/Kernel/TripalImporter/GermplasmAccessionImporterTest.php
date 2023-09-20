@@ -14,6 +14,8 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
 
 	protected static $modules = ['system', 'user', 'file', 'tripal', 'tripal_chado', 'trpcultivate_germplasm'];
 
+  protected $importer;
+
 	/**
    * {@inheritdoc}
    */
@@ -35,12 +37,34 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     $this->installEntitySchema('file');
     $this->installSchema('file', ['file_usage']);
 
+    // We need to mock the logger to test the progress reporting.
+    $container = \Drupal::getContainer();
+    $mock_logger = $this->getMockBuilder(\Drupal\tripal\Services\TripalLogger::class)
+      ->onlyMethods(['notice','error'])
+      ->getMock();
+    // $mock_logger->method('notice')
+    //   ->willReturnCallback(function($message, $context, $options) {
+    //     print str_replace(array_keys($context), $context, $message);
+    //     return NULL;
+    //   });
+    $mock_logger->method('error')
+      ->willReturnCallback(function($message, $context, $options) {
+        print str_replace(array_keys($context), $context, $message);
+        return NULL;
+      });
+    $container->set('tripal.logger', $mock_logger);
+
+    $this->importer = new \Drupal\trpcultivate_germplasm\Plugin\TripalImporter\GermplasmAccessionImporter(
+      [],
+      'trpcultivate-germplasm-accession',
+      [] // Note: May need to add annotation in here. Ask Lacey if annotation things fail
+    );
   }
 
 	/**
    * Tests focusing on the Germplasm Accession Importer form.
    *
-   * @group tripal_importer
+   * @group germ_accession_importer
    */
   public function testGermplasmAccessionImporterForm() {
 
@@ -85,4 +109,27 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
       "The from should not include analysis element, yet one exists.");
 	}
 
+  /**
+   * Tests focusing on the Germplasm Accession Importer getOrganismID() function
+   *
+   * @group germ_accession_importer
+   */
+  public function testGermplasmAccessionImporterGetOrganismID() {
+
+    // Insert an organism
+    $subtaxa_cvterm_id = $this->getCVtermID('TAXRANK', '0000023');
+
+    $organism_id = $this->connection->insert('1:organism')
+      ->fields([
+        'genus' => 'Tripalus',
+        'species' => 'databasica',
+        'infraspecific_name' => 'chadoii',
+        'type_id' => $subtaxa_cvterm_id,
+      ])
+      ->execute();
+
+    $grabbed_organism_id = $this->importer->getOrganismID('Tripalus', 'databasica', 'subspecies chadoii');
+    $this->assertEquals($grabbed_organism_id, $organism_id, "The organism ID grabbed by the importer does not match the one that was inserted into the database.");
+
+  }
 }

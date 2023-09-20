@@ -165,8 +165,12 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
    * are multiple matches
    *
    * @param string $genus_name
+   *   The genus of the organism.
    * @param string $germplasm_species
+   *   The species of the organism.
    * @param string $germplasm_subtaxa
+   *   Optional. Must consist of two strings, one of the subtaxon type
+   *   followed by the name. For example: "subspecies chadoii".
    * @return int|false
    *   The value of the primary key for the organism record in Chado.
    *   If no single primary key can be retrieved, then FALSE is returned.
@@ -180,13 +184,13 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     $organism_array = chado_get_organism_id_from_scientific_name($organism_name);
 
     if (!$organism_array) {
-      $this->logMessage("ERROR: Could not find an organism \"@organism_name\" in the database.", ['@organism_name' => $organism_name], TRIPAL_ERROR);
+      $this->logger->error("Could not find an organism \"@organism_name\" in the database.", ['@organism_name' => $organism_name]);
       return false;
     }
     // We also want to check if we were given only one value back, as there is
     // potential to retrieve multiple organism IDs
     if (is_array($organism_array) && (count($organism_array) > 1)) {
-      $this->logMessage("ERROR: Found more than one organism ID for \"@organism_name\" when only 1 was expected.", ['@organism_name' => $organism_name], TRIPAL_ERROR);
+      $this->logger->error("Found more than one organism ID for \"@organism_name\" when only 1 was expected.", ['@organism_name' => $organism_name]);
       return false;
     }
 
