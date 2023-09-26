@@ -198,12 +198,63 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
   }
 
   /**
-   * Checks if an stock exists in Chado, inserts it and returns the primary
-   * key in the stock table
-   *
+   * Checks if a stock exists in Chado and if not, inserts it and returns the primary
+   * key in the stock table. If the stock already exists, logs an error
+   * 
+   * @param string $germplasm_name
+   *   The name of the germplasm.
+   * @param string $accession_number
+   *   A unique identifier for the germplasm accession.
+   * @param int $organism_ID
+   *   The primary key of the stock's organism in the organism table
+   * @return int|false
+   *   The value of the primary key for the stock record in Chado. If the stock already
+   *   exists or cannot be inserted, then FALSE is returned.
    */
-  public function getStockID() {
-    return 0;
+  public function getStockID($germplasm_name, $accession_number, $organism_ID) {
+    
+    // First query the stock table just using the germplasm name and organism ID
+    $query = $this->connection->select('1:stock', 's')
+      ->fields('s', 'stock_id');
+    $query->condition('s.name', $germplasm_name, '=')
+      ->condition('s.organism_id', $organism_ID, '=');
+    $record = $query->execute()->fetchAll();
+
+    if (sizeof($record) >= 2) {
+      $this->logger->error("Found more than one stock ID for \"@germplasm_name\".", ['@germplasm_name' => $germplasm_name]);
+      return false;
+    }
+    if (sizeof($record) == 1) {
+      // Handle the situation where a stock record exists
+    } 
+    // Confirmed that a stock record doesn't yet exist, so now we create one
+    else {
+      $values = array(
+        'organism_id' => $organism_ID,
+        'name' => $germplasm_name,
+        'uniquename' => $accession_number,
+        //'type_id' => get_CV_term();
+        // Ask Lacey: Do we need to insert NULL values?
+        'dbxref_id' => NULL,
+        'description' => NULL,
+        $is_obsolete = 'f'
+      );
+
+      $this->logger->notice("Inserting \"@germplasm_name\".", ['@germplasm_name' => $germplasm_name]);
+
+      $result = $this->connection->insert('1:stock')
+        ->fields($values)
+        ->execute();
+
+      // If the primary key is available, then the insert worked and we can return it
+      if ($result) {
+        return $result;
+      }
+      else {
+        $this->logger->error("Insertion of \"@germplasm_name\" failed.", ['@germplasm_name' => $germplasm_name]);
+        return false;
+      }
+    }
   }
 
   /*
