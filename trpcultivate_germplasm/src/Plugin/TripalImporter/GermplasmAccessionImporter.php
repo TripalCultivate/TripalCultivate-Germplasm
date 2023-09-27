@@ -39,6 +39,13 @@ use Drupal\tripal_chado\TripalImporter\ChadoImporterBase;
  * )
  */
 class GermplasmAccessionImporter extends ChadoImporterBase {
+
+  /**
+   * Used to track whether an error is logged during the import process. If it
+   * is set to TRUE, then the db transaction will not be committed.
+   */
+  protected $error_tracker = FALSE;
+
   /**
    * {@inheritDoc}
    */
@@ -141,7 +148,9 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       $organism_ID = $this->getOrganismID($genus_name, $germplasm_species, $germplasm_subtaxa);
 
       // STEP 2: Check/Insert this germplasm into the Chado stock table
-      $stock_id = $this->getStockID($germplasm_name, $accession_number, $organism_ID);
+      if ($organism_ID) {
+        $stock_id = $this->getStockID($germplasm_name, $accession_number, $organism_ID);
+      }
 
       // STEP 3: If $external_database is provided, then
       // Load the external database info into Chado dbxref table
@@ -185,12 +194,14 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
 
     if (!$organism_array) {
       $this->logger->error("Could not find an organism \"@organism_name\" in the database.", ['@organism_name' => $organism_name]);
+      $this->error_tracker = TRUE;
       return false;
     }
     // We also want to check if we were given only one value back, as there is
     // potential to retrieve multiple organism IDs
     if (is_array($organism_array) && (count($organism_array) > 1)) {
       $this->logger->error("Found more than one organism ID for \"@organism_name\" when only 1 was expected.", ['@organism_name' => $organism_name]);
+      $this->error_tracker = TRUE;
       return false;
     }
 
@@ -200,7 +211,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
   /**
    * Checks if a stock exists in Chado and if not, inserts it and returns the primary
    * key in the stock table. If the stock already exists, logs an error
-   * 
+   *
    * @param string $germplasm_name
    *   The name of the germplasm.
    * @param string $accession_number
@@ -212,7 +223,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
    *   exists or cannot be inserted, then FALSE is returned.
    */
   public function getStockID($germplasm_name, $accession_number, $organism_ID) {
-    
+
     // First query the stock table just using the germplasm name and organism ID
     $query = $this->connection->select('1:stock', 's')
       ->fields('s', 'stock_id');
@@ -222,11 +233,23 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
 
     if (sizeof($record) >= 2) {
       $this->logger->error("Found more than one stock ID for \"@germplasm_name\".", ['@germplasm_name' => $germplasm_name]);
+      $this->error_tracker = TRUE;
       return false;
     }
     if (sizeof($record) == 1) {
       // Handle the situation where a stock record exists
-    } 
+      // Check the uniquename matches the accession_number column in the file
+      if ($accession_number != $record[0]->{uniquename}) {
+        $this->logger->error("A stock already exists for \"@germplasm_name\" but with an accession of \"@accession\" which does not match the input file.", ['@germplasm_name' => $germplasm_name, '@accession' => $record[0]->uniquename]);
+        $this->error_tracker = TRUE;
+        return false;
+      }
+      // Check the type_id is of type accession
+      // if ($record[0]->{type_id})
+
+      // Confirmed that the selected record matches what's in the upload file, so return the stock_id
+      return $record[0]->{stock_id};
+    }
     // Confirmed that a stock record doesn't yet exist, so now we create one
     else {
       $values = array(
@@ -234,10 +257,6 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
         'name' => $germplasm_name,
         'uniquename' => $accession_number,
         //'type_id' => get_CV_term();
-        // Ask Lacey: Do we need to insert NULL values?
-        'dbxref_id' => NULL,
-        'description' => NULL,
-        $is_obsolete = 'f'
       );
 
       $this->logger->notice("Inserting \"@germplasm_name\".", ['@germplasm_name' => $germplasm_name]);
@@ -252,6 +271,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       }
       else {
         $this->logger->error("Insertion of \"@germplasm_name\" failed.", ['@germplasm_name' => $germplasm_name]);
+        $this->error_tracker = TRUE;
         return false;
       }
     }
