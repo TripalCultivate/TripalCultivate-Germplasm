@@ -16,6 +16,25 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
 
   protected $importer;
 
+  protected $definitions = [
+    'test-germplasm-accession' => [
+      'id' => 'trpcultivate-germplasm-accession',
+      'label' => 'Tripal Cultivate: Germplasm Accessions',
+      'description' => 'Imports germplasm accessions into Chado with metadata meeting BrAPI standards.',
+      'file_types' => ["tsv", "txt"],
+      'use_analysis' => FALSE,
+      'require_analysis' => FALSE,
+      'upload_title' => 'Germplasm Accession Import',
+      'upload_description' => 'This should not be visible!',
+      'button_text' => 'Import Germplasm Accessions',
+      'file_upload' => True,
+      'file_load' => True,
+      'file_remote' => True,
+      'file_required' => True,
+      'cardinality' => 1,
+    ],
+  ];
+
 	/**
    * {@inheritdoc}
    */
@@ -57,7 +76,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     $this->importer = new \Drupal\trpcultivate_germplasm\Plugin\TripalImporter\GermplasmAccessionImporter(
       [],
       'trpcultivate-germplasm-accession',
-      [] // Note: May need to add annotation in here. Ask Lacey if annotation things fail
+      $this->definitions
     );
   }
 
@@ -130,6 +149,10 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
 
     $grabbed_organism_id = $this->importer->getOrganismID('Tripalus', 'databasica', 'subspecies chadoii');
     $this->assertEquals($grabbed_organism_id, $organism_id, "The organism ID grabbed by the importer does not match the one that was inserted into the database.");
+
+    // Try an organism that does not currently exist
+    //$non_existent_organism_id = $this->importer->getOrganismID('Nullus', 'organismus');
+    //assertTrue($this->importer->error_tracker);
 
   }
 }

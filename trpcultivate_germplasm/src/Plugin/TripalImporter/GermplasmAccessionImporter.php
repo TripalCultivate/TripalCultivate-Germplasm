@@ -16,20 +16,6 @@ use Drupal\tripal_chado\TripalImporter\ChadoImporterBase;
  *   use_analysis = FALSE,
  *   require_analysis = FALSE,
  *   upload_title = "Germplasm Accession Import",
- *   upload_description = "Germplasm file should be a tab separated file with the following columns:<ol>
-     <li>Germplasm Name: Name of this germplasm accession.</li>
-     <li>External Database: The institution who assigned the accession.</li>
-     <li>Accession Number: A unique identifier for the accession. </li>
-     <li>Germplasm Species: The species of the accession.</li>
-     <li>Germplasm Subtaxa: Subtaxon can be specified here or any additional taxonomic identifier.</li>
-     <li>Institute Code: The code for the Institute that bred the material.</li>
-     <li>Institute Name: The name of the Institute that bred the material.</li>
-     <li>Country of Origin Code: 3-letter ISO 3166-1 code of the country in which the sample was originally sourced.</li>
-     <li>Biological Status of Accession: The 3 digit code representing the biological status of the accession.</li>
-     <li>Breeding Method: The unique identifier for the breeding method used to create this germplasm.</li>
-     <li>Pedigree: The cross name and optional selection history.</li>
-     <li>Synonyms: Any synonyms of the accession.</li>
-     </ol>",
  *   button_text = "Import Germplasm Accessions",
  *   file_upload = True,
  *   file_load = True,
@@ -45,6 +31,46 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
    * is set to TRUE, then the db transaction will not be committed.
    */
   protected $error_tracker = FALSE;
+
+  /**
+   * @{inheritdoc}
+   */
+  public function describeUploadFileFormat() {
+
+    $file_types = $this->plugin_definition['file_types'];
+
+    $output = "Germplasm file should be a tab separated file (<b>" . implode(', ', $file_types) . "</b>) with the following columns:";
+
+    $columns = [
+      'Germplasm Name' => 'Name of this germplasm accession (e.g. CDC Redberry)',
+      'External Database' => 'The institution who assigned the accession. (e.g. KnowPulse Germplasm)',
+      'Accession Number' => 'A unique identifier for the accession (e.g. KP:GERM58)',
+      'Germplasm Species' => 'The species of the accession (e.g. culinaris)',
+      'Germplasm Subtaxa' => 'The rank below species is specified first, followed by the name (e.g. var. medullare)',
+      'Institute Code' => 'The code for the Institute that bred the material (e.g. CUAC)',
+      'Institute Name' => 'The name of the Institute that bred the material (e.g. "Crop Development Center, University of Saskatchewan")',
+      'Country of Origin Code' => '3-letter ISO 3166-1 code of the country in which the sample was originally sourced (e.g. 124)',
+      'Biological Status of Accession' => 'The 3 digit code representing the biological status of the accession (e.g. 410)',
+      'Breeding Method' => 'The unique identifier for the breeding method used to create this germplasm (e.g. "Recurrent selection")',
+      'Pedigree' => 'The cross name and optional selection history (e.g. 1049F^3/819-5R)',
+      'Synonyms' => 'Any synonyms of the accession. (e.g. Redberry)',
+    ];
+
+    $required_col = ['Germplasm Name', 'Accession Number', 'Germplasm Species'];
+
+    $output .= '<ol>';
+    foreach ($columns as $title => $definition) {
+      if (in_array($title, $required_col)) {
+        $output .= '<li><b>' . $title . '<font color=red">*</font></b>: ' . $definition . '</li>';
+      } 
+      else {
+        $output .= '<li><b>' . $title . '</b>: ' . $definition . '</li>';
+      }
+    }
+    $output .= '</ol>';
+
+    return $output;
+  }
 
   /**
    * {@inheritDoc}
