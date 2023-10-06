@@ -56,12 +56,14 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       'Synonyms' => 'Any synonyms of the accession. (e.g. Redberry)',
     ];
 
-    $required_col = ['Germplasm Name', 'Accession Number', 'Germplasm Species'];
+    $required_col = ['Germplasm Name', 'External Database', 'Accession Number', 'Germplasm Species'];
+    // @TODO: Make this red, but Drupal makes it difficult :)
+    $required_markup = '*'; 
 
     $output .= '<ol>';
     foreach ($columns as $title => $definition) {
       if (in_array($title, $required_col)) {
-        $output .= '<li><b>' . $title . '<font color=red">*</font></b>: ' . $definition . '</li>';
+        $output .= '<li><b>' . $title . $required_markup .  '</b>: '  . $definition . '</li>';
       } 
       else {
         $output .= '<li><b>' . $title . '</b>: ' . $definition . '</li>';
