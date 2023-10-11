@@ -78,6 +78,15 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
       'trpcultivate-germplasm-accession',
       $this->definitions
     );
+
+    $run_args = [
+      'schema_name' => $this->testSchemaName,
+      'genus' => 'Tripalus',
+    ];
+    $file_details = [
+      'file_local' => '/pretend/we/have/a/file.txt',
+    ];
+    $this->importer->create($run_args, $file_details);
   }
 
 	/**
@@ -151,8 +160,48 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     $this->assertEquals($grabbed_organism_id, $organism_id, "The organism ID grabbed by the importer does not match the one that was inserted into the database.");
 
     // Try an organism that does not currently exist
-    //$non_existent_organism_id = $this->importer->getOrganismID('Nullus', 'organismus');
+    //$non_existent_organism_id = $this->importer->getOrganismID('Nullus', 'organismus', '');
     //assertTrue($this->importer->error_tracker);
 
+    // Check for multiple organism IDs? @AskLacey how we want to go about this considering Chado SHOULD restrict inserting multiple
+
   }
+
+  /**
+   * Tests focusing on the Germplasm Accession Importer getStockID() function
+   *
+   * @group germ_accession_importer
+   */
+  public function testGermplasmAccessionImporterGetStockID() {
+
+    // Insert an organism
+    $subtaxa_cvterm_id = $this->getCVtermID('TAXRANK', '0000023');
+
+    $organism_id = $this->connection->insert('1:organism')
+      ->fields([
+        'genus' => 'Tripalus',
+        'species' => 'databasica',
+        'infraspecific_name' => 'chadoii',
+        'type_id' => $subtaxa_cvterm_id,
+      ])
+      ->execute();
+
+    // Insert a stock
+    // @TODO: FIND THE APPROPRIATE CVTERM ID FOR ACCESSION
+    $accession_cvterm_id = $this->getCVtermID('TAXRANK', '0000023');
+
+    $stock_id = $this->connection->insert('1:stock')
+      ->fields([
+        'organism_id' => $organism_id,
+        'name' => 'stock1',
+        'uniquename' => 'TEST:1',
+        'type_id' => $accession_cvterm_id,
+      ])
+      ->execute();
+
+    $grabbed_stock_id = $this->importer->getStockID('stock1', 'TEST:1', $organism_id);
+    $this->assertEquals($grabbed_stock_id, $stock_id, "The stock ID grabbed by the importer does not match the one that was inserted into the database.");
+
+  }
+
 }

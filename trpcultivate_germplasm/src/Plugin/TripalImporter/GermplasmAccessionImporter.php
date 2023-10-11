@@ -58,13 +58,13 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
 
     $required_col = ['Germplasm Name', 'External Database', 'Accession Number', 'Germplasm Species'];
     // @TODO: Make this red, but Drupal makes it difficult :)
-    $required_markup = '*'; 
+    $required_markup = '*';
 
     $output .= '<ol>';
     foreach ($columns as $title => $definition) {
       if (in_array($title, $required_col)) {
-        $output .= '<li><b>' . $title . $required_markup .  '</b>: '  . $definition . '</li>';
-      } 
+        $output .= '<li><b>' . $title . $required_markup . '</b>: ' . $definition . '</li>';
+      }
       else {
         $output .= '<li><b>' . $title . '</b>: ' . $definition . '</li>';
       }
@@ -78,6 +78,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
    * {@inheritDoc}
    */
   public function form($form, &$form_state) {
+    $form = parent::form($form, $form_state);
 
     // Select the entire genus field and make sure it is sorted and distinct
     $connection = \Drupal::service('tripal_chado.database');
@@ -180,8 +181,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
         $stock_id = $this->getStockID($germplasm_name, $accession_number, $organism_ID);
       }
 
-      // STEP 3: If $external_database is provided, then
-      // Load the external database info into Chado dbxref table
+      // STEP 3: Load the external database info into Chado dbxref table
 
       // STEP 4: Load stock properties (if provided) for:
       // $institute_code
@@ -254,7 +254,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
 
     // First query the stock table just using the germplasm name and organism ID
     $query = $this->connection->select('1:stock', 's')
-      ->fields('s', 'stock_id');
+      ->fields('s', ['stock_id', 'uniquename', 'type_id']);
     $query->condition('s.name', $germplasm_name, '=')
       ->condition('s.organism_id', $organism_ID, '=');
     $record = $query->execute()->fetchAll();
@@ -267,16 +267,16 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     if (sizeof($record) == 1) {
       // Handle the situation where a stock record exists
       // Check the uniquename matches the accession_number column in the file
-      if ($accession_number != $record[0]->{uniquename}) {
+      if ($accession_number != $record[0]->uniquename) {
         $this->logger->error("A stock already exists for \"@germplasm_name\" but with an accession of \"@accession\" which does not match the input file.", ['@germplasm_name' => $germplasm_name, '@accession' => $record[0]->uniquename]);
         $this->error_tracker = TRUE;
         return false;
       }
       // Check the type_id is of type accession
-      // if ($record[0]->{type_id})
+      // if ($record[0]->type_id)
 
       // Confirmed that the selected record matches what's in the upload file, so return the stock_id
-      return $record[0]->{stock_id};
+      return $record[0]->stock_id;
     }
     // Confirmed that a stock record doesn't yet exist, so now we create one
     else {
