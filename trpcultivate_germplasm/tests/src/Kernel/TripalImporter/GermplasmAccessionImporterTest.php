@@ -61,11 +61,11 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     $mock_logger = $this->getMockBuilder(\Drupal\tripal\Services\TripalLogger::class)
       ->onlyMethods(['notice','error'])
       ->getMock();
-    // $mock_logger->method('notice')
-    //   ->willReturnCallback(function($message, $context, $options) {
-    //     print str_replace(array_keys($context), $context, $message);
-    //     return NULL;
-    //   });
+    $mock_logger->method('notice')
+       ->willReturnCallback(function($message, $context, $options) {
+         print str_replace(array_keys($context), $context, $message);
+         return NULL;
+       });
     $mock_logger->method('error')
       ->willReturnCallback(function($message, $context, $options) {
         print str_replace(array_keys($context), $context, $message);
@@ -152,11 +152,12 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     $this->assertEquals($grabbed_organism_id, $organism_id, "The organism ID grabbed by the importer does not match the one that was inserted into the database.");
 
     // Try an organism that does not currently exist
-    //$non_existent_organism_id = $this->importer->getOrganismID('Nullus', 'organismus', '');
-    //assertTrue($this->importer->error_tracker);
+    ob_start();
+    $non_existent_organism_id = $this->importer->getOrganismID('Nullus', 'organismus', '');
+    $printed_output = ob_get_clean();
+    $this->assertTrue($printed_output == 'Could not find an organism "Nullus organismus" in the database.', "Did not get the expected error message when testing for a non-existant organism.");
 
-    // Check for multiple organism IDs? @AskLacey how we want to go about this considering Chado SHOULD restrict inserting multiple
-
+    // Not testing if multiple organisms are retrieved, since Chado should be preventing such a situation
   }
 
   /**
@@ -180,7 +181,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
 
     // Insert a stock
     // @TODO: FIND THE APPROPRIATE CVTERM ID FOR ACCESSION
-    $accession_cvterm_id = $this->getCVtermID('TAXRANK', '0000023');
+    $accession_cvterm_id = $this->getCVtermID('TAXRANK', '0000024');
 
     $stock_id = $this->connection->insert('1:stock')
       ->fields([
@@ -191,8 +192,37 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
       ])
       ->execute();
 
+    // Test that the stock just inserted gets selected
     $grabbed_stock_id = $this->importer->getStockID('stock1', 'TEST:1', $organism_id);
     $this->assertEquals($grabbed_stock_id, $stock_id, "The stock ID grabbed by the importer does not match the one that was inserted into the database.");
+
+    // Test that a stock not in the database successfully gets inserted
+    //ob_start();
+    //$created_stock_id = $this->importer->getStockID('stock2', 'TEST:2', $organism_id);
+    //$printed_output = ob_get_clean();
+    //$this->assertTrue($printed_output == 'Inserting "stock2".', "Did not get the expected notice message when inserting a new stock.");
+
+    // Test for a stock name + organism that already exists but has a different accession
+
+    ob_start();
+    $grabbed_dup_stock_name = $this->importer->getStockID('stock1', 'TEST:1000', $organism_id);
+    $printed_output = ob_get_clean();
+    $this->assertTrue($printed_output == 'A stock already exists for "stock1" but with an accession of "TEST:1" which does not match the input file.', "Did not get the expected error message when testing for duplicate stock names.");
+
+    // Now test for multiple stocks with the same name and accession, but different type_id
+    $stock_id = $this->connection->insert('1:stock')
+      ->fields([
+        'organism_id' => $organism_id,
+        'name' => 'stock1',
+        'uniquename' => 'TEST:1',
+        'type_id' => $subtaxa_cvterm_id,
+      ])
+      ->execute();
+
+    ob_start();
+    $grabbed_dup_stock_id = $this->importer->getStockID('stock1', 'TEST:1', $organism_id);
+    $printed_output = ob_get_clean();
+    $this->assertTrue($printed_output == 'Found more than one stock ID for "stock1".', "Did not get the expected error message when testing for duplicate stock IDs.");
 
   }
 
