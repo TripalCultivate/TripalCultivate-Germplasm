@@ -76,17 +76,9 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     $this->importer = new \Drupal\trpcultivate_germplasm\Plugin\TripalImporter\GermplasmAccessionImporter(
       [],
       'trpcultivate-germplasm-accession',
-      $this->definitions
+      $this->definitions,
+      $this->connection
     );
-
-    $run_args = [
-      'schema_name' => $this->testSchemaName,
-      'genus' => 'Tripalus',
-    ];
-    $file_details = [
-      'file_local' => '/pretend/we/have/a/file.txt',
-    ];
-    $this->importer->create($run_args, $file_details);
   }
 
 	/**
