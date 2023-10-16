@@ -3,6 +3,9 @@
 namespace Drupal\trpcultivate_germplasm\Plugin\TripalImporter;
 
 use Drupal\tripal_chado\TripalImporter\ChadoImporterBase;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Drupal\tripal_chado\Database\ChadoConnection;
+use Drupal\Core\Config\ConfigFactoryInterface;
 
 /**
  * Provides an importer for loading germplasm accessions from a tab-delimited
@@ -31,6 +34,63 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
    * is set to TRUE, then the db transaction will not be committed.
    */
   protected $error_tracker = FALSE;
+
+  /**
+   * The service for retreiving configuration values.
+   * 
+   * @var \Drupal\Core\Config\ConfigFactoryInterface
+   */
+  protected $config_factory;
+
+  /**
+   * Implements ContainerFactoryPluginInterface->create().
+   * 
+   * OVERRIDES create() from the parent, ChadoImporterBase.php, in order to introduce the 
+   * config factory
+   *
+   * Since we have implemented the ContainerFactoryPluginInterface this static function
+   * will be called behind the scenes when a Plugin Manager uses createInstance(). Specifically
+   * this method is used to determine the parameters to pass to the contructor.
+   *
+   * @param \Symfony\Component\DependencyInjection\ContainerInterface $container
+   * @param array $configuration
+   * @param string $plugin_id
+   * @param mixed $plugin_definition
+   *
+   * @return static
+   */
+  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
+    return new static(
+      $configuration,
+      $plugin_id,
+      $plugin_definition,
+      $container->get('tripal_chado.database'),
+      $container->get('config.factory')
+    );
+  }
+
+  /**
+   * Implements __contruct().
+   * 
+   * OVERRIDES __construct() from the parent, ChadoImporterBase.php, in order to introduce
+   * the config factory
+   *
+   * Since we have implemented the ContainerFactoryPluginInterface, the constructor
+   * will be passed additional parameters added by the create() function. This allows
+   * our plugin to use dependency injection without our plugin manager service needing
+   * to worry about it.
+   *
+   * @param array $configuration
+   * @param string $plugin_id
+   * @param mixed $plugin_definition
+   * @param Drupal\tripal_chado\Database\ChadoConnection $connection
+   * @param 
+   */
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, ChadoConnection $connection, ConfigFactoryInterface $config_factory) {
+    parent::__construct($configuration, $plugin_id, $plugin_definition, $connection);
+
+    $this->config_factory = $config_factory;
+  }
 
   /**
    * @{inheritdoc}
@@ -177,11 +237,10 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       $organism_ID = $this->getOrganismID($genus_name, $germplasm_species, $germplasm_subtaxa);
 
       // STEP 2: Check/Insert this germplasm into the Chado stock table
-      if ($organism_ID) {
-        $stock_id = $this->getStockID($germplasm_name, $accession_number, $organism_ID);
-      }
+      $stock_id = $this->getStockID($germplasm_name, $accession_number, $organism_ID);
 
       // STEP 3: Load the external database info into Chado dbxref table
+
 
       // STEP 4: Load stock properties (if provided) for:
       // $institute_code
@@ -252,6 +311,9 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
    */
   public function getStockID($germplasm_name, $accession_number, $organism_ID) {
 
+    $germplasm_config = $this->config_factory->get('trpcultivate_germplasm.settings');
+    $accession_type_id = $germplasm_config->get('terms.accession');
+
     // First query the stock table just using the germplasm name and organism ID
     $query = $this->connection->select('1:stock', 's')
       ->fields('s', ['stock_id', 'uniquename', 'type_id']);
@@ -264,6 +326,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       $this->error_tracker = TRUE;
       return false;
     }
+
     if (sizeof($record) == 1) {
       // Handle the situation where a stock record exists
       // Check the uniquename matches the accession_number column in the file
@@ -273,7 +336,11 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
         return false;
       }
       // Check the type_id is of type accession
-      // if ($record[0]->type_id)
+      if ($accession_type_id != $record[0]->type_id) {
+        $this->logger->error("A stock already exists for \"@germplasm_name\" but with a type ID of \"@type\" which is not of type \"accession\".", ['@germplasm_name' => $germplasm_name, '@type' => $accession_type_id]);
+        $this->error_tracker = TRUE;
+        return false;
+      }
 
       // Confirmed that the selected record matches what's in the upload file, so return the stock_id
       return $record[0]->stock_id;
@@ -284,7 +351,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
         'organism_id' => $organism_ID,
         'name' => $germplasm_name,
         'uniquename' => $accession_number,
-        //'type_id' => get_CV_term();
+        'type_id' => $accession_type_id
       );
 
       $this->logger->notice("Inserting \"@germplasm_name\".", ['@germplasm_name' => $germplasm_name]);

@@ -49,7 +49,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
 
     // Ensure we can access file_managed related functionality from Drupal.
     // ... users need access to system.action config?
-    $this->installConfig('system');
+    $this->installConfig(['system', 'trpcultivate_germplasm']);
     // ... managed files are associated with a user.
     $this->installEntitySchema('user');
     // ... Finally the file module + tables itself.
@@ -73,11 +73,19 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
       });
     $container->set('tripal.logger', $mock_logger);
 
+    $this->config_factory = \Drupal::configFactory();
+		$germplasm_config = $this->config_factory->getEditable('trpcultivate_germplasm.settings');
+    $subtaxa_cvterm_id = $this->getCVtermID('TAXRANK', '0000023');
+    $germplasm_config->set('terms.subtaxa', $subtaxa_cvterm_id);
+		$germplasm_config->set('terms.accession', 9);
+		$germplasm_config->save();
+
     $this->importer = new \Drupal\trpcultivate_germplasm\Plugin\TripalImporter\GermplasmAccessionImporter(
       [],
       'trpcultivate-germplasm-accession',
       $this->definitions,
-      $this->connection
+      $this->connection,
+      $this->config_factory
     );
   }
 
@@ -180,15 +188,12 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
       ->execute();
 
     // Insert a stock
-    // @TODO: FIND THE APPROPRIATE CVTERM ID FOR ACCESSION
-    $accession_cvterm_id = $this->getCVtermID('TAXRANK', '0000024');
-
     $stock_id = $this->connection->insert('1:stock')
       ->fields([
         'organism_id' => $organism_id,
         'name' => 'stock1',
         'uniquename' => 'TEST:1',
-        'type_id' => $accession_cvterm_id,
+        'type_id' => 9,
       ])
       ->execute();
 
@@ -197,13 +202,23 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     $this->assertEquals($grabbed_stock_id, $stock_id, "The stock ID grabbed by the importer does not match the one that was inserted into the database.");
 
     // Test that a stock not in the database successfully gets inserted
-    //ob_start();
-    //$created_stock_id = $this->importer->getStockID('stock2', 'TEST:2', $organism_id);
-    //$printed_output = ob_get_clean();
-    //$this->assertTrue($printed_output == 'Inserting "stock2".', "Did not get the expected notice message when inserting a new stock.");
+    ob_start();
+    $created_stock_id = $this->importer->getStockID('stock2', 'TEST:2', $organism_id);
+    $printed_output = ob_get_clean();
+    $this->assertTrue($printed_output == 'Inserting "stock2".', "Did not get the expected notice message when inserting a new stock.");
+    
+    $stock2_query = $this->connection->select('1:stock', 's')
+      ->fields('s', ['stock_id'])
+      ->condition('organism_id', $organism_id, '=')
+      ->condition('name', 'stock2', '=')
+      ->condition('uniquename', 'TEST:2', '=')
+      ->condition('type_id', 9, '=');
+    $stock2_record = $stock2_query->execute()->fetchAll();
+    $this->assertEquals($created_stock_id, $stock2_record[0]->stock_id, "The stock ID inserted for \"stock2\" does not match the stock ID returned by getStockID().");
+    
+    // No test for if the insert fails, since most likely will get a complaint from Chado
 
     // Test for a stock name + organism that already exists but has a different accession
-
     ob_start();
     $grabbed_dup_stock_name = $this->importer->getStockID('stock1', 'TEST:1000', $organism_id);
     $printed_output = ob_get_clean();
@@ -215,7 +230,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
         'organism_id' => $organism_id,
         'name' => 'stock1',
         'uniquename' => 'TEST:1',
-        'type_id' => $subtaxa_cvterm_id,
+        'type_id' => 10,
       ])
       ->execute();
 
