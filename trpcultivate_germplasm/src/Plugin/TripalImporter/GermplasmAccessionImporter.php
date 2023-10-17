@@ -37,15 +37,15 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
 
   /**
    * The service for retreiving configuration values.
-   * 
+   *
    * @var \Drupal\Core\Config\ConfigFactoryInterface
    */
   protected $config_factory;
 
   /**
    * Implements ContainerFactoryPluginInterface->create().
-   * 
-   * OVERRIDES create() from the parent, ChadoImporterBase.php, in order to introduce the 
+   *
+   * OVERRIDES create() from the parent, ChadoImporterBase.php, in order to introduce the
    * config factory
    *
    * Since we have implemented the ContainerFactoryPluginInterface this static function
@@ -71,7 +71,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
 
   /**
    * Implements __contruct().
-   * 
+   *
    * OVERRIDES __construct() from the parent, ChadoImporterBase.php, in order to introduce
    * the config factory
    *
@@ -84,7 +84,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
    * @param string $plugin_id
    * @param mixed $plugin_definition
    * @param Drupal\tripal_chado\Database\ChadoConnection $connection
-   * @param 
+   * @param
    */
   public function __construct(array $configuration, $plugin_id, $plugin_definition, ChadoConnection $connection, ConfigFactoryInterface $config_factory) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $connection);
@@ -141,8 +141,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     $form = parent::form($form, $form_state);
 
     // Select the entire genus field and make sure it is sorted and distinct
-    $connection = \Drupal::service('tripal_chado.database');
-    $genus_query = $connection->select('1:organism', 'o')
+    $genus_query = $this->connection->select('1:organism', 'o')
       ->fields('o',['genus'])
       ->orderBy('genus')
       ->distinct();
@@ -234,13 +233,17 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       $synonyms = $germplasm_columns[11];
 
       // STEP 1: Pull out the organism ID for the current germplasm
-      $organism_ID = $this->getOrganismID($genus_name, $germplasm_species, $germplasm_subtaxa);
+      $organism_id = $this->getOrganismID($genus_name, $germplasm_species, $germplasm_subtaxa);
 
       // STEP 2: Check/Insert this germplasm into the Chado stock table
-      $stock_id = $this->getStockID($germplasm_name, $accession_number, $organism_ID);
+      if ($organism_id) {
+        $stock_id = $this->getStockID($germplasm_name, $accession_number, $organism_id);
+      }
 
       // STEP 3: Load the external database info into Chado dbxref table
-
+      if ($stock_id) {
+        $dbxref_id = $this->getDbxrefID($external_database, $stock_id, $accession_number);
+      }
 
       // STEP 4: Load stock properties (if provided) for:
       // $institute_code
@@ -303,13 +306,14 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
    *   The name of the germplasm.
    * @param string $accession_number
    *   A unique identifier for the germplasm accession.
-   * @param int $organism_ID
+   * @param int $organism_id
    *   The primary key of the stock's organism in the organism table
    * @return int|false
    *   The value of the primary key for the stock record in Chado. If the stock already
-   *   exists or cannot be inserted, then FALSE is returned.
+   *   exists and does not match the accession number or type, or it cannot be inserted,
+   *   then FALSE is returned.
    */
-  public function getStockID($germplasm_name, $accession_number, $organism_ID) {
+  public function getStockID($germplasm_name, $accession_number, $organism_id) {
 
     $germplasm_config = $this->config_factory->get('trpcultivate_germplasm.settings');
     $accession_type_id = $germplasm_config->get('terms.accession');
@@ -318,7 +322,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     $query = $this->connection->select('1:stock', 's')
       ->fields('s', ['stock_id', 'uniquename', 'type_id']);
     $query->condition('s.name', $germplasm_name, '=')
-      ->condition('s.organism_id', $organism_ID, '=');
+      ->condition('s.organism_id', $organism_id, '=');
     $record = $query->execute()->fetchAll();
 
     if (sizeof($record) >= 2) {
@@ -327,7 +331,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       return false;
     }
 
-    if (sizeof($record) == 1) {
+    elseif (sizeof($record) == 1) {
       // Handle the situation where a stock record exists
       // Check the uniquename matches the accession_number column in the file
       if ($accession_number != $record[0]->uniquename) {
@@ -348,7 +352,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     // Confirmed that a stock record doesn't yet exist, so now we create one
     else {
       $values = array(
-        'organism_id' => $organism_ID,
+        'organism_id' => $organism_id,
         'name' => $germplasm_name,
         'uniquename' => $accession_number,
         'type_id' => $accession_type_id
@@ -370,6 +374,79 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
         return false;
       }
     }
+  }
+
+  /**
+   * Checks if a dbxref exists in Chado and if not, inserts it. Then, updates
+   * the stock table to include the dbxref_id. Returns the primary
+   * key in the dbxref table.
+   *
+   * @param string $external_database
+   *   The name of the institution who assigned the accession.
+   * @param int $stock_id
+   *   The value of the primary key for the stock record in Chado.
+   * @param string $accession_number
+   *   A unique identifier for the germplasm accession.
+   * @return int|false
+   *   The value of the primary key for the dbxref record in Chado.
+   */
+  public function getDbxrefID($external_database, $stock_id, $accession_number) {
+    // Check if the external database exists in chado.db
+    $db_query = $this->connection->select('1:db', 'db')
+      ->fields('db', ['db_id']);
+    $db_query->condition('db.name', $external_database, '=');
+    $db_record = $db_query->execute()->fetchAll();
+
+    if (sizeof($db_record) >= 2) {
+      $this->logger->error("Found more than one db ID for \"@external_db\".", ['@external_db' => $external_database]);
+      $this->error_tracker = TRUE;
+      return false;
+    }
+
+    elseif (sizeof($db_record) == 0) {
+      $this->logger->error("Couldn't find \"@external_db\" in chado.db.", ['@external_db' => $external_database]);
+      $this->error_tracker = TRUE;
+      return false;
+    }
+
+    // Confirmed that a single record of this external database exists
+    $db_id = $db_record[0]->db_id;
+
+    // Now to check for the dbxref record
+    $dbx_query = $this->connection->select('1:dbxref', 'dbx')
+      ->fields('dbx', ['dbxref_id']);
+    $dbx_query->condition('dbx.accession', $accession_number, '=')
+      ->condition('dbxdb_id', $db_id, '=');
+    $dbx_record = $dbx_query->execute()->fetchAll();
+
+    if (sizeof($dbx_record) >= 2) {
+      $this->logger->error("Found more than one dbxref ID for \"@accession\".", ['@accession' => $accession_number]);
+      $this->error_tracker = TRUE;
+      return false;
+    }
+    elseif (sizeof($dbx_record) == 1) {
+      $dbxref_id = $dbx_record[0]->dbxref_id;
+    }
+    // Couldn't find the dbxref_id for this accession, so insert it
+    else {
+      $values = [
+        'db_id' => $db_id,
+        'accession' => $accession_number
+      ];
+      $result = $this->connection->insert('1:dbxref')
+        ->fields($values)
+        ->execute();
+
+      // If the primary key is not available, then the insert failed
+      if (!$result) {
+        $this->logger->error("Insertion of \"@accession\" into chado.dbxref failed.", ['@accession' => $accession_number]);
+        $this->error_tracker = TRUE;
+        return false;
+      }
+    }
+
+    // Now update the stock table to include the dbxref_id
+
   }
 
   /*
