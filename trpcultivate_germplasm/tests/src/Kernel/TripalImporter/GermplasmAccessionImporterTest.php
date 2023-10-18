@@ -206,7 +206,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     $created_stock_id = $this->importer->getStockID('stock2', 'TEST:2', $organism_id);
     $printed_output = ob_get_clean();
     $this->assertTrue($printed_output == 'Inserting "stock2".', "Did not get the expected notice message when inserting a new stock.");
-    
+
     $stock2_query = $this->connection->select('1:stock', 's')
       ->fields('s', ['stock_id'])
       ->condition('organism_id', $organism_id, '=')
@@ -215,7 +215,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
       ->condition('type_id', 9, '=');
     $stock2_record = $stock2_query->execute()->fetchAll();
     $this->assertEquals($created_stock_id, $stock2_record[0]->stock_id, "The stock ID inserted for \"stock2\" does not match the stock ID returned by getStockID().");
-    
+
     // No test for if the insert fails, since most likely will get a complaint from Chado
 
     // Test for a stock name + organism that already exists but has a different accession
@@ -238,7 +238,122 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     $grabbed_dup_stock_id = $this->importer->getStockID('stock1', 'TEST:1', $organism_id);
     $printed_output = ob_get_clean();
     $this->assertTrue($printed_output == 'Found more than one stock ID for "stock1".', "Did not get the expected error message when testing for duplicate stock IDs.");
-
   }
 
+  /**
+   * Tests focusing on the Germplasm Accession Importer getDbxrefID() function
+   *
+   * @group germ_accession_importer
+   */
+  public function testGermplasmAccessionImporterGetDbxrefID() {
+
+    // Insert an organism
+    $subtaxa_cvterm_id = $this->getCVtermID('TAXRANK', '0000023');
+
+    $organism_id = $this->connection->insert('1:organism')
+      ->fields([
+        'genus' => 'Tripalus',
+        'species' => 'databasica',
+        'infraspecific_name' => 'chadoii',
+        'type_id' => $subtaxa_cvterm_id,
+      ])
+      ->execute();
+
+    // Insert a stock
+    $accession = 'TEST:1';
+
+    $stock_id = $this->connection->insert('1:stock')
+      ->fields([
+        'organism_id' => $organism_id,
+        'name' => 'stock1',
+        'uniquename' => $accession,
+        'type_id' => 9,
+      ])
+      ->execute();
+
+    // Attempt to call the function before inserting an external database
+    ob_start();
+    $non_existing_external_db = $this->importer->getDbxrefID('PRETEND', $stock_id, $accession);
+    $printed_output = ob_get_clean();
+    $this->assertTrue($printed_output == 'Unable to find "PRETEND" in chado.db.', "Did not get the expected error message when looking up an external database that does not yet exist.");
+
+    // Verify that the stock has an empty dbxref_id
+    $empty_stock_query = $this->connection->select('1:stock', 's')
+      ->fields('s', ['dbxref_id']);
+    $empty_stock_query->condition('s.stock_id', $stock_id, '=');
+    $empty_stock_record = $empty_stock_query->execute()->fetchAll();
+
+    $this->assertEmpty($empty_stock_record[0]->dbxref_id, "The stock just inserted (stock1) already has a dbxref_id.");
+
+    // Now add an external db
+    $db_id = $this->connection->insert('1:db')
+      ->fields([
+        'name' => 'Test DB',
+      ])
+      ->execute();
+
+    // ----------------------------- ROUND 1 -------------------------------
+    // Call the function and check that dbxref is inserted and stock updated
+    $round_one_dbxref = $this->importer->getDbxrefID('Test DB', $stock_id, $accession);
+
+    // Check that the dbxref was inserted successfully
+    $r1_dbx_query = $this->connection->select('1:dbxref', 'dbx')
+      ->fields('dbx', ['dbxref_id']);
+    $r1_dbx_query->condition('dbx.accession', $accession, '=')
+      ->condition('dbx.db_id', $db_id, '=');
+    $r1_dbx_record = $r1_dbx_query->execute()->fetchAll();
+
+    $this->assertEquals($round_one_dbxref, $r1_dbx_record[0]->dbxref_id, "The dbxref_id that was inserted does not match what was queried.");
+
+    // Check that the stock was updated successfully
+    $updated_stock_query = $this->connection->select('1:stock', 's')
+      ->fields('s', ['dbxref_id']);
+    $updated_stock_query->condition('s.stock_id', $stock_id, '=');
+    $updated_stock_record = $updated_stock_query->execute()->fetchAll();
+
+    $this->assertEquals($round_one_dbxref, $updated_stock_record[0]->dbxref_id, "The stock just inserted (stock1) was not successfully updated with a dbxref_id.");
+
+    // ----------------------------- ROUND 2 -------------------------------
+    // Call the function again and check that the results are still the same
+    // The purpose of this test is to trigger the elseif statements for both
+    // the dbxref check and stock.dbxref_id
+    $round_two_dbxref = $this->importer->getDbxrefID('Test DB', $stock_id, $accession);
+
+    // Check that the dbxref was selected successfully
+    $r2_dbx_query = $this->connection->select('1:dbxref', 'dbx')
+      ->fields('dbx', ['dbxref_id']);
+    $r2_dbx_query->condition('dbx.accession', $accession, '=')
+      ->condition('dbx.db_id', $db_id, '=');
+    $r2_dbx_record = $r2_dbx_query->execute()->fetchAll();
+
+    $this->assertEquals($round_two_dbxref, $r2_dbx_record[0]->dbxref_id, "The dbxref_id has changed unexpectedly in round 2.");
+
+    // Check that the stock was updated successfully
+    $r2_updated_stock_query = $this->connection->select('1:stock', 's')
+      ->fields('s', ['dbxref_id']);
+    $r2_updated_stock_query->condition('s.stock_id', $stock_id, '=');
+    $r2_updated_stock_record = $r2_updated_stock_query->execute()->fetchAll();
+
+    $this->assertEquals($round_two_dbxref, $r2_updated_stock_record[0]->dbxref_id, "The dbxref_id of stock1 was unexpectedly changed in round 2 from round 1.");
+    // ---------------------------------------------------------------------
+    // Manually insert a dbxref with the same accession but a different db_id
+    $second_db_name = 'Second Test DB';
+    $second_db_id = $this->connection->insert('1:db')
+      ->fields([
+        'name' => $second_db_name,
+      ])
+      ->execute();
+
+    $second_dbxref_id = $this->connection->insert('1:dbxref')
+      ->fields([
+        'db_id' => $second_db_id,
+        'accession' => $accession
+      ])
+      ->execute();
+
+    ob_start();
+    $multiple_dbxref_accessions = $this->importer->getDbxrefID($second_db_name, $stock_id, $accession);
+    $printed_output = ob_get_clean();
+    $this->assertTrue($printed_output == 'There is already a primary dbxref_id for stock ID "1" that does not match the external database and accession provided in the file (Second Test DB:TEST:1).', "Did not get the expected error message when inserting a dbxref with an existing accession with a different db.");
+  }
 }

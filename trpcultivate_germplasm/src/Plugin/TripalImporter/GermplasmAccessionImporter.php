@@ -391,7 +391,10 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
    *   The value of the primary key for the dbxref record in Chado.
    */
   public function getDbxrefID($external_database, $stock_id, $accession_number) {
+    // -------------------------------------------------
     // Check if the external database exists in chado.db
+    // If not, report an error
+    // -------------------------------------------------
     $db_query = $this->connection->select('1:db', 'db')
       ->fields('db', ['db_id']);
     $db_query->condition('db.name', $external_database, '=');
@@ -404,7 +407,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     }
 
     elseif (sizeof($db_record) == 0) {
-      $this->logger->error("Couldn't find \"@external_db\" in chado.db.", ['@external_db' => $external_database]);
+      $this->logger->error("Unable to find \"@external_db\" in chado.db.", ['@external_db' => $external_database]);
       $this->error_tracker = TRUE;
       return false;
     }
@@ -412,11 +415,14 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     // Confirmed that a single record of this external database exists
     $db_id = $db_record[0]->db_id;
 
-    // Now to check for the dbxref record
+    // -------------------------------------------------
+    // Check if the dbxref for this stock already exists
+    // If not, insert it
+    // -------------------------------------------------
     $dbx_query = $this->connection->select('1:dbxref', 'dbx')
       ->fields('dbx', ['dbxref_id']);
     $dbx_query->condition('dbx.accession', $accession_number, '=')
-      ->condition('dbxdb_id', $db_id, '=');
+      ->condition('dbx.db_id', $db_id, '=');
     $dbx_record = $dbx_query->execute()->fetchAll();
 
     if (sizeof($dbx_record) >= 2) {
@@ -443,9 +449,46 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
         $this->error_tracker = TRUE;
         return false;
       }
+      else {
+        $dbxref_id = $result;
+      }
     }
 
-    // Now update the stock table to include the dbxref_id
+    // ------------------------------------------------------------------------
+    // Update the stock table to include the dbxref_id
+    // After making sure a different one doesn't already exist (throw an error)
+    // ------------------------------------------------------------------------
+    $stock_query = $this->connection->select('1:stock', 's')
+      ->fields('s', ['dbxref_id']);
+    $stock_query->condition('s.stock_id', $stock_id, '=');
+    $stock_record = $stock_query->execute()->fetchAll();
+
+    if ($stock_record[0]->dbxref_id == "") {
+      $update_stock = $this->connection->update('1:stock')
+        ->fields(['dbxref_id' => $dbxref_id])
+        ->condition('stock_id', $stock_id, '=')
+        ->execute();
+
+      // Since update queries return the number of rows affected, check that only one row was changed
+      if ($update_stock != 1) {
+        $this->logger->error("An attempt to update the dbxref_id of \"@stock\" reported that \"@number\" rows were affected.", ['@stock' => $accession_number, '@number' => $update_stock]);
+        $this->error_tracker = TRUE;
+        return false;
+      }
+      else {
+        return $dbxref_id;
+      }
+    }
+    // Otherwise, the correct dbxref_id might already be set so we're good to go
+    elseif ($stock_record[0]->dbxref_id == $dbxref_id) {
+      return $dbxref_id;
+    }
+    // OR, it is something entirely different - so report an error
+    else {
+      $this->logger->error("There is already a primary dbxref_id for stock ID \"@stock\" that does not match the external database and accession provided in the file (@external_db:@accession).", ['@stock' => $stock_id, '@external_db' => $external_database, '@accession' => $accession_number]);
+      $this->error_tracker = TRUE;
+      return false;
+    }
 
   }
 
