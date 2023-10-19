@@ -43,6 +43,11 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
   protected $config_factory;
 
   /**
+   * An associative array of cvterms as the key and the cvterm_id as the value.
+   */
+  protected $cvterms = [];
+
+  /**
    * Implements ContainerFactoryPluginInterface->create().
    *
    * OVERRIDES create() from the parent, ChadoImporterBase.php, in order to introduce the
@@ -135,6 +140,31 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
   }
 
   /**
+   * Set a cvterm with its cvterm_id
+   * 
+   * @param string $key
+   *   A key used in the config settings.yml
+   * @param int $cvterm_id
+   * @return TRUE
+   */
+  public function setCVterm($key, $cvterm_id) {
+    $this->cvterms[$key] = $cvterm_id;
+    return TRUE;
+  }
+
+  /**
+   * Get a cvterm ID, given a key that maps to the config settings.yml
+   * 
+   * @param string $key
+   *   The cvterm name
+   * @return int 
+   *   The cvterm ID
+   */
+  public function getCVterm($key) {
+    return $this->cvterms[$key];
+  }
+
+  /**
    * {@inheritDoc}
    */
   public function form($form, &$form_state) {
@@ -191,6 +221,16 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     // Grab the genus name
     $genus_name = $arguments['genus_name'];
 
+    // Set up our array of cv terms
+    $germplasm_config = $this->config_factory->get('trpcultivate_germplasm.settings');
+    $this->setCVterm('accession', $germplasm_config->get('terms.accession'));
+    $this->setCVterm('institute_code', $germplasm_config->get('terms.institute_code'));
+    $this->setCVterm('institute_name', $germplasm_config->get('terms.institute_name'));
+    $this->setCVterm('country_of_origin_code', $germplasm_config->get('terms.country_of_origin_code'));
+    $this->setCVterm('biological_status_of_accession_code', $germplasm_config->get('terms.biological_status_of_accession_code'));
+    $this->setCVterm('breeding_method_DbId', $germplasm_config->get('terms.breeding_method_DbId'));
+    $this->setCVterm('pedigree', $germplasm_config->get('terms.pedigree'));
+
     // Set up the ability to track progress so we can report it to the user
     $filesize = filesize($file_path);
     $this->setTotalItems($filesize);
@@ -240,19 +280,26 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
         $stock_id = $this->getStockID($germplasm_name, $accession_number, $organism_id);
       }
 
-      // STEP 3: Load the external database info into Chado dbxref table
       if ($stock_id) {
+        // STEP 3: Load the external database info into Chado dbxref table
         $dbxref_id = $this->getDbxrefID($external_database, $stock_id, $accession_number);
+
+        // STEP 4: Load stock properties
+        // Since all stock properties are optional, check if they have an empty string
+        $stock_properties = [
+          $institute_code, 
+          $institute_name, 
+          $country_of_origin_code, 
+          $biological_status_of_accession_code,
+          $breeding_method_DbId,
+          $pedigree
+        ];
+//        foreach ($stock_properties) {
+//          if (empty())
+//        }
+        $this->loadStockProperties($stock_id, $stock_properties);
       }
-
-      // STEP 4: Load stock properties (if provided) for:
-      // $institute_code
-      // $institute_name
-      // $country_of_origin_code
-      // $biological_status_of_accession_code
-      // $breeding_method_DbId
-      // $pedigree
-
+      
       // STEP 5: Load synonyms
 
     }
@@ -315,8 +362,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
    */
   public function getStockID($germplasm_name, $accession_number, $organism_id) {
 
-    $germplasm_config = $this->config_factory->get('trpcultivate_germplasm.settings');
-    $accession_type_id = $germplasm_config->get('terms.accession');
+    $accession_type_id = $this->getCVterm('accession');
 
     // First query the stock table just using the germplasm name and organism ID
     $query = $this->connection->select('1:stock', 's')
@@ -351,12 +397,12 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     }
     // Confirmed that a stock record doesn't yet exist, so now we create one
     else {
-      $values = array(
+      $values = [
         'organism_id' => $organism_id,
         'name' => $germplasm_name,
         'uniquename' => $accession_number,
         'type_id' => $accession_type_id
-      );
+      ];
 
       $this->logger->notice("Inserting \"@germplasm_name\".", ['@germplasm_name' => $germplasm_name]);
 
@@ -492,6 +538,95 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
 
   }
 
+  /**
+   * Checks each property within an array and inserts them into chado.stockprop.
+   * Returns true if the insert was successful.
+   *
+   * @param int $stock_id
+   *   The value of the primary key for the stock record in Chado.
+   * @param array $stock_properties
+   *   An array of optional properties to be attached to a stock
+   * @return boolean
+   *   Returns true if inserting all the properties was successful,
+   *   including if there are no properties
+   */
+  public function loadStockProperties($stock_id, $stock_properties) {
+
+    // Log a notice if there's no properties to deal with, but since 
+    // they are all optional, return true.
+    if (sizeof($stock_properties) == 0) {
+      $this->logger->notice("There are no stock properties to insert for stock ID \"@stock\".", ['@stock' => $stock_id]);
+      return true;
+    }
+    // Iterate through our properties 
+    foreach ($stock_properties as $property) {
+
+      // Lookup the CV term
+      $cvterm_id = getCVterm($property);
+      if ($cvterm_id) {
+        // Try to lookup the stockprop_id in Chado
+        $stockprop_query = $this->connection->select('1:stockprop', 'sp')
+          ->fields('sp', ['stockprop_id', 'value'])
+          ->condition('sp.stock_id', $stock_id, '=')
+          ->condition('sp.type_id', $cvterm_id, '=');
+        $stockprop_record = $stockprop_query->execute()->fetchAll();
+        // If one or more record(s) exists for this stock, check if one is the same as in
+        // the file. If not, then add it but increase the rank by 1
+        if (sizeof($stockprop_record) >= 1) {
+          $maxrank = 0;
+          foreach ($stockprop_record as $record) {
+            $found = false;
+            if ($record->value == $property) { 
+              $found = true; 
+              next;
+            } 
+            else {
+              $rank = $record->rank;
+              if ($rank > $maxrank) { $maxrank = $rank; }
+            }
+          }
+          if ($found == false) {
+            // Insert this property into the stockprop table and increment the max rank by one
+            $values = [
+              'stock_id' => $stock_id,
+              'type_id' => $cvterm_id,
+              'value' => $property,
+              'rank' => $maxrank++
+            ];
+            $result = $this->connection->insert('1:stockprop')
+              ->fields($values)
+              ->execute();
+
+            // If the primary key is not available, then the insert failed
+            if (!$result) {
+              $this->logger->error("Insertion of stock property \"@property\" into chado.stockprop failed.", ['@property' => $property]);
+              $this->error_tracker = TRUE;
+              return false;
+            }
+          }
+        }
+
+        // If no records exist, then insert the property as normal
+        else {
+          $values = [
+            'stock_id' => $stock_id,
+            'type_id' => $cvterm_id,
+            'value' => $property
+          ];
+          $result = $this->connection->insert('1:stockprop')
+            ->fields($values)
+            ->execute();
+
+          // If the primary key is not available, then the insert failed
+          if (!$result) {
+            $this->logger->error("Insertion of stock property \"@property\" into chado.stockprop failed.", ['@property' => $property]);
+            $this->error_tracker = TRUE;
+            return false;
+          }
+        }
+      }
+    }
+  }
   /*
    * {@inheritdoc}
    */

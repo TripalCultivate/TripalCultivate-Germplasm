@@ -74,12 +74,6 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     $container->set('tripal.logger', $mock_logger);
 
     $this->config_factory = \Drupal::configFactory();
-		$germplasm_config = $this->config_factory->getEditable('trpcultivate_germplasm.settings');
-    $subtaxa_cvterm_id = $this->getCVtermID('TAXRANK', '0000023');
-    $germplasm_config->set('terms.subtaxa', $subtaxa_cvterm_id);
-		$germplasm_config->set('terms.accession', 9);
-		$germplasm_config->save();
-
     $this->importer = new \Drupal\trpcultivate_germplasm\Plugin\TripalImporter\GermplasmAccessionImporter(
       [],
       'trpcultivate-germplasm-accession',
@@ -87,6 +81,10 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
       $this->connection,
       $this->config_factory
     );
+
+    $subtaxa_cvterm_id = $this->getCVtermID('TAXRANK', '0000023');
+    $this->importer->setCVterm('accession', 9);
+    $this->importer->setCVterm('subtaxa', $subtaxa_cvterm_id);
   }
 
 	/**
@@ -355,5 +353,44 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     $multiple_dbxref_accessions = $this->importer->getDbxrefID($second_db_name, $stock_id, $accession);
     $printed_output = ob_get_clean();
     $this->assertTrue($printed_output == 'There is already a primary dbxref_id for stock ID "1" that does not match the external database and accession provided in the file (Second Test DB:TEST:1).', "Did not get the expected error message when inserting a dbxref with an existing accession with a different db.");
+  }
+
+  /**
+   * Tests focusing on the Germplasm Accession Importer loadStockProperties() function
+   *
+   * @group germ_accession_importer
+   */
+  public function testGermplasmAccessionImporterloadStockProperties() {
+    // Insert an organism
+    $subtaxa_cvterm_id = $this->getCVtermID('TAXRANK', '0000023');
+
+    $organism_id = $this->connection->insert('1:organism')
+      ->fields([
+        'genus' => 'Tripalus',
+        'species' => 'databasica',
+        'infraspecific_name' => 'chadoii',
+        'type_id' => $subtaxa_cvterm_id,
+      ])
+      ->execute();
+
+    // Insert a stock
+    $stock_id = $this->connection->insert('1:stock')
+      ->fields([
+        'organism_id' => $organism_id,
+        'name' => 'stock1',
+        'uniquename' => 'TEST:1',
+        'type_id' => 9,
+      ])
+      ->execute();
+
+    // Try running the function with no properties. Expecting a notice but should
+    // return true
+    $stock_props = [];
+    ob_start();
+    $this->importer->loadStockProperties($stock_id, $stock_props);
+    $printed_output = ob_get_clean();
+    $this->assertTrue($printed_output == 'There are no stock properties to insert for stock ID "1".', "Expected a notice message when trying to insert 0 stock properties for a stock.");
+
+
   }
 }
