@@ -1,0 +1,101 @@
+name: Bug Report
+description: Report any unexpected behaviour so we can improve this module.
+title: "[Bug] "
+labels: ["bug - potential"]
+body:
+  - type: dropdown
+    id: drupal-version
+    attributes:
+      label: Drupal Version
+      description: What version of Drupal did you experience this bug on?
+      options:
+        - 9.4
+        - 9.5
+        - 10.0
+        - 10.1
+    validations:
+      required: true
+  - type: dropdown
+    id: tripal-version
+    attributes:
+      label: Tripal Version
+      description: What version of Tripal was installed on this site?
+      options:
+        - 4.0.0-alpha1
+        - 4.x dev (most recent commit)
+    validations:
+      required: true
+  - type: dropdown
+    id: module-version
+    attributes:
+      label: Module Version
+      description: What version of this module were you using?
+      options:
+        - 4.x dev (most recent commit)
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Site Operating System
+      description: What operating system is your site installed on
+      options:
+        - Debian Linux
+        - Redhat Linux
+        - Other Linux Distribution
+        - Intel Mac
+        - M1 Chip Mac
+        - Windows
+    validations:
+      required: true
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: Installation Method
+      description: How was this module installed?
+      options:
+        - TripalDocker docker
+        - Docker image built from this module
+        - Composer
+        - Manual Download
+    validations:
+      required: true
+  - type: dropdown
+    id: browsers
+    attributes:
+      label: Browsers
+      description: What browsers are you seeing the problem on?
+      multiple: true
+      options:
+        - Firefox
+        - Chrome
+        - Safari
+        - Microsoft Edge
+        - Other
+  - type: textarea
+    id: description
+    attributes:
+      label: Observations
+      placeholder: A clear and concise description of what the bug is. Please include screenshots wherever possible and copy error message text.
+    validations:
+      required: true
+  - type: textarea
+    id: expected-behaviour
+    attributes:
+      label: Expected Behaviour
+      placeholder: A clear and concise description of what you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to Reproduce
+      placeholder: Indicate steps to reproduce this bug. Ideally this includes a detailed numbered list.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
+      render: shell
