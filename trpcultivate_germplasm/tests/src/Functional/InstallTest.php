@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\Tests\trpgeno_genetics\Functional;
+namespace Drupal\Tests\trpcultivate_germplasm\Functional;
 
 use Drupal\Core\Url;
 use Drupal\Tests\tripal_chado\Functional\ChadoTestBrowserBase;
@@ -8,35 +8,35 @@ use Drupal\Tests\tripal_chado\Functional\ChadoTestBrowserBase;
 /**
  * Simple test to ensure that main page loads with module enabled.
  *
- * @group TripGeno Genetics
+ * @group TripalCultivate-Germplasm
  * @group Installation
  */
 class InstallTest extends ChadoTestBrowserBase {
 
-  protected $defaultTheme = 'stable';
+  protected $defaultTheme = 'stark';
 
   /**
    * Modules to enable.
    *
    * @var array
    */
-  protected static $modules = ['help', 'modulename'];
+  protected static $modules = ['help', 'trpcultivate_germplasm'];
 
   /**
    * The name of your module in the .info.yml
    */
-  protected static $module_name = 'Template Modulename';
+  protected static $module_name = 'Germplasm';
 
   /**
    * The machine name of this module.
    */
-  protected static $module_machinename = 'modulename';
+  protected static $module_machinename = 'trpcultivate_germplasm';
 
   /**
    * A small excert from your help page.
    * Do not cross newlines.
    */
-  protected static $help_text_excerpt = 'This is a template module which should never be';
+  protected static $help_text_excerpt = 'specialized Tripal fields and importers for germplasm';
 
   /**
    * Tests that a specific set of pages load with a 200 response.
