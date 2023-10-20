@@ -85,6 +85,12 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     $subtaxa_cvterm_id = $this->getCVtermID('TAXRANK', '0000023');
     $this->importer->setCVterm('accession', 9);
     $this->importer->setCVterm('subtaxa', $subtaxa_cvterm_id);
+    $this->importer->setCVterm('institute_code', 10);
+    $this->importer->setCVterm('institute_name', 11);
+    $this->importer->setCVterm('country_of_origin_code',12);
+    $this->importer->setCVterm('biological_status_of_accession_code', 13);
+    $this->importer->setCVterm('breeding_method_DbId', 14);
+    $this->importer->setCVterm('pedigree', 15);
   }
 
 	/**
@@ -383,14 +389,90 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
       ])
       ->execute();
 
-    // Try running the function with no properties. Expecting a notice but should
-    // return true
-    $stock_props = [];
-    ob_start();
+    // Declare our stock property variables with empty values
+    $empty_string = '';
+    $stock_empty_props = [
+      'institute_code' => $empty_string,
+      'institute_name' => $empty_string,
+      'country_of_origin_code' => $empty_string,
+      'biological_status_of_accession_code' => $empty_string,
+      'breeding_method_DbId' => $empty_string,
+      'pedigree' => $empty_string
+    ];
+
+    // "Load" our empty values and check that the stockprop table is empty 
+    // before and after
+    $sp_initial_count = $this->connection->select('1:stockprop', 'sp')
+      ->condition('sp.stock_id', $stock_id, '=')
+      ->countQuery()->execute()->fetchField();
+    $this->importer->loadStockProperties($stock_id, $stock_empty_props);
+    $sp_empty_count = $this->connection->select('1:stockprop', 'sp')
+      ->condition('sp.stock_id', $stock_id, '=')
+      ->countQuery()->execute()->fetchField();
+    $this->assertEquals($sp_initial_count, $sp_empty_count, "The row count of the stockprop table before and after inserting empty values is not the same.");
+
+    // Now load in all 6 stock properties for this stock_id
+    $stock_props = [
+      'institute_code' => 'CUAC',
+      'institute_name' => 'Crop Development Center, University of Saskatchewan',
+      'country_of_origin_code' => 124,
+      'biological_status_of_accession_code' => 410,
+      'breeding_method_DbId' => 'Recurrent selection',
+      'pedigree' => '1049F^3/819-5R'
+    ];
+    $stock_prop_count = count($stock_props);
+
     $this->importer->loadStockProperties($stock_id, $stock_props);
-    $printed_output = ob_get_clean();
-    $this->assertTrue($printed_output == 'There are no stock properties to insert for stock ID "1".', "Expected a notice message when trying to insert 0 stock properties for a stock.");
+    $sp_six_count = $this->connection->select('1:stockprop', 'sp')
+      ->condition('sp.stock_id', $stock_id, '=')
+      ->countQuery()->execute()->fetchField();
+    $this->assertEquals($sp_six_count, $stock_prop_count, "The row count of the stockprop table after inserting 6 values is not correct.");
 
+    // Select a random property to see if it inserted correctly
+    $sp_six_institute_name = $this->connection->select('1:stockprop', 'sp')
+      ->fields('sp', ['value'])
+      ->condition('sp.stock_id', $stock_id, '=')
+      ->condition('sp.type_id', 11, '=');
+    $sp_six_institute_name_record = $sp_six_institute_name->execute()->fetchAll();
+    $this->assertEquals($sp_six_institute_name_record[0]->value,'Crop Development Center, University of Saskatchewan', "The selected stockprop value for institute name does not match what was inserted.");
+    
+    // Now add some new properties for the same stock_id
+    $new_stock_props = [
+      'biological_status_of_accession_code' => 500, // New value
+      'breeding_method_DbId' => 'Breeder line', // New value
+      'pedigree' => '1049F^3/819-5R' // Old value
+    ];
+    $new_sp_count = count($new_stock_props);
+    // 2 should be added to the stockprop table, 1 should not
+    $total_expected_sp_count = $sp_six_count + $new_sp_count - 1;
+    
+    $this->importer->loadStockProperties($stock_id, $new_stock_props);
+    $sp_eight_count = $this->connection->select('1:stockprop', 'sp')
+      ->condition('sp.stock_id', $stock_id, '=')
+      ->countQuery()->execute()->fetchField();
+    $this->assertEquals($sp_eight_count, $total_expected_sp_count, "The row count of the stockprop table after inserting 2 additional values is not correct.");
 
+    // Select one of our new properties and compare the ranks
+    $sp_eight_breeding_method_DbId = $this->connection->select('1:stockprop', 'sp')
+      ->fields('sp', ['value', 'rank'])
+      ->condition('sp.stock_id', $stock_id, '=')
+      ->condition('sp.type_id', 14, '=');
+    $sp_eight_breeding_method_DbId_record = $sp_eight_breeding_method_DbId->execute()->fetchAll();
+    $first_value = $sp_eight_breeding_method_DbId_record[0]->value;
+    $this->assertEquals($first_value,'Recurrent selection', "The selected stockprop value for the first breeding_method_db_id does not match what was inserted.");
+    $second_value = $sp_eight_breeding_method_DbId_record[1]->value;
+    $this->assertEquals($second_value,'Breeder line', "The selected stockprop value for the second breeding_method_db_id does not match what was inserted.");
+    
+    $first_rank = $sp_eight_breeding_method_DbId_record[0]->rank;
+    $second_rank = $sp_eight_breeding_method_DbId_record[1]->rank;
+    $this->assertGreaterThan($first_rank, $second_rank, "The rank of the second inserted stockprop for breeding_method_db_id is not greater than the first one.");
+
+    // Ensure only one record is retrieved for pedigree since the second array
+    // contained an identical value for it
+    $sp_eight_pedigree_count = $this->connection->select('1:stockprop', 'sp')
+      ->condition('sp.stock_id', $stock_id, '=')
+      ->condition('sp.type_id', 15, '=')
+      ->countQuery()->execute()->fetchField();
+    $this->assertEquals($sp_eight_pedigree_count, 1, "The number of records for stockprop pedigree is not 1.");
   }
 }
