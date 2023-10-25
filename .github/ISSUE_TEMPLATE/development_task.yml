@@ -1,0 +1,41 @@
+name: Development Task
+description: MODULE DEVELOPERS ONLY These issues describe development tasks for the module.
+title: "G[groupNo].[issueNo] "
+body:
+  - type: input
+    id: branch
+    attributes:
+      label: Branch
+      description: This is the name of the branch that development will occur in. You will need to edit this issue to add in the issue number.
+      value: g[groupNo].[issueNo]-[shortDescriptor]
+  - type: dropdown
+    id: group
+    attributes:
+      label: Groups
+      description: Select the relevant groups applying to this task. Also remember to select the labels mapping to these groups.
+      multiple: true
+      options:
+        - "Group 0 - General"
+        - "Group 1 - Content Types | Ontology | Fields"
+        - "Group 2 - Data Importing"
+        - "Group 3 - Search | Browse | Tools"
+        - "Group 4 - API | Services | Plugins"
+        - "Group 5 | Automated Testing | Performance"
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe
+      placeholder: |
+        Describe the task fully here. This should include the following as applicable:
+          - description of the task to be carried out including goal/purpose
+          - link to Tripal 3 code
+          - if developing a service or plugin then describe what code will call it
+    validations:
+      required: true
+  - type: textarea
+    id: design
+    attributes:
+      label: Design
+      placeholder: Describe the class name and methods in detail here if applicable. For methods, think of writing the docblock now before writing any code.
+    validations:
+      required: true
