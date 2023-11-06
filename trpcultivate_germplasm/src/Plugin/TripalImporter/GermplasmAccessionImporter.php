@@ -118,7 +118,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       'Biological Status of Accession' => 'The 3 digit code representing the biological status of the accession (e.g. 410)',
       'Breeding Method' => 'The unique identifier for the breeding method used to create this germplasm (e.g. "Recurrent selection")',
       'Pedigree' => 'The cross name and optional selection history (e.g. 1049F^3/819-5R)',
-      'Synonyms' => 'Any synonyms of the accession. (e.g. Redberry)',
+      'Synonyms' => 'Any synonyms of the accession, separated by a comma. (e.g. Redberry)',
     ];
 
     $required_col = ['Germplasm Name', 'External Database', 'Accession Number', 'Germplasm Species'];
@@ -288,10 +288,10 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
 
         // STEP 4: Load stock properties
         $load_props = $this->loadStockProperties($stock_id, $stock_properties);
+
+        // STEP 5: Load synonyms
+        $load_synonyms = $this->loadSynonyms($stock_id, $synonyms);
       }
-
-      // STEP 5: Load synonyms
-
     }
   }
 
@@ -614,6 +614,44 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
         $this->logger->error("Unable to retrieve the cvterm_id of property \"@property\"", ['@property' => $property]);
         $this->error_tracker = TRUE;
         return false;
+      }
+    }
+  }
+
+  /**
+   * Loads each synonym into the chado.stock_synonym table
+   * Returns true if the insert was successful.
+   *
+   * @param int $stock_id
+   *   The value of the primary key for the stock record in Chado.
+   * @param string $stock_properties
+   *   The name that is a synonym of the current germplasm. Multiple
+   *   synonyms may be specified, in which case they are expected to
+   *   be separated using a comma or semicolon.
+   * @return boolean
+   *   Returns true if inserting all the properties was successful,
+   *   including if there are no properties
+   */
+  public function loadSynonyms($stock_id, $synonyms) {
+    // First check if we a synonym to deal with
+    if ($synonyms) {
+      // Separate out multiple synonyms if we have them by either 
+      // semicolons or commas. Whitespace is optional
+      $all_synonyms = preg_split("/[;,]\s*/", $synonyms);
+
+      foreach ($all_synonyms as $synonym) {
+        $synonym = trim($synonym);
+        $synonym_type_id = $this->getCVterm('synonym');
+
+        // Check for and load any synonyms to chado.synonym
+        $synonym_query = $this->connection->select('1:synonym', 's')
+          ->fields('s', ['synonym_id'])
+          ->condition('s.name', $synonym, '=')
+          ->condition('s.type_id', $synonym_type_id, '=');
+        $stockprop_record = $synonym_query->execute()->fetchAll();
+
+        // Make sure there aren't 2 or more records for this synonym
+        
       }
     }
   }

@@ -91,6 +91,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     $this->importer->setCVterm('biological_status_of_accession_code', 13);
     $this->importer->setCVterm('breeding_method_DbId', 14);
     $this->importer->setCVterm('pedigree', 15);
+    $this->importer->setCVterm('synonym', 16);
   }
 
 	/**
@@ -366,7 +367,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
    *
    * @group germ_accession_importer
    */
-  public function testGermplasmAccessionImporterloadStockProperties() {
+  public function testGermplasmAccessionImporterLoadStockProperties() {
     // Insert an organism
     $subtaxa_cvterm_id = $this->getCVtermID('TAXRANK', '0000023');
 
@@ -474,5 +475,47 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
       ->condition('sp.type_id', 15, '=')
       ->countQuery()->execute()->fetchField();
     $this->assertEquals($sp_eight_pedigree_count, 1, "The number of records for stockprop pedigree is not 1.");
+  }
+
+  /**
+   * Tests focusing on the Germplasm Accession Importer loadSynonyms() function
+   *
+   * @group germ_accession_importer
+   */
+  public function testGermplasmAccessionImporterLoadSynonyms() {
+
+    // Insert an organism
+    $subtaxa_cvterm_id = $this->getCVtermID('TAXRANK', '0000023');
+
+    $organism_id = $this->connection->insert('1:organism')
+      ->fields([
+        'genus' => 'Tripalus',
+        'species' => 'databasica',
+        'infraspecific_name' => 'chadoii',
+        'type_id' => $subtaxa_cvterm_id,
+      ])
+      ->execute();
+
+    // Insert a stock
+    $stock_id = $this->connection->insert('1:stock')
+      ->fields([
+        'organism_id' => $organism_id,
+        'name' => 'stock1',
+        'uniquename' => 'TEST:1',
+        'type_id' => 9,
+      ])
+      ->execute();
+
+    // Attempt to load an empty string (ie. an empty column in the file)
+    $stock1_synonym = '';
+    $this->importer->loadSynonyms($stock_id, $stock1_synonym);
+
+    // Make sure no synonyms were entered
+    $synonym_empty_count = $this->connection->select('1:synonym', 's')
+      ->fields('s', ['name'])
+      ->condition('s.name', $stock1_synonym, '=')
+      ->countQuery()->execute()->fetchField();
+
+    $this->assertEquals($synonym_empty_count, 0, "The number of record in the synonym table is not zero despite trying to add an empty string.");
   }
 }
