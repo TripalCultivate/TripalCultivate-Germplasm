@@ -141,7 +141,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
 
   /**
    * Set a cvterm with its cvterm_id
-   * 
+   *
    * @param string $key
    *   A key used in the config settings.yml
    * @param int $cvterm_id
@@ -154,10 +154,10 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
 
   /**
    * Get a cvterm ID, given a key that maps to the config settings.yml
-   * 
+   *
    * @param string $key
    *   The cvterm name
-   * @return int 
+   * @return int
    *   The cvterm ID
    */
   public function getCVterm($key) {
@@ -561,10 +561,10 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
           $maxrank = 0;
           foreach ($stockprop_record as $record) {
             $found = false;
-            if ($record->value == $prop_value) { 
-              $found = true; 
+            if ($record->value == $prop_value) {
+              $found = true;
               break;
-            } 
+            }
             else {
               $rank = $record->rank;
               if ($rank > $maxrank) { $maxrank = $rank; }
@@ -633,9 +633,9 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
    *   including if there are no properties
    */
   public function loadSynonyms($stock_id, $synonyms) {
-    // First check if we a synonym to deal with
+
     if ($synonyms) {
-      // Separate out multiple synonyms if we have them by either 
+      // Separate out multiple synonyms if we have them by either
       // semicolons or commas. Whitespace is optional
       $all_synonyms = preg_split("/[;,]\s*/", $synonyms);
 
@@ -648,10 +648,41 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
           ->fields('s', ['synonym_id'])
           ->condition('s.name', $synonym, '=')
           ->condition('s.type_id', $synonym_type_id, '=');
-        $stockprop_record = $synonym_query->execute()->fetchAll();
+        $synonym_record = $synonym_query->execute()->fetchAll();
 
         // Make sure there aren't 2 or more records for this synonym
-        
+        if (sizeof($synonym_record) >= 2) {
+          $this->logger->error("Found more than one synonym for \"@synonym\" in chado.synonym.", ['@synonym' => $synonym]);
+          $this->error_tracker = TRUE;
+          return false;
+        }
+        elseif (sizeof($synonym_record) == 1) {
+          $synonym_id = $synonym_record[0]->synonym_id;
+        }
+        // Can't find a synonym in the chado.synonym table, so insert it
+        else {
+          $values = [
+            'name' => $synonym,
+            'type_id' => $synonym_type_id,
+          ];
+          $result = $this->connection->insert('1:synonym')
+            ->fields($values)
+            ->execute();
+
+          // If the primary key is not available, then the insert failed
+          if (!$result) {
+            $this->logger->error("Insertion of \"@synonym\" into chado.synonym failed.", ['@synonym' => $synonym]);
+            $this->error_tracker = TRUE;
+            return false;
+          }
+          else {
+            $synonym_id = $result;
+          }
+        }
+        // ------------------------------------------------------------------------
+        // Create a synonym-stock relationship via chado.stock_synonym
+        // ------------------------------------------------------------------------
+
       }
     }
   }
