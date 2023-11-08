@@ -401,7 +401,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
       'pedigree' => $empty_string
     ];
 
-    // "Load" our empty values and check that the stockprop table is empty 
+    // "Load" our empty values and check that the stockprop table is empty
     // before and after
     $sp_initial_count = $this->connection->select('1:stockprop', 'sp')
       ->condition('sp.stock_id', $stock_id, '=')
@@ -436,7 +436,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
       ->condition('sp.type_id', 11, '=');
     $sp_six_institute_name_record = $sp_six_institute_name->execute()->fetchAll();
     $this->assertEquals($sp_six_institute_name_record[0]->value,'Crop Development Center, University of Saskatchewan', "The selected stockprop value for institute name does not match what was inserted.");
-    
+
     // Now add some new properties for the same stock_id
     $new_stock_props = [
       'biological_status_of_accession_code' => 500, // New value
@@ -446,7 +446,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     $new_sp_count = count($new_stock_props);
     // 2 should be added to the stockprop table, 1 should not
     $total_expected_sp_count = $sp_six_count + $new_sp_count - 1;
-    
+
     $this->importer->loadStockProperties($stock_id, $new_stock_props);
     $sp_eight_count = $this->connection->select('1:stockprop', 'sp')
       ->condition('sp.stock_id', $stock_id, '=')
@@ -463,7 +463,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     $this->assertEquals($first_value,'Recurrent selection', "The selected stockprop value for the first breeding_method_db_id does not match what was inserted.");
     $second_value = $sp_eight_breeding_method_DbId_record[1]->value;
     $this->assertEquals($second_value,'Breeder line', "The selected stockprop value for the second breeding_method_db_id does not match what was inserted.");
-    
+
     $first_rank = $sp_eight_breeding_method_DbId_record[0]->rank;
     $second_rank = $sp_eight_breeding_method_DbId_record[1]->rank;
     $this->assertGreaterThan($first_rank, $second_rank, "The rank of the second inserted stockprop for breeding_method_db_id is not greater than the first one.");
@@ -517,5 +517,9 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
       ->countQuery()->execute()->fetchField();
 
     $this->assertEquals($synonym_empty_count, 0, "The number of record in the synonym table is not zero despite trying to add an empty string.");
+
+    // Now attempt to load a single synonym
+    $stock1_synonym = 's1';
+    $this->importer->loadSynonyms($stock_id, $stock1_synonym);
   }
 }

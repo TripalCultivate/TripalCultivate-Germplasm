@@ -682,7 +682,36 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
         // ------------------------------------------------------------------------
         // Create a synonym-stock relationship via chado.stock_synonym
         // ------------------------------------------------------------------------
+        // First check if this stock-synonym relationship already exists
+        $synonym_stock_query = $this->connection->select('1:stock_synonym', 'ss')
+          ->fields('ss', ['stock_synonym_id'])
+          ->condition('ss.synonym_id', $synonym_id, '=')
+          ->condition('ss.stock_id', $stock_id, '=');
+        $synonym_stock_record = $synonym_stock_query->execute()->fetchAll();
 
+        // Make sure there aren't 2 or more records
+        if (sizeof($synonym_stock_record) >= 2) {
+          $this->logger->error("Found more than one stock-synonym relationship for stock ID \"@stock\" and synonym \"@synonym\" in chado.stock_synonym.", ['@stock' => $stock_id, '@synonym' => $synonym]);
+          $this->error_tracker = TRUE;
+          return false;
+        }
+        elseif (sizeof($synonym_stock_record) == 0) {
+          $values = [
+              'synonym_id' => $synonym_id,
+              'stock_id'=> $stock_id,
+              'pub_id'=> '1', // Set to the NULL publication and hopefully someone will update it later :)
+          ];
+          $result = $this->connection->insert('1:stock_synonym')
+            ->fields($values)
+            ->execute();
+
+          // If the primary key is not available, then the insert failed
+          if (!$result) {
+            $this->logger->error("Insertion of stock ID \"@stock\" and synonym \"@synonym\" into chado.stock_synonym failed.", ['@stock' => $stock_id, '@synonym' => $synonym]);
+            $this->error_tracker = TRUE;
+            return false;
+          }
+        }
       }
     }
   }
