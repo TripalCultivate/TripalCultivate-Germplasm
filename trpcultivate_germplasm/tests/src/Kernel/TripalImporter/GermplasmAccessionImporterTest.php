@@ -55,6 +55,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     // ... Finally the file module + tables itself.
     $this->installEntitySchema('file');
     $this->installSchema('file', ['file_usage']);
+    $this->installSchema('tripal_chado', ['tripal_custom_tables']);
 
     // We need to mock the logger to test the progress reporting.
     $container = \Drupal::getContainer();
@@ -477,12 +478,89 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     $this->assertEquals($sp_eight_pedigree_count, 1, "The number of records for stockprop pedigree is not 1.");
   }
 
+  public function createStockSynonymTable() {
+    $table = 'stock_synonym';
+    $schema = [
+      'table' => 'stock_synonym',
+      'description' => 'Linking table between stock and synonym.',
+      'fields' => [
+        'stock_synonym_id' => [
+          'type' => 'serial',
+          'not null' => TRUE,
+        ],
+        'synonym_id' => [
+          'size' => 'big',
+          'type' => 'int',
+          'not null' => TRUE,
+        ],
+        'stock_id' => [
+          'size' => 'big',
+          'type' => 'int',
+          'not null' => TRUE,
+        ],
+        'pub_id' => [
+          'size' => 'big',
+          'type' => 'int',
+          'not null' => TRUE,
+        ],
+        'is_current' => [
+          'type' => 'int',
+          'default' => 0,
+        ],
+        'is_internal' => [
+          'type' => 'int',
+          'default' => 0,
+        ],
+      ],
+      'primary key' => [
+        'stock_synonym_id',
+      ],
+      'indexes' => [
+        'stock_synonym_idx1' => [
+          0 => 'synonym_id',
+        ],
+        'stock_synonym_idx2' => [
+          0 => 'stock_id',
+        ],
+        'stock_synonym_idx3' => [
+          0 => 'pub_id',
+        ],
+      ],
+      'foreign keys' => [
+        'synonym' => [
+          'table' => 'synonym',
+          'columns' => [
+            'synonym_id' => 'synonym_id',
+          ],
+        ],
+        'stock' => [
+          'table' => 'stock',
+          'columns' => [
+            'stock_id' => 'stock_id',
+          ],
+        ],
+        'pub' => [
+          'table' => 'pub',
+          'columns' => [
+            'pub_id' => 'pub_id',
+          ],
+        ],
+      ],
+    ];
+
+    $custom_tables = \Drupal::service('tripal_chado.custom_tables');
+    $custom_table = $custom_tables->create($table, $this->connection->getSchemaName());
+    $custom_table->setTableSchema($schema);
+  }
+
   /**
    * Tests focusing on the Germplasm Accession Importer loadSynonyms() function
    *
    * @group germ_accession_importer
    */
   public function testGermplasmAccessionImporterLoadSynonyms() {
+
+    $this->createStockSynonymTable();
 
     // Insert an organism
     $subtaxa_cvterm_id = $this->getCVtermID('TAXRANK', '0000023');
@@ -508,7 +586,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
 
     // Attempt to load an empty string (ie. an empty column in the file)
     $stock1_synonym = '';
-    $this->importer->loadSynonyms($stock_id, $stock1_synonym);
+    $this->importer->loadSynonyms($stock_id, $stock1_synonym, $organism_id);
 
     // Make sure no synonyms were entered
     $synonym_empty_count = $this->connection->select('1:synonym', 's')
@@ -518,8 +596,49 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
 
     $this->assertEquals($synonym_empty_count, 0, "The number of record in the synonym table is not zero despite trying to add an empty string.");
 
-    // Now attempt to load a single synonym
+    // ------------------------------------------------------------------------
+    // Load a single synonym
     $stock1_synonym = 's1';
-    $this->importer->loadSynonyms($stock_id, $stock1_synonym);
+    $this->importer->loadSynonyms($stock_id, $stock1_synonym, $organism_id);
+
+    // STEP 1: Check the synonym table
+    $stock1_synonym_query = $this->connection->select('1:synonym', 's')
+      ->fields('s', ['synonym_id', 'name'])
+      ->condition('s.name', $stock1_synonym, '=');
+    $stock1_synonym_record = $stock1_synonym_query->execute()->fetchAll();
+
+    $this->assertEquals($stock1_synonym_record[0]->name, $stock1_synonym, "The selected synonym in the synonym table does not match what was just inserted.");
+
+    // STEP 2: Check the stock_synonym table
+    // Grab the synonym_id to pull it out of the stock_synonym table
+    $s1_synonym_id = $stock1_synonym_record[0]->synonym_id;
+
+    $stock1_stock_synonym_query = $this->connection->select('1:stock_synonym', 'ss')
+      ->fields('ss', ['stock_id', 'synonym_id'])
+      ->condition('ss.synonym_id', $s1_synonym_id, '=');
+    $stock1_stock_synonym_record = $stock1_stock_synonym_query->execute()->fetchAll();
+
+    $this->assertEquals($stock1_stock_synonym_record[0]->stock_id, $stock_id, "The synonym s1 in the stock_synonym table does not contain the correct stock_id.");
+
+    // STEP 3: Check the stock_relationship table
+    // $stock1_stock_relationship_count = $this->connection->select('1:stock_relationship', 'sr')
+    //   ->fields('sr', ['subject_id', 'object_id'])
+    //   ->condition('sr.subject_id', $s1_synonym_id, '=')
+    //   ->condition('sr.object_id', $stock_id, '=')
+    //   ->countQuery()->execute()->fetchField();
+
+    // $this->assertEquals($stock1_stock_relationship_count, 1, "A stock_relationship was not created for stock1 and its synonym, s1.");
+    // ------------------------------------------------------------------------
+
+    // Attempt to insert another synonym for stock1
+    $stock1_synonym_2 = 's1_2';
+    $this->importer->loadSynonyms($stock_id, $stock1_synonym_2, $organism_id);
+
+    $stock1_synonym_2_query = $this->connection->select('1:synonym', 's')
+      ->fields('s', ['name'])
+      ->condition('s.name', $stock1_synonym_2, '=');
+    $stock1_synonym_2_record = $stock1_synonym_2_query->execute()->fetchAll();
+
+    $this->assertEquals($stock1_synonym_2_record[0]->name, $stock1_synonym_2, "The second synonym added to the synonym table does not match what was just inserted.");
   }
 }

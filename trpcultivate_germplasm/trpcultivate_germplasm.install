@@ -86,12 +86,11 @@ function trpcultivate_germplasm_enable(){
         ],
       ],
     ],
-  );
+  ];
 
   $custom_tables = \Drupal::service('tripal_chado.custom_tables');
   $custom_table = $custom_tables->create($table, $this->chado_schema_main);
   $custom_table->setTableSchema($schema);
-  $custom_table->setHidden(True);
 
   // Relationship verb and Default db set to 0, frontend will notify user
   // to configure these variables before any upload.
