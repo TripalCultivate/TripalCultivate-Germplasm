@@ -61,11 +61,10 @@ maintainability issues and test coverage.
 
 The following compatibility is proven via automated testing workflows.
 
-| Drupal      | 9.4.x           | 9.5.x           | 10.0.x          | 10.1.x          |
-|-------------|-----------------|-----------------|-----------------|-----------------|
-| **PHP 8.0** | ![Grid1A-Badge] | ![Grid1B-Badge] |                 |                 |
-| **PHP 8.1** | ![Grid2A-Badge] | ![Grid2B-Badge] | ![Grid2C-Badge] | ![Grid2D-Badge] |
-| **PHP 8.2** |                 |                 | ![Grid3C-Badge] | ![Grid3D-Badge] |
+| Drupal      | 10.0.x          | 10.1.x          |
+|-------------|-----------------|-----------------|
+| **PHP 8.1** | ![Grid1A-Badge] | ![Grid1B-Badge] |
+| **PHP 8.2** | ![Grid2A-Badge] | ![Grid2B-Badge] |
 
 [our CodeClimate project page]: https://codeclimate.com/github/TripalCultivate/TripalCultivate-Germplasm
 [MaintainabilityBadge]: https://api.codeclimate.com/v1/badges/0619dcf991bd5e5114fb/maintainability
@@ -76,8 +75,3 @@ The following compatibility is proven via automated testing workflows.
 
 [Grid2A-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-Grid2A.yml/badge.svg
 [Grid2B-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-Grid2B.yml/badge.svg
-[Grid2C-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-Grid2C.yml/badge.svg
-[Grid2D-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-Grid2D.yml/badge.svg
-
-[Grid3C-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-Grid3C.yml/badge.svg
-[Grid3D-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-Grid3D.yml/badge.svg
