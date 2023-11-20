@@ -230,6 +230,8 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     $this->setCVterm('biological_status_of_accession_code', $germplasm_config->get('terms.biological_status_of_accession_code'));
     $this->setCVterm('breeding_method_DbId', $germplasm_config->get('terms.breeding_method_DbId'));
     $this->setCVterm('pedigree', $germplasm_config->get('terms.pedigree'));
+    $this->setCVterm('synonym', $germplasm_config->get('terms.synonym'));
+    $this->setCVterm('stock_relationship_type_synonym', $germplasm_config->get('terms.stock_relationship_type_synonym'));
 
     // Set up the ability to track progress so we can report it to the user
     $filesize = filesize($file_path);
@@ -714,11 +716,13 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
             return false;
           }
         }
+
         // ------------------------------------------------------------------------
         // Lastly, check if our synonym is in the stock table. If yes, THEN create 
         // a stock_relationship to connect this stock_id to the synonym. 
-        // NOTE: Lookup the type_id for relationship in schema:alternateName
         // ------------------------------------------------------------------------
+        $stock_relationship_type_id = $this->getCVterm('stock_relationship_type_synonym');
+
         $stock_query = $this->connection->select('1:stock', 'st')
           ->fields('st', ['stock_id'])
           ->condition('st.name', $synonym, '=')
@@ -732,19 +736,30 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
           return false;
         }
         elseif (sizeof($stock_record) == 1) {
-          $stock_id_of_synonym = $synonym_record[0]->synonym_id;
-          /**
+          $stock_id_of_synonym = $stock_record[0]->stock_id;
           $values = [
             'subject_id' => $stock_id_of_synonym,
             'type_id' => $stock_relationship_type_id,
             'object_id' => $stock_id
           ];
-          $result = $this->connection->insert('1:synonym')
+          $result = $this->connection->insert('1:stock_relationship')
             ->fields($values)
             ->execute();
-          */
+          
+          // If the primary key is not available, then the insert failed
+          if (!$result) {
+            $this->logger->error("Insertion of stock ID \"@stock\" and stock ID of its synonym \"@sid_synonym\" into chado.stock_relationship failed.", ['@stock' => $stock_id, '@sid_synonym' => $stock_id_of_synonym]);
+            $this->error_tracker = TRUE;
+            return false;
+          }
+        }
+        else {
+          $this->logger->notice("Synonym \"@synonym\" was not found in the stock table, so no stock_relationship was made with stock ID \"@stock\".", ['@synonym' => $synonym, '@stock' => $stock_id]);
         }
       }
+      // Cycled through all the synonyms by this point, and if false hasn't been 
+      // returned, then return true
+      return true;
     }
   }
   /*

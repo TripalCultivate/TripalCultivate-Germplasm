@@ -42,3 +42,6 @@ trpcultivate_germplasm.settings:
         subtaxa:
           type: integer
           label: 'The cvterm ID of the subtaxa of a germplasm'
+        stock_relationship_type_synonym:
+          type: integer
+          label: 'The cvterm ID of the stock_relationship synonym'

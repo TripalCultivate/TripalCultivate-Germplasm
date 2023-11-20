@@ -93,6 +93,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     $this->importer->setCVterm('breeding_method_DbId', 14);
     $this->importer->setCVterm('pedigree', 15);
     $this->importer->setCVterm('synonym', 16);
+    $this->importer->setCVterm('stock_relationship_type_synonym', 17);
   }
 
 	/**
@@ -585,29 +586,31 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
       ->execute();
 
     // Attempt to load an empty string (ie. an empty column in the file)
-    $stock1_synonym = '';
-    $this->importer->loadSynonyms($stock_id, $stock1_synonym, $organism_id);
+    $stock1_synonym_empty = '';
+    $this->importer->loadSynonyms($stock_id, $stock1_synonym_empty, $organism_id);
 
     // Make sure no synonyms were entered
     $synonym_empty_count = $this->connection->select('1:synonym', 's')
       ->fields('s', ['name'])
-      ->condition('s.name', $stock1_synonym, '=')
+      ->condition('s.name', $stock1_synonym_empty, '=')
       ->countQuery()->execute()->fetchField();
 
     $this->assertEquals($synonym_empty_count, 0, "The number of record in the synonym table is not zero despite trying to add an empty string.");
 
     // ------------------------------------------------------------------------
     // Load a single synonym
-    $stock1_synonym = 's1';
-    $this->importer->loadSynonyms($stock_id, $stock1_synonym, $organism_id);
+    $stock1_synonym_1 = 's1';
+    ob_start();
+    $this->importer->loadSynonyms($stock_id, $stock1_synonym_1, $organism_id);
+    $printed_output = ob_get_clean();
 
     // STEP 1: Check the synonym table
     $stock1_synonym_query = $this->connection->select('1:synonym', 's')
       ->fields('s', ['synonym_id', 'name'])
-      ->condition('s.name', $stock1_synonym, '=');
+      ->condition('s.name', $stock1_synonym_1, '=');
     $stock1_synonym_record = $stock1_synonym_query->execute()->fetchAll();
 
-    $this->assertEquals($stock1_synonym_record[0]->name, $stock1_synonym, "The selected synonym in the synonym table does not match what was just inserted.");
+    $this->assertEquals($stock1_synonym_record[0]->name, $stock1_synonym_1, "The selected synonym in the synonym table does not match what was just inserted.");
 
     // STEP 2: Check the stock_synonym table
     // Grab the synonym_id to pull it out of the stock_synonym table
@@ -620,25 +623,58 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
 
     $this->assertEquals($stock1_stock_synonym_record[0]->stock_id, $stock_id, "The synonym s1 in the stock_synonym table does not contain the correct stock_id.");
 
-    // STEP 3: Check the stock_relationship table
-    // $stock1_stock_relationship_count = $this->connection->select('1:stock_relationship', 'sr')
-    //   ->fields('sr', ['subject_id', 'object_id'])
-    //   ->condition('sr.subject_id', $s1_synonym_id, '=')
-    //   ->condition('sr.object_id', $stock_id, '=')
-    //   ->countQuery()->execute()->fetchField();
+    // STEP 3: Check the stock_relationship table. We expect to have 0 records
+    // since the stock_relationship only gets created if the synonym itself is 
+    // in the stock table
+    $stock1_stock_relationship_count = $this->connection->select('1:stock_relationship', 'sr')
+      ->fields('sr', ['subject_id', 'object_id'])
+      ->condition('sr.subject_id', $s1_synonym_id, '=')
+      ->condition('sr.object_id', $stock_id, '=')
+      ->countQuery()->execute()->fetchField();
 
-    // $this->assertEquals($stock1_stock_relationship_count, 1, "A stock_relationship was not created for stock1 and its synonym, s1.");
+    $this->assertEquals($stock1_stock_relationship_count, 0, "Did not expect for one or more stock_relationships to be present in the stock_relationship table.");
+
+    // We can also check the output of our command as we expect a notice to be given
+    $this->assertTrue($printed_output == 'Synonym "s1" was not found in the stock table, so no stock_relationship was made with stock ID "1".', "Did not get the expected notice message when adding a synonym that does not exist in the stock table.");
     // ------------------------------------------------------------------------
 
-    // Attempt to insert another synonym for stock1
+    // Attempt to insert another synonym for stock1. This time, also add the
+    // synonym to the stock table and confirm that we have a stock_relationship
     $stock1_synonym_2 = 's1_2';
+    $stock_id_of_synonym = $this->connection->insert('1:stock')
+    ->fields([
+      'organism_id' => $organism_id,
+      'name' => $stock1_synonym_2,
+      'uniquename' => 'TEST:2',
+      'type_id' => 9,
+    ])
+    ->execute();
+
     $this->importer->loadSynonyms($stock_id, $stock1_synonym_2, $organism_id);
 
+    // Make sure this synonym was added to chado.synonym
     $stock1_synonym_2_query = $this->connection->select('1:synonym', 's')
       ->fields('s', ['name'])
       ->condition('s.name', $stock1_synonym_2, '=');
     $stock1_synonym_2_record = $stock1_synonym_2_query->execute()->fetchAll();
 
     $this->assertEquals($stock1_synonym_2_record[0]->name, $stock1_synonym_2, "The second synonym added to the synonym table does not match what was just inserted.");
+
+    // Check that we now have 2 records in chado.stock_synonym
+    $stock_synonym_count = $this->connection->select('1:stock_synonym', 'ss')
+      ->fields('ss', ['stock_synonym_id'])
+      ->countQuery()->execute()->fetchField();
+    
+    $this->assertEquals($stock_synonym_count, 2, "The stock_synonym table does not contain the expected 2 records.");
+
+    // Check that we have exactly 1 record in the stock_relationship table now
+    $stock1_stock_relationship_synonym2_count = $this->connection->select('1:stock_relationship', 'sr')
+      ->fields('sr', ['subject_id', 'object_id'])
+      ->condition('sr.subject_id', $stock_id_of_synonym, '=')
+      ->condition('sr.object_id', $stock_id, '=')
+      ->condition('sr.type_id', $this->importer->getCVterm('stock_relationship_type_synonym', '='))
+      ->countQuery()->execute()->fetchField();
+
+    $this->assertEquals($stock1_stock_relationship_synonym2_count, 1, "Did not count the expected single stock_relationship between stock1 and its 2nd synonym, s1_2.");
   }
 }
