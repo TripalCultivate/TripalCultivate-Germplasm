@@ -624,7 +624,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     $this->assertEquals($stock1_stock_synonym_record[0]->stock_id, $stock_id, "The synonym s1 in the stock_synonym table does not contain the correct stock_id.");
 
     // STEP 3: Check the stock_relationship table. We expect to have 0 records
-    // since the stock_relationship only gets created if the synonym itself is 
+    // since the stock_relationship only gets created if the synonym itself is
     // in the stock table
     $stock1_stock_relationship_count = $this->connection->select('1:stock_relationship', 'sr')
       ->fields('sr', ['subject_id', 'object_id'])
@@ -664,7 +664,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     $stock_synonym_count = $this->connection->select('1:stock_synonym', 'ss')
       ->fields('ss', ['stock_synonym_id'])
       ->countQuery()->execute()->fetchField();
-    
+
     $this->assertEquals($stock_synonym_count, 2, "The stock_synonym table does not contain the expected 2 records.");
 
     // Check that we have exactly 1 record in the stock_relationship table now
@@ -676,5 +676,66 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
       ->countQuery()->execute()->fetchField();
 
     $this->assertEquals($stock1_stock_relationship_synonym2_count, 1, "Did not count the expected single stock_relationship between stock1 and its 2nd synonym, s1_2.");
+
+    // Add a comma separated list of synonyms
+    $stock_comma = 'stock-comma';
+    $stock_comma_id = $this->connection->insert('1:stock')
+    ->fields([
+      'organism_id' => $organism_id,
+      'name' => $stock_comma,
+      'uniquename' => 'TEST:3',
+      'type_id' => 9,
+    ])
+    ->execute();
+
+    $synonyms_comma = 'syn1, syn2';
+    $syn1 = 'syn1';
+    $syn2 = 'syn2';
+    ob_start();
+    $this->importer->loadSynonyms($stock_comma_id, $synonyms_comma, $organism_id);
+    ob_end_clean();
+
+    // Check both synonyms are in chado.synonym
+    $synonyms_comma_query = $this->connection->select('1:synonym', 's')
+      ->fields('s', ['name']);
+    $group = $synonyms_comma_query->orConditionGroup()
+      ->condition('s.name', $syn1, '=')
+      ->condition('s.name', $syn2, '=');
+    $synonyms_comma_query->condition($group);
+    $synonyms_comma_record = $synonyms_comma_query->execute()->fetchAll();
+
+    $this->assertEquals($synonyms_comma_record[0]->name, $syn1, "The synonym table does not contain the expected synonym syn1");
+    $this->assertEquals($synonyms_comma_record[1]->name, $syn2, "The synonym table does not contain the expected synonym syn2");
+
+    // Add a semicolon separated list of synonyms
+    $stock_semicolon = 'stock-semicolon';
+    $stock_semicolon_id = $this->connection->insert('1:stock')
+    ->fields([
+      'organism_id' => $organism_id,
+      'name' => $stock_semicolon,
+      'uniquename' => 'TEST:4',
+      'type_id' => 9,
+    ])
+    ->execute();
+
+    $synonyms_semicolon = 'syn3;syn4';
+    $syn3 = 'syn3';
+    $syn4 = 'syn4';
+    ob_start();
+    $this->importer->loadSynonyms($stock_semicolon_id, $synonyms_semicolon, $organism_id);
+    ob_end_clean();
+
+    // Check both synonyms are in chado.synonym
+    $synonyms_semicolon_query = $this->connection->select('1:synonym', 's')
+      ->fields('s', ['name']);
+    $group = $synonyms_semicolon_query->orConditionGroup()
+      ->condition('s.name', $syn3, '=')
+      ->condition('s.name', $syn4, '=');
+    $synonyms_semicolon_query->condition($group);
+    $synonyms_semicolon_record = $synonyms_semicolon_query->execute()->fetchAll();
+
+    $this->assertEquals($synonyms_semicolon_record[0]->name, $syn3, "The synonym table does not contain the expected synonym syn3");
+    $this->assertEquals($synonyms_semicolon_record[1]->name, $syn4, "The synonym table does not contain the expected synonym syn4");
+
   }
 }
