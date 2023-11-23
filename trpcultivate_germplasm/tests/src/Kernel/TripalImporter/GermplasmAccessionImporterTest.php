@@ -736,6 +736,19 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
 
     $this->assertEquals($synonyms_semicolon_record[0]->name, $syn3, "The synonym table does not contain the expected synonym syn3");
     $this->assertEquals($synonyms_semicolon_record[1]->name, $syn4, "The synonym table does not contain the expected synonym syn4");
+  }
+
+  /**
+   * Tests focusing on the Germplasm Accession Importer run() function
+   *
+   * @group germ_accession_importer
+   */
+  public function testGermplasmAccessionImporterRun() {
+    
+    $simple_example_file = __DIR__ . '/../../Fixtures/simple_example.txt';
+    $this->importer->prepareFiles();
+
+    $this->importer->run();
 
   }
 }

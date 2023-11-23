@@ -1,0 +1,3 @@
+Germplasm Name  External Database   Accession Number    Germplasm Species   Germplasm Subtaxa   Institute Code  Institute Name  Country of Origin Code  Biological Status of Accession  Breeding Method Pedigree    Synonyms
+Test1   TestDB  T1  databasica  subspecies chadoii              
+Test2   TestDB  T2  databasica  subspecies chadoii              
