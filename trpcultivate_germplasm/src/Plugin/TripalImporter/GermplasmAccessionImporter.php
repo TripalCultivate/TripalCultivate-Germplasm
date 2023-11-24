@@ -208,9 +208,9 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
    * @see TripalImporter::run()
    */
   public function run(){
-    // All values provided by the user in the Importer's form widgets are
-    // made available to us here by the Class' arguments member variable.
-    $arguments = $this->arguments['run_args'];
+
+    // Grabbing our arguments from the form
+    $arguments = $this->getArguments();
 
     // The path to the uploaded file is always made available using the
     // 'files' argument. The importer can support multiple files, therefore
@@ -219,7 +219,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     $file_path = $arguments['files'][0]['file_path'];
 
     // Grab the genus name
-    $genus_name = $arguments['genus_name'];
+    $genus_name = $arguments['run_args']['genus_name'];
 
     // Set up our array of cv terms
     $germplasm_config = $this->config_factory->get('trpcultivate_germplasm.settings');
@@ -241,13 +241,17 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
 
     // Open the file and start iterating through each line
     $GERMPLASM_FILE = fopen($file_path, 'r');
+    if(!$GERMPLASM_FILE) {
+      $this->logger->error("Could not open file: @file", ['@file' => $file_path]);
+    }
+
     while (!feof($GERMPLASM_FILE)){
-      $current_line = fgetcsv($GERMPLASM_FILE, 0, "\t");
+      $current_line = fgets($GERMPLASM_FILE);
 
       // Calculate how many bytes we have read from the file and let the
       // importer know how many have been processed so it can provide a
       // progress indicator.
-      $bytes_read += drupal_strlen($current_line);
+      $bytes_read += mb_strlen($current_line);
       $this->setItemsHandled($bytes_read);
 
       // Check for empty lines, comment lines and a header line
@@ -259,22 +263,28 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       // into an array
       $current_line = trim($current_line);
       $germplasm_columns = explode("\t", $current_line);
+      $num_columns = count($germplasm_columns);
+      if (count($germplasm_columns) < 4) {
+        $this->logger->error("Insufficient number of columns detected (<4) for the current line: @current", ['@current' => $current_line]);
+        $this->error_tracker = TRUE;
+      }
 
       // Collect our values from our current line into variables
+      // Since the 1st 4 columns are required, make sure there are values there
       $germplasm_name = $germplasm_columns[0];
       $external_database = $germplasm_columns[1];
       $accession_number = $germplasm_columns[2];
       $germplasm_species = $germplasm_columns[3];
-      $germplasm_subtaxa = $germplasm_columns[4];
+      $germplasm_subtaxa = $germplasm_columns[4] ?? '';
       $stock_properties = [
-        'institute_code' => $germplasm_columns[5],
-        'institute_name' => $germplasm_columns[6],
-        'country_of_origin_code' => $germplasm_columns[7],
-        'biological_status_of_accession_code' => $germplasm_columns[8],
-        'breeding_method_DbId' => $germplasm_columns[9],
-        'pedigree' => $germplasm_columns[10]
+        'institute_code' => $germplasm_columns[5] ?? '',
+        'institute_name' => $germplasm_columns[6] ?? '',
+        'country_of_origin_code' => $germplasm_columns[7] ?? '',
+        'biological_status_of_accession_code' => $germplasm_columns[8] ?? '',
+        'breeding_method_DbId' => $germplasm_columns[9] ?? '',
+        'pedigree' => $germplasm_columns[10] ?? ''
       ];
-      $synonyms = $germplasm_columns[11];
+      $synonyms = $germplasm_columns[11] ?? '';
 
       // STEP 1: Pull out the organism ID for the current germplasm
       $organism_id = $this->getOrganismID($genus_name, $germplasm_species, $germplasm_subtaxa);
