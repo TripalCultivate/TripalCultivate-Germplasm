@@ -45,7 +45,18 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
   /**
    * An associative array of cvterms as the key and the cvterm_id as the value.
    */
-  protected $cvterms = [];
+  protected $cvterms = [
+    'accession',
+    'subtaxa',
+    'institute_code',
+    'institute_name',
+    'country_of_origin_code',
+    'biological_status_of_accession_code',
+    'breeding_method_DbId',
+    'pedigree',
+    'synonym',
+    'stock_relationship_type_synonym'
+  ];
 
   /**
    * Implements ContainerFactoryPluginInterface->create().
@@ -204,6 +215,19 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     // Nothing to validate since the genus field is set to "required".
   }
 
+  public function setUpCVterms(){
+
+    $germplasm_config = $this->config_factory->get('trpcultivate_germplasm.settings');
+    // Iterate through our cvterms
+    // If it hasn't been set before, set it now
+    foreach($this->cvterms as $term){
+      if (!isset($this->cvterms[$term])){
+        $terms_string = 'terms.' . $term;
+        $this->setCVterm($term, $germplasm_config->get($terms_string));
+      }
+    }
+  }
+
   /**
    * @see TripalImporter::run()
    */
@@ -221,23 +245,15 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     // Grab the genus name
     $genus_name = $arguments['run_args']['genus_name'];
 
-    // Set up our array of cv terms
-    $germplasm_config = $this->config_factory->get('trpcultivate_germplasm.settings');
-    $this->setCVterm('accession', $germplasm_config->get('terms.accession'));
-    $this->setCVterm('institute_code', $germplasm_config->get('terms.institute_code'));
-    $this->setCVterm('institute_name', $germplasm_config->get('terms.institute_name'));
-    $this->setCVterm('country_of_origin_code', $germplasm_config->get('terms.country_of_origin_code'));
-    $this->setCVterm('biological_status_of_accession_code', $germplasm_config->get('terms.biological_status_of_accession_code'));
-    $this->setCVterm('breeding_method_DbId', $germplasm_config->get('terms.breeding_method_DbId'));
-    $this->setCVterm('pedigree', $germplasm_config->get('terms.pedigree'));
-    $this->setCVterm('synonym', $germplasm_config->get('terms.synonym'));
-    $this->setCVterm('stock_relationship_type_synonym', $germplasm_config->get('terms.stock_relationship_type_synonym'));
+    // Make sure our CVterms are all set
+    $this->setUpCVterms(); 
 
     // Set up the ability to track progress so we can report it to the user
     $filesize = filesize($file_path);
     $this->setTotalItems($filesize);
     $this->setItemsHandled(0);
     $bytes_read = 0;
+    $line_count = 0;
 
     // Open the file and start iterating through each line
     $GERMPLASM_FILE = fopen($file_path, 'r');
@@ -247,6 +263,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
 
     while (!feof($GERMPLASM_FILE)){
       $current_line = fgets($GERMPLASM_FILE);
+      $line_count++;
 
       // Calculate how many bytes we have read from the file and let the
       // importer know how many have been processed so it can provide a
@@ -265,12 +282,19 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       $germplasm_columns = explode("\t", $current_line);
       $num_columns = count($germplasm_columns);
       if (count($germplasm_columns) < 4) {
-        $this->logger->error("Insufficient number of columns detected (<4) for the current line: @current", ['@current' => $current_line]);
+        $this->logger->error("Insufficient number of columns detected (<4) for line # @line", ['@line' => $line_count]);
         $this->error_tracker = TRUE;
       }
 
       // Collect our values from our current line into variables
       // Since the 1st 4 columns are required, make sure there are values there
+      for($i=0; $i<4; $i++) {
+        if ($germplasm_columns[$i] == '') {
+          $column = $i+1;
+          $this->logger->error("Column @column is required and cannot be empty for line # @line", ['@column' => $column, '@line' => $line_count]);
+          $this->error_tracker = TRUE;
+        }
+      }
       $germplasm_name = $germplasm_columns[0];
       $external_database = $germplasm_columns[1];
       $accession_number = $germplasm_columns[2];

@@ -110,7 +110,26 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
    */
   public function testGermplasmAccessionImporterRun() {
     
-    // Test 1: Test using a file with only the required columns
+    // Insert our organism
+    $subtaxa_cvterm_id = $this->importer->getCVterm('subtaxa');
+    $organism_id = $this->connection->insert('1:organism')
+      ->fields([
+        'genus' => 'Tripalus',
+        'species' => 'databasica',
+        'infraspecific_name' => 'chadoii',
+        'type_id' => $subtaxa_cvterm_id,
+      ])
+      ->execute();
+
+    // Insert an external db
+    $db_id = $this->connection->insert('1:db')
+    ->fields([
+      'name' => 'TestDB',
+    ])
+    ->execute();
+
+    // ----------------------------- ROUND 1 -------------------------------
+    // Test using a simple file with only the required columns
     $simple_example_file = __DIR__ . '/../../../Fixtures/simple_example.txt';
 
     $genus = 'Tripalus';
@@ -119,7 +138,42 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     
     $this->importer->createImportJob($run_args, $file_details);
     $this->importer->prepareFiles();
-    //$this->importer->run();
+    ob_start();
+    $this->importer->run();
+    $printed_output = ob_get_clean();
+    $this->assertStringContainsString('Inserting "Test2".', $printed_output, "Did not get the expected output when running the run() method during ROUND 1.");
 
+    // Now check the db for our 2 new stocks
+    $stock_query = $this->connection->select('1:stock', 's')
+      ->fields('s', ['organism_id', 'name', 'uniquename', 'type_id']);
+    $stock_record = $stock_query->execute()->fetchAll();
+
+    // Stock: Test1
+    $this->assertEquals($stock_record[0]->organism_id, $organism_id, "The inserted organism ID and the selected organism ID for stock Test1 don't match.");
+    $this->assertEquals($stock_record[0]->name, 'Test1', "The inserted stock.name and the selected name for stock Test1 don't match.");
+    $this->assertEquals($stock_record[0]->uniquename, 'T1', "The inserted stock.uniquename and the selected uniquename for stock Test1 don't match.");
+    $this->assertEquals($stock_record[0]->type_id, 9, "The inserted type_id and the selected type_id for stock Test1 don't match.");
+    // Stock: Test2
+    $this->assertEquals($stock_record[1]->organism_id, $organism_id, "The inserted organism ID and the selected organism ID for stock Test2 don't match.");
+    $this->assertEquals($stock_record[1]->name, 'Test2', "The inserted stock.name and the selected name for stock Test2 don't match.");
+    $this->assertEquals($stock_record[1]->uniquename, 'T2', "The inserted stock.uniquename and the selected uniquename for stock Test2 don't match.");
+    $this->assertEquals($stock_record[1]->type_id, 9, "The inserted type_id and the selected type_id for stock Test2 don't match.");
+
+    // Make sure that the stockprop and synonyms table are empty
+    $stockprop_count_query = $this->connection->select('1:stockprop', 'sp')
+      ->countQuery()->execute()->fetchField();
+    $this->assertEquals($stockprop_count_query, 0, "The row count of the stockprop table is not empty, despite there be no stock properties to insert during ROUND 1.");
+
+    $synonym_count_query = $this->connection->select('1:synonym', 'syn')
+      ->countQuery()->execute()->fetchField();
+    $this->assertEquals($synonym_count_query, 0, "The row count of the synonym table is not empty, despite there be no snyonyms to insert during ROUND 1.");
+    
+    // ----------------------------- ROUND 2 -------------------------------
+    // Test a file with missing required columns
+    // Also ensure lines that are empty or begin with "#" and "Germplasm"
+    // are skipped
+
+    // ----------------------------- ROUND 3 -------------------------------
+    // Test using a complex file with some/all optional columns
   }
 }
