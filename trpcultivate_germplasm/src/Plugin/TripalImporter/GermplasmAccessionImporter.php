@@ -246,12 +246,12 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     $genus_name = $arguments['run_args']['genus_name'];
 
     // Make sure our CVterms are all set
-    $this->setUpCVterms(); 
+    $this->setUpCVterms();
 
     // Set up the ability to track progress so we can report it to the user
     $filesize = filesize($file_path);
-    $this->setTotalItems($filesize);
-    $this->setItemsHandled(0);
+    //$this->setTotalItems($filesize);
+    //$this->setItemsHandled(0);
     $bytes_read = 0;
     $line_count = 0;
 
@@ -269,30 +269,35 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       // importer know how many have been processed so it can provide a
       // progress indicator.
       $bytes_read += mb_strlen($current_line);
-      $this->setItemsHandled($bytes_read);
+      //$this->setItemsHandled($bytes_read);
 
       // Check for empty lines, comment lines and a header line
-      if (empty($current_line)) continue;
-      if (preg_match('/^#/', $current_line)) continue;
-      if (preg_match('/^Germplasm/', $current_line)) continue;
-
-      // Trim the current line for trailing whitespace and split columns
-      // into an array
       $current_line = trim($current_line);
+      if ($current_line == '') continue;
+      if (preg_match('/^#/', $current_line)) continue;
+      if (preg_match('/^Germplasm/i', $current_line)) continue;
+
+      // Split our columns into an array for easier processing
       $germplasm_columns = explode("\t", $current_line);
       $num_columns = count($germplasm_columns);
       if (count($germplasm_columns) < 4) {
         $this->logger->error("Insufficient number of columns detected (<4) for line # @line", ['@line' => $line_count]);
         $this->error_tracker = TRUE;
+				// Continue to next line since we already know this will cascade into
+				// further issues
+				continue;
       }
 
       // Collect our values from our current line into variables
       // Since the 1st 4 columns are required, make sure there are values there
       for($i=0; $i<4; $i++) {
+        $column = $i+1;
         if ($germplasm_columns[$i] == '') {
-          $column = $i+1;
           $this->logger->error("Column @column is required and cannot be empty for line # @line", ['@column' => $column, '@line' => $line_count]);
           $this->error_tracker = TRUE;
+					// Continue to next line since we already know this will cascade into
+					// further issues
+					continue 2;
         }
       }
       $germplasm_name = $germplasm_columns[0];
@@ -655,7 +660,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
   }
 
   /**
-   * Loads each synonym into the chado.synonym and chado.stock_synonym 
+   * Loads each synonym into the chado.synonym and chado.stock_synonym
    * tables. Returns true if the insert was successful.
    *
    * @param int $stock_id
@@ -752,8 +757,8 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
         }
 
         // ------------------------------------------------------------------------
-        // Lastly, check if our synonym is in the stock table. If yes, THEN create 
-        // a stock_relationship to connect this stock_id to the synonym. 
+        // Lastly, check if our synonym is in the stock table. If yes, THEN create
+        // a stock_relationship to connect this stock_id to the synonym.
         // ------------------------------------------------------------------------
         $stock_relationship_type_id = $this->getCVterm('stock_relationship_type_synonym');
 
@@ -779,7 +784,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
           $result = $this->connection->insert('1:stock_relationship')
             ->fields($values)
             ->execute();
-          
+
           // If the primary key is not available, then the insert failed
           if (!$result) {
             $this->logger->error("Insertion of stock ID \"@stock\" and stock ID of its synonym \"@sid_synonym\" into chado.stock_relationship failed.", ['@stock' => $stock_id, '@sid_synonym' => $stock_id_of_synonym]);
@@ -791,7 +796,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
           $this->logger->notice("Synonym \"@synonym\" was not found in the stock table, so no stock_relationship was made with stock ID \"@stock\".", ['@synonym' => $synonym, '@stock' => $stock_id]);
         }
       }
-      // Cycled through all the synonyms by this point, and if false hasn't been 
+      // Cycled through all the synonyms by this point, and if false hasn't been
       // returned, then return true
       return true;
     }

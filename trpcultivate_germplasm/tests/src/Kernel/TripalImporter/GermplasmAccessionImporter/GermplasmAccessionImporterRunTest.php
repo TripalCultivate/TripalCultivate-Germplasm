@@ -4,7 +4,8 @@ namespace Drupal\Tests\trpcultivate_germplasm\Kernel\TripalImporter;
 
 use Drupal\Core\Url;
 use Drupal\Tests\tripal_chado\Kernel\ChadoTestKernelBase;
-use \Drupal\Tests\user\Traits\UserCreationTrait;
+use Drupal\Tests\user\Traits\UserCreationTrait;
+use Drupal\Tests\trpcultivate_germplasm\Traits\GermplasmAccessionImporterTestTrait;
 
 /**
  * Tests the functionality of the Germplasm Accession Importer.
@@ -16,6 +17,7 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
 	protected static $modules = ['system', 'user', 'file', 'tripal', 'tripal_chado', 'trpcultivate_germplasm'];
 
   use UserCreationTrait;
+  use GermplasmAccessionImporterTestTrait;
 
   protected $importer;
 
@@ -101,15 +103,10 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     $this->importer->setCVterm('pedigree', 15);
     $this->importer->setCVterm('synonym', 16);
     $this->importer->setCVterm('stock_relationship_type_synonym', 17);
-  }
-  
-  /**
-   * Tests focusing on the Germplasm Accession Importer run() function
-   *
-   * @group germ_accession_importer
-   */
-  public function testGermplasmAccessionImporterRun() {
-    
+
+    // Create the stock_synonym table
+    $this->createStockSynonymTable();
+
     // Insert our organism
     $subtaxa_cvterm_id = $this->importer->getCVterm('subtaxa');
     $organism_id = $this->connection->insert('1:organism')
@@ -128,20 +125,28 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     ])
     ->execute();
 
-    // ----------------------------- ROUND 1 -------------------------------
-    // Test using a simple file with only the required columns
+  }
+
+  /**
+   * Tests focusing on the Germplasm Accession Importer run() function
+   * using a simple example file that only populates required columns
+   *
+   * @group germ_accession_importer
+   */
+  public function testGermplasmAccessionImporterRunSimple() {
+
     $simple_example_file = __DIR__ . '/../../../Fixtures/simple_example.txt';
 
     $genus = 'Tripalus';
     $run_args = ['genus_name' => $genus];
     $file_details = ['file_local' => $simple_example_file];
-    
+
     $this->importer->createImportJob($run_args, $file_details);
     $this->importer->prepareFiles();
     ob_start();
     $this->importer->run();
     $printed_output = ob_get_clean();
-    $this->assertStringContainsString('Inserting "Test2".', $printed_output, "Did not get the expected output when running the run() method during ROUND 1.");
+    $this->assertStringContainsString('Inserting "Test2".', $printed_output, "Did not get the expected output when running the run() method on simple_example.txt.");
 
     // Now check the db for our 2 new stocks
     $stock_query = $this->connection->select('1:stock', 's')
@@ -162,18 +167,61 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     // Make sure that the stockprop and synonyms table are empty
     $stockprop_count_query = $this->connection->select('1:stockprop', 'sp')
       ->countQuery()->execute()->fetchField();
-    $this->assertEquals($stockprop_count_query, 0, "The row count of the stockprop table is not empty, despite there be no stock properties to insert during ROUND 1.");
+    $this->assertEquals($stockprop_count_query, 0, "The row count of the stockprop table is not empty, despite there be no stock properties to insert from simple_example.txt.");
 
     $synonym_count_query = $this->connection->select('1:synonym', 'syn')
       ->countQuery()->execute()->fetchField();
-    $this->assertEquals($synonym_count_query, 0, "The row count of the synonym table is not empty, despite there be no snyonyms to insert during ROUND 1.");
-    
-    // ----------------------------- ROUND 2 -------------------------------
-    // Test a file with missing required columns
-    // Also ensure lines that are empty or begin with "#" and "Germplasm"
-    // are skipped
+    $this->assertEquals($synonym_count_query, 0, "The row count of the synonym table is not empty, despite there be no syonyms to insert from simple_example.txt.");
+  }
 
-    // ----------------------------- ROUND 3 -------------------------------
-    // Test using a complex file with some/all optional columns
+  /**
+   * Tests focusing on the Germplasm Accession Importer run() function
+   * using a file where some required columns are missing
+   *
+   * @group germ_accession_importer
+   */
+  public function testGermplasmAccessionImporterRunMissing() {
+
+    $problem_example_file = __DIR__ . '/../../../Fixtures/missing_required_example.txt';
+
+    $genus = 'Tripalus';
+    $run_args = ['genus_name' => $genus];
+    $file_details = ['file_local' => $problem_example_file];
+
+    $this->importer->createImportJob($run_args, $file_details);
+    $this->importer->prepareFiles();
+    ob_start();
+    $this->importer->run();
+    $printed_output = ob_get_clean();
+    $this->assertStringContainsString('Column 2 is required and cannot be empty for line # 7', $printed_output, "Did not get the expected output regarding line #7 when running the run() method on missing_required_example.txt.");
+    $this->assertStringContainsString('Insufficient number of columns detected (<4) for line # 8', $printed_output, "Did not get the expected output regarding line #8 when running the run() method on missing_required_example.txt.");
+
+    // Double check that neither germplasm made it to the database
+    $stock_count_query = $this->connection->select('1:stock', 's')
+      ->countQuery()->execute()->fetchField();
+    $this->assertEquals($stock_count_query, 0, "The row count of the stock table is not empty, despite expecting to skip stocks in missing_required_example.txt.");
+  }
+
+  /**
+   * Tests focusing on the Germplasm Accession Importer run() function
+   * using a more complicated file where some optional columns are specified
+   *
+   * @group germ_accession_importer
+   */
+  public function testGermplasmAccessionImporterRunComplex() {
+
+    $problem_example_file = __DIR__ . '/../../../Fixtures/props_syns_example.txt';
+
+    $genus = 'Tripalus';
+    $run_args = ['genus_name' => $genus];
+    $file_details = ['file_local' => $problem_example_file];
+
+    $this->importer->createImportJob($run_args, $file_details);
+    $this->importer->prepareFiles();
+    ob_start();
+    $this->importer->run();
+    $printed_output = ob_get_clean();
+    //$this->assertStringContainsString('Column 2 is required and cannot be empty for line # 7', $printed_output, "Did not get the expected output regarding line #7 when running the run() method on missing_required_example.txt.");
+    //$this->assertStringContainsString('Insufficient number of columns detected (<4) for line # 8', $printed_output, "Did not get the expected output regarding line #8 when running the run() method on missing_required_example.txt.");
   }
 }
