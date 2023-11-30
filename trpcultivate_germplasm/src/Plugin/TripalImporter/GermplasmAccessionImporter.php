@@ -284,7 +284,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
         $this->logger->error("Insufficient number of columns detected (<4) for line # @line", ['@line' => $line_count]);
         $this->error_tracker = TRUE;
 				// Continue to next line since we already know this will cascade into
-				// further issues
+				// further errors
 				continue;
       }
 
@@ -296,7 +296,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
           $this->logger->error("Column @column is required and cannot be empty for line # @line", ['@column' => $column, '@line' => $line_count]);
           $this->error_tracker = TRUE;
 					// Continue to next line since we already know this will cascade into
-					// further issues
+					// further errors
 					continue 2;
         }
       }
@@ -333,6 +333,17 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
         // STEP 5: Load synonyms
         $load_synonyms = $this->loadSynonyms($stock_id, $synonyms, $organism_id);
       }
+    }
+    // Check the error flag
+    // If true, throw an exception explaining that nothing will be added to the database
+    // unless errors are resolved
+    if ($this->error_tracker) {
+      throw new \Exception(
+        t("The database transaction was not commited due to the presence of one or more errors. Please fix all errors and try the import again.")
+      );
+    }
+    else {
+      $this->logger->notice("Reached end of file without encountering any errors. Transaction will be committed to the database.");
     }
   }
 

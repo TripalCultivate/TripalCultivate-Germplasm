@@ -40,6 +40,9 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     ],
   ];
 
+  // Make the organism ID accessible by all the functions
+  public $organism_id;
+
 	/**
    * {@inheritdoc}
    */
@@ -109,7 +112,7 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
 
     // Insert our organism
     $subtaxa_cvterm_id = $this->importer->getCVterm('subtaxa');
-    $organism_id = $this->connection->insert('1:organism')
+    $this->organism_id = $this->connection->insert('1:organism')
       ->fields([
         'genus' => 'Tripalus',
         'species' => 'databasica',
@@ -154,12 +157,12 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     $stock_record = $stock_query->execute()->fetchAll();
 
     // Stock: Test1
-    $this->assertEquals($stock_record[0]->organism_id, $organism_id, "The inserted organism ID and the selected organism ID for stock Test1 don't match.");
+    $this->assertEquals($stock_record[0]->organism_id, $this->organism_id, "The inserted organism ID and the selected organism ID for stock Test1 don't match.");
     $this->assertEquals($stock_record[0]->name, 'Test1', "The inserted stock.name and the selected name for stock Test1 don't match.");
     $this->assertEquals($stock_record[0]->uniquename, 'T1', "The inserted stock.uniquename and the selected uniquename for stock Test1 don't match.");
     $this->assertEquals($stock_record[0]->type_id, 9, "The inserted type_id and the selected type_id for stock Test1 don't match.");
     // Stock: Test2
-    $this->assertEquals($stock_record[1]->organism_id, $organism_id, "The inserted organism ID and the selected organism ID for stock Test2 don't match.");
+    $this->assertEquals($stock_record[1]->organism_id, $this->organism_id, "The inserted organism ID and the selected organism ID for stock Test2 don't match.");
     $this->assertEquals($stock_record[1]->name, 'Test2', "The inserted stock.name and the selected name for stock Test2 don't match.");
     $this->assertEquals($stock_record[1]->uniquename, 'T2', "The inserted stock.uniquename and the selected uniquename for stock Test2 don't match.");
     $this->assertEquals($stock_record[1]->type_id, 9, "The inserted type_id and the selected type_id for stock Test2 don't match.");
@@ -190,9 +193,18 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
 
     $this->importer->createImportJob($run_args, $file_details);
     $this->importer->prepareFiles();
-    ob_start();
-    $this->importer->run();
+
+    // Need a try-catch since errors in this file will trigger the error flag exception
+    $exception_caught = FALSE;
+    try {
+      ob_start();
+      $this->importer->run();
+    }
+    catch ( \Exception $e ) {
+      $exception_caught = TRUE;
+    }
     $printed_output = ob_get_clean();
+    $this->assertTrue($exception_caught, 'Did not catch exception that should have occurred due to missing required columns.');
     $this->assertStringContainsString('Column 2 is required and cannot be empty for line # 7', $printed_output, "Did not get the expected output regarding line #7 when running the run() method on missing_required_example.txt.");
     $this->assertStringContainsString('Insufficient number of columns detected (<4) for line # 8', $printed_output, "Did not get the expected output regarding line #8 when running the run() method on missing_required_example.txt.");
 
@@ -216,12 +228,72 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     $run_args = ['genus_name' => $genus];
     $file_details = ['file_local' => $problem_example_file];
 
+    $stock_type_id = $this->importer->getCVterm('accession');
+    $stockprop_bsoac_type_id = $this->importer->getCVterm('biological_status_of_accession_code');
+    $stockprop_bmDbId_type_id = $this->importer->getCVterm('breeding_method_DbId');
+    $stock_relationship_type_id = $this->importer->getCVterm('stock_relationship_type_synonym');
+
+    // Insert one of the synonyms in our test file into the database as a stock
+    // This way we can ensure a stock_relationship record is created
+    $stock_id_of_synonym = $this->connection->insert('1:stock')
+      ->fields([
+        'organism_id' => $this->organism_id,
+        'name' => 'synonym2',
+        'uniquename' => 'synonym2',
+        'type_id' => $stock_type_id,
+      ])
+      ->execute();
+
     $this->importer->createImportJob($run_args, $file_details);
     $this->importer->prepareFiles();
     ob_start();
     $this->importer->run();
     $printed_output = ob_get_clean();
-    //$this->assertStringContainsString('Column 2 is required and cannot be empty for line # 7', $printed_output, "Did not get the expected output regarding line #7 when running the run() method on missing_required_example.txt.");
-    //$this->assertStringContainsString('Insufficient number of columns detected (<4) for line # 8', $printed_output, "Did not get the expected output regarding line #8 when running the run() method on missing_required_example.txt.");
+    $this->assertStringContainsString('Inserting "Test5".Synonym "synonym1" was not found in the stock table, so no stock_relationship was made with stock ID "2".Synonym "synonym3" was not found in the stock table, so no stock_relationship was made with stock ID "2".', $printed_output, "Did not get the expected output regarding synonyms when running the run() method on props_syns_example.txt.");
+
+    // Now check that the stock properties inserted correctly
+    $stockprop_count_query = $this->connection->select('1:stockprop', 'sp')
+      ->countQuery()->execute()->fetchField();
+    $this->assertEquals($stockprop_count_query, 2, "The row count of the stockprop table after inserting 2 stock properties values is not correct.");
+
+    // Grab the stock ID
+    $stock_query = $this->connection->select('1:stock', 's')
+      ->fields('s', ['stock_id'])
+      ->condition('name', 'Test5');
+    $stock_record = $stock_query->execute()->fetchAll();
+    $stock_id = $stock_record[0]->stock_id;
+
+    $stockprop_query = $this->connection->select('1:stockprop', 'sp')
+      ->fields('sp', ['stock_id', 'type_id', 'value']);
+    $stockprop_records = $stockprop_query->execute()->fetchAll();
+    $this->assertEquals($stockprop_records[0]->stock_id, $stock_id, 'The inserted stock_id and the existing stock_id for the first stockprop does not match for stock Test5.');
+    $this->assertEquals($stockprop_records[0]->type_id, $stockprop_bsoac_type_id, 'The inserted type_id and the existing type_id for the first stockprop does not match for stock Test5.');
+    $this->assertEquals($stockprop_records[0]->value, 500, 'The value of the inserted stock property "Biological Status of Accession" does not match what was in the file for stock Test5.');
+    $this->assertEquals($stockprop_records[1]->stock_id, $stock_id, 'The inserted stock_id and the existing stock_id for the second stockprop does not match for stock Test5.');
+    $this->assertEquals($stockprop_records[1]->type_id, $stockprop_bmDbId_type_id, 'The inserted type_id and the existing type_id for the second stockprop does not match for stock Test5.');
+    $this->assertEquals($stockprop_records[1]->value, 'Breeder line', 'The value of the inserted stock property "Breeding Method" does not match what was in the file for stock Test5.');
+    
+    // Lastly, check on our synonyms
+    // Count number of synonyms in the synonym table
+    $synonym_count_query = $this->connection->select('1:synonym', 'sy')
+      ->countQuery()->execute()->fetchField();
+    $this->assertEquals($synonym_count_query, 3, "Expected there to be 3 synonyms in the synonym table after inserting stock Test5.");
+
+    // Count the number of records in stock_synonym
+    $stock_synonym_count_query = $this->connection->select('1:stock_synonym', 'ssy')
+      ->countQuery()->execute()->fetchField();
+    $this->assertEquals($stock_synonym_count_query, 3, "Expected there to be 3 records in the stock_synonym table after inserting stock Test5.");
+
+    // Count the number of record in stock_relationship
+    $stock_relationship_count_query = $this->connection->select('1:stock_relationship', 'sr')
+      ->countQuery()->execute()->fetchField();
+    $this->assertEquals($stock_relationship_count_query, 1, "Expected there to be 1 record in the stock_relationship table after inserting stock Test5.");
+
+    $stock_relationship_query = $this->connection->select('1:stock_relationship', 'sr')
+      ->fields('sr', ['subject_id', 'object_id', 'type_id', 'value']);
+    $stock_relationship_record = $stock_relationship_query->execute()->fetchAll();
+    $this->assertEquals($stock_relationship_record[0]->subject_id, $stock_id_of_synonym, 'The subject ID of the stock_relationship that was inserted is not the expected stock ID of synonym2');
+    $this->assertEquals($stock_relationship_record[0]->object_id, $stock_id, 'The object ID of the stock_relationship that was inserted is not the expected stock ID of Test5');
+    $this->assertEquals($stock_relationship_record[0]->type_id, $stock_relationship_type_id, 'The type ID of the stock_relationship that was inserted is not of type synonym');
   }
 }
