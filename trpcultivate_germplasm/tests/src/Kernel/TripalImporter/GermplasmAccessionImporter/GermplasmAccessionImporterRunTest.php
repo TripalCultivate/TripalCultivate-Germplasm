@@ -127,7 +127,6 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
       'name' => 'TestDB',
     ])
     ->execute();
-
   }
 
   /**

@@ -248,6 +248,13 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     // Make sure our CVterms are all set
     $this->setUpCVterms();
 
+    // Check if the stock_synonym table exists before moving forward
+    if (!$this->connection->schema()->tableExists('stock_synonym')) {
+      throw new \Exception(
+        t("Could not find stock_synonym table in the current database schema")
+      );
+    }
+
     // Set up the ability to track progress so we can report it to the user
     $filesize = filesize($file_path);
     //$this->setTotalItems($filesize);
@@ -258,7 +265,9 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     // Open the file and start iterating through each line
     $GERMPLASM_FILE = fopen($file_path, 'r');
     if(!$GERMPLASM_FILE) {
-      $this->logger->error("Could not open file: @file", ['@file' => $file_path]);
+      throw new \Exception(
+        t("Could not open file: @file", ['@file' => $file_path])
+      );
     }
 
     while (!feof($GERMPLASM_FILE)){
