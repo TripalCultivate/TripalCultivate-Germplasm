@@ -232,8 +232,10 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     $stockprop_bmDbId_type_id = $this->importer->getCVterm('breeding_method_DbId');
     $stock_relationship_type_id = $this->importer->getCVterm('stock_relationship_type_synonym');
 
-    // Insert one of the synonyms in our test file into the database as a stock
-    // This way we can ensure a stock_relationship record is created
+    // --------------------------------------------------------------------
+    // 1. Insert one of the synonyms in our test file into the database as 
+    // a stock. This way we can ensure a stock_relationship record is created
+
     $stock_id_of_synonym = $this->connection->insert('1:stock')
       ->fields([
         'organism_id' => $this->organism_id,
@@ -250,7 +252,10 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     $printed_output = ob_get_clean();
     $this->assertStringContainsString('Inserting "Test5".Synonym "synonym1" was not found in the stock table, so no stock_relationship was made with stock ID "2".Synonym "synonym3" was not found in the stock table, so no stock_relationship was made with stock ID "2".', $printed_output, "Did not get the expected output regarding synonyms when running the run() method on props_syns_example.txt.");
 
-    // Now check that the stock properties inserted correctly
+    // --------------------------------------------------------------------
+    // 2. Check that the stock properties inserted correctly
+
+    // Count the number of stock properties in the database
     $stockprop_count_query = $this->connection->select('1:stockprop', 'sp')
       ->countQuery()->execute()->fetchField();
     $this->assertEquals($stockprop_count_query, 2, "The row count of the stockprop table after inserting 2 stock properties values is not correct.");
@@ -272,7 +277,9 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     $this->assertEquals($stockprop_records[1]->type_id, $stockprop_bmDbId_type_id, 'The inserted type_id and the existing type_id for the second stockprop does not match for stock Test5.');
     $this->assertEquals($stockprop_records[1]->value, 'Breeder line', 'The value of the inserted stock property "Breeding Method" does not match what was in the file for stock Test5.');
     
-    // Lastly, check on our synonyms
+    // --------------------------------------------------------------------
+    // 3. Check on our synonyms
+
     // Count number of synonyms in the synonym table
     $synonym_count_query = $this->connection->select('1:synonym', 'sy')
       ->countQuery()->execute()->fetchField();
@@ -283,7 +290,7 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
       ->countQuery()->execute()->fetchField();
     $this->assertEquals($stock_synonym_count_query, 3, "Expected there to be 3 records in the stock_synonym table after inserting stock Test5.");
 
-    // Count the number of record in stock_relationship
+    // Count the number of records in stock_relationship
     $stock_relationship_count_query = $this->connection->select('1:stock_relationship', 'sr')
       ->countQuery()->execute()->fetchField();
     $this->assertEquals($stock_relationship_count_query, 1, "Expected there to be 1 record in the stock_relationship table after inserting stock Test5.");

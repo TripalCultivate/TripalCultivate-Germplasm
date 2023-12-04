@@ -215,6 +215,13 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     // Nothing to validate since the genus field is set to "required".
   }
 
+  /**
+   * Checks if our terms have been set already from the config file.
+   * This is helpful for automated test functionality where terms are
+   * set there using our setCVterm() function.
+   * If not already set, then the value of the term is set using setCVterm() 
+   * here.
+   */
   public function setUpCVterms(){
 
     $germplasm_config = $this->config_factory->get('trpcultivate_germplasm.settings');
@@ -257,8 +264,8 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
 
     // Set up the ability to track progress so we can report it to the user
     $filesize = filesize($file_path);
-    //$this->setTotalItems($filesize);
-    //$this->setItemsHandled(0);
+    $this->setTotalItems($filesize);
+    $this->setItemsHandled(0);
     $bytes_read = 0;
     $line_count = 0;
 
@@ -278,7 +285,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       // importer know how many have been processed so it can provide a
       // progress indicator.
       $bytes_read += mb_strlen($current_line);
-      //$this->setItemsHandled($bytes_read);
+      $this->setItemsHandled($bytes_read);
 
       // Check for empty lines, comment lines and a header line
       $current_line = trim($current_line);
