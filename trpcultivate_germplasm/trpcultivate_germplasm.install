@@ -9,15 +9,6 @@
  */
 function trpcultivate_germplasm_install(){
 
-  // Load required ontologies and cvterms for this module, which includes:
-  //  - MCPD (Multi-Crop Passport Ontology)
-  //  - GCP germplasm ontology.
-  //  - a collection of custom terms required for germplasm.
-  // For a full list, see uofspb_germplasm.module:uofspb_germplasm_ontology_list().
-  // global $user;
-  // require_once('includes/job.load_ontolgies.inc');
-  // load_ontologies_job();
-
   // Now create the stock_synonym linking table.
   $table = 'stock_synonym';
   $schema = [
@@ -93,16 +84,4 @@ function trpcultivate_germplasm_install(){
   $custom_tables = \Drupal::service('tripal_chado.custom_tables');
   $custom_table = $custom_tables->create($table, $schema_name);
   $custom_table->setTableSchema($schema);
-
-  // Relationship verb and Default db set to 0, frontend will notify user
-  // to configure these variables before any upload.
-
-  // Create a settings/configuration variable used by
-  // Germplasm Population Importer to limit/filter relationship verb
-  // field to specific controlled vocabulary.
-  //variable_set('germplasm_population_importer_verb_cv', 0);
-  // Default prefix used in germplasm names.
-  //variable_set('germplasm_population_importer_default_prefix', 'GERM');
-  // Default db used by chado stock.dbxref_id when inserting germplasm.
-  //variable_set('germplasm_population_importer_db', 0);
 }
