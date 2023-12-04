@@ -5,9 +5,9 @@
  */
 
 /**
- * Implement hook_enable()
+ * Implement hook_install()
  */
-function trpcultivate_germplasm_enable(){
+function trpcultivate_germplasm_install(){
 
   // Load required ontologies and cvterms for this module, which includes:
   //  - MCPD (Multi-Crop Passport Ontology)
@@ -88,8 +88,10 @@ function trpcultivate_germplasm_enable(){
     ],
   ];
 
+  $connection = \Drupal::service('tripal_chado.database');
+  $schema_name = $connection->getSchemaName();
   $custom_tables = \Drupal::service('tripal_chado.custom_tables');
-  $custom_table = $custom_tables->create($table, $this->chado_schema_main);
+  $custom_table = $custom_tables->create($table, $schema_name);
   $custom_table->setTableSchema($schema);
 
   // Relationship verb and Default db set to 0, frontend will notify user
