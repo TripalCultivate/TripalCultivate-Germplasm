@@ -11,4 +11,5 @@ RUN service postgresql restart \
   && drush trp-prep-chado --schema-name=${chadoschema} \
   && drush tripal:trp-import-types --username=drupaladmin --collection_id=general_chado \
   && drush tripal:trp-import-types --username=drupaladmin --collection_id=germplasm_chado \
-  && drush en trpcultivate_germplasm trpcultivate_germcollection --yes
+  && drush en trpcultivate_germplasm trpcultivate_germcollection --yes \
+  && drush cr
