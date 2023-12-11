@@ -9,4 +9,7 @@ WORKDIR /var/www/drupal/web/modules/contrib/TripalCultivate-Germplasm
 RUN service postgresql restart \
   && drush trp-install-chado --schema-name=${chadoschema} \
   && drush trp-prep-chado --schema-name=${chadoschema} \
-  && drush en trpcultivate_germplasm trpcultivate_germcollection --yes
+  && drush tripal:trp-import-types --username=drupaladmin --collection_id=general_chado \
+  && drush tripal:trp-import-types --username=drupaladmin --collection_id=germplasm_chado \
+  && drush en trpcultivate_germplasm trpcultivate_germcollection --yes \
+  && drush cr
