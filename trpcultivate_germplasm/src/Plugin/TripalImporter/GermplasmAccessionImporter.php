@@ -424,34 +424,58 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
 
     $accession_type_id = $this->getCVterm('accession');
 
-    // First query the stock table just using the germplasm name and organism ID
+    // First query the stock table:
+    // 1. Using a regular condition to ensure the organism_id is a match
+    // 2. Create an OR condition group to look for records that match germplasm name OR 
+    //    the uniquename. Since the unique constraint is organism_id/uniquename/type_id,
+    //    we have to make sure this combo doesn't already exist with a different germplasm 
+    //    name.
     $query = $this->connection->select('1:stock', 's')
-      ->fields('s', ['stock_id', 'uniquename', 'type_id']);
-    $query->condition('s.name', $germplasm_name, '=')
+      ->fields('s', ['stock_id', 'name', 'uniquename', 'type_id'])
       ->condition('s.organism_id', $organism_id, '=');
+
+    $orGroup = $query->orConditionGroup()
+      ->condition('s.name', $germplasm_name, '=')
+      ->condition('s.uniquename', $accession_number, '=');
+    
+    // Now add the OR condition group to the query
+    $query->condition($orGroup);
     $record = $query->execute()->fetchAll();
 
+    // We may have retrieved 1+ records that share the germplasm name and/or 1+ records that
+    // share the accession_number. In this case, throw an error since there's no way to
+    // enter a new record with a unique organism_id/uniquename/type_id combo in this scenario
     if (sizeof($record) >= 2) {
-      $this->logger->error("Found more than one stock ID for \"@germplasm_name\".", ['@germplasm_name' => $germplasm_name]);
+      $this->logger->error("Found more than one stock ID for \"@germplasm_name\" and/or \"@accession\".", ['@germplasm_name' => $germplasm_name, '@accession' => $accession_number]);
       $this->error_tracker = TRUE;
       return false;
     }
 
     elseif (sizeof($record) == 1) {
       // Handle the situation where a stock record exists
-      // Check the uniquename matches the accession_number column in the file
+      // Here we are individually checking that our uniquename, name and type_id all match
+      // what is in the input file. This is to provide an informative error message if one
+      // of these don't match. In the future, we may want to handle each case differently.
+      // For example, some groups may want to allow the same germplasm name but a different
+      // type_id to be allowed.
+      // 1. Check the uniquename matches the accession_number column in the file
       if ($accession_number != $record[0]->uniquename) {
         $this->logger->error("A stock already exists for \"@germplasm_name\" but with an accession of \"@accession\" which does not match the input file.", ['@germplasm_name' => $germplasm_name, '@accession' => $record[0]->uniquename]);
         $this->error_tracker = TRUE;
         return false;
       }
-      // Check the type_id is of type accession
+      // 2. Check that our germplasm name matches
+      if ($germplasm_name != $record[0]->name) {
+        $this->logger->error("A stock already exists for accession \"@accession\" but with a germplasm name of \"@germplasm_name\" which does not match the input file.", ['@germplasm_name' => $record[0]->name, '@accession' => $accession_number]);
+        $this->error_tracker = TRUE;
+        return false;
+      }
+      // 3. Check the type_id is of type accession
       if ($accession_type_id != $record[0]->type_id) {
         $this->logger->error("A stock already exists for \"@germplasm_name\" but with a type ID of \"@type\" which is not of type \"accession\".", ['@germplasm_name' => $germplasm_name, '@type' => $accession_type_id]);
         $this->error_tracker = TRUE;
         return false;
       }
-
       // Confirmed that the selected record matches what's in the upload file, so return the stock_id
       return $record[0]->stock_id;
     }

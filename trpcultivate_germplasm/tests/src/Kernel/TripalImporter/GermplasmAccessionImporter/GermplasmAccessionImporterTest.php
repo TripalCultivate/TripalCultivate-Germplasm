@@ -249,7 +249,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     ob_start();
     $grabbed_dup_stock_id = $this->importer->getStockID('stock1', 'TEST:1', $organism_id);
     $printed_output = ob_get_clean();
-    $this->assertTrue($printed_output == 'Found more than one stock ID for "stock1".', "Did not get the expected error message when testing for duplicate stock IDs.");
+    $this->assertStringContainsString('Found more than one stock ID for "stock1"', $printed_output, "Did not get the expected error message when testing for duplicate stock IDs.");
   }
 
   /**
