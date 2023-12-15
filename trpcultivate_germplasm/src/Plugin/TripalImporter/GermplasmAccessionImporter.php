@@ -115,7 +115,9 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
 
     $file_types = $this->plugin_definition['file_types'];
 
-    $output = "Germplasm file should be a tab separated file (<b>" . implode(', ', $file_types) . "</b>) with the following columns:";
+    $output = "The input file should be a tab separated file (<b>" . implode(', ', $file_types) . "</b>) with the following columns. ";
+    $output .= "For more detailed information on this format including links to lookup various codes, please see ";
+    $output .= '<a href="https://tripalcultivate.github.io/docs/docs/curation/germplasm-data/germplasm-accessions-importer">the official documentation</a>.';
 
     $columns = [
       'Germplasm Name' => 'Name of this germplasm accession (e.g. CDC Redberry)',
@@ -191,8 +193,8 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     $form['instructions'] = [
       '#weight' => -99,
       '#markup' => '
-        <h2>Load germplasm into database</h2>
-        <p>Please confirm the file format and column order before upload.</p>
+        <h2>Import Germplasm Accessions</h2>
+        <p>Use this form to import germplasm accessions into Chado with metadata that meet the BrAPI standards. <b>Please confirm the file format and column order before upload as this will insert records into your Chado database.</b> </p>
       ',
     ];
 
