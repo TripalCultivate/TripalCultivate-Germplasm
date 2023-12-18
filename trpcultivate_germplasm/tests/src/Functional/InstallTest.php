@@ -20,7 +20,7 @@ class InstallTest extends ChadoTestBrowserBase {
    *
    * @var array
    */
-  protected static $modules = ['help', 'trpcultivate_germplasm'];
+  protected static $modules = ['help', 'tripal_chado'];
 
   /**
    * The name of your module in the .info.yml
@@ -37,6 +37,25 @@ class InstallTest extends ChadoTestBrowserBase {
    * Do not cross newlines.
    */
   protected static $help_text_excerpt = 'specialized Tripal fields and importers for germplasm';
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function setUp() :void {
+
+    parent::setUp();
+
+    // Ensure we see all logging in tests.
+    \Drupal::state()->set('is_a_test_environment', TRUE);
+
+    // Open connection to Chado
+    $this->connection = $this->getTestSchema(ChadoTestBrowserBase::PREPARE_TEST_CHADO);
+
+    $moduleHandler = $this->container->get('module_handler');
+    $moduleInstaller = $this->container->get('module_installer');
+    $this->assertFalse($moduleHandler->moduleExists('trpcultivate_germplasm'));
+    $this->assertTrue($moduleInstaller->install(['trpcultivate_germplasm']));
+  }
 
   /**
    * Tests that a specific set of pages load with a 200 response.
