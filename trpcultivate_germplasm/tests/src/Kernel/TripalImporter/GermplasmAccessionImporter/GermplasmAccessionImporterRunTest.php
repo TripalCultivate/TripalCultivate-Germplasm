@@ -221,11 +221,11 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
    */
   public function testGermplasmAccessionImporterRunComplex() {
 
-    $problem_example_file = __DIR__ . '/../../../Fixtures/props_syns_example.txt';
+    $complex_example_file = __DIR__ . '/../../../Fixtures/props_syns_example.txt';
 
     $genus = 'Tripalus';
     $run_args = ['genus_name' => $genus];
-    $file_details = ['file_local' => $problem_example_file];
+    $file_details = ['file_local' => $complex_example_file];
 
     $stock_type_id = $this->importer->getCVterm('accession');
     $stockprop_bsoac_type_id = $this->importer->getCVterm('biological_status_of_accession_code');
@@ -301,5 +301,75 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     $this->assertEquals($stock_relationship_record[0]->subject_id, $stock_id_of_synonym, 'The subject ID of the stock_relationship that was inserted is not the expected stock ID of synonym2');
     $this->assertEquals($stock_relationship_record[0]->object_id, $stock_id, 'The object ID of the stock_relationship that was inserted is not the expected stock ID of Test5');
     $this->assertEquals($stock_relationship_record[0]->type_id, $stock_relationship_type_id, 'The type ID of the stock_relationship that was inserted is not of type synonym');
+  }
+
+  /**
+   * Tests focusing on the Germplasm Accession Importer run() function
+   * using an example file that should specifically cause an exception
+   * to occur due to the following cases:
+   *   1. A non-existant organism in the database
+   *   2. Attempt to insert a duplicate stock accession
+   *
+   * @group germ_accession_importer
+   */
+  public function testGermplasmAccessionImporterRunIncomplete() {
+
+    // Test for a non-existant file
+    $non_existant_file = __DIR__ . '/does_not_exist.txt';
+
+    $genus = 'Sally';
+    $run_args = ['genus_name' => $genus];
+    $file_details = ['file_local' => $non_existant_file];
+
+    $this->importer->createImportJob($run_args, $file_details);
+    $this->importer->prepareFiles();
+
+    $exception_caught = FALSE;
+    try {
+      $this->importer->run();
+    } catch ( \Exception $e ) {
+      $exception_caught = TRUE;
+    }
+    $this->assertStringContainsString("File does not exist:", $e->getMessage(), "Expected an exception message that file \"does_not_exist.txt\", does not, in fact, exist.");
+    $this->assertTrue($exception_caught, "Did not catch exception for a non-existant file as input.");
+
+    $incomplete_example_file = __DIR__ . '/../../../Fixtures/incomplete_example.txt';
+
+    // Test for a non-existant organism
+    $genus = 'Sally';
+    $run_args = ['genus_name' => $genus];
+    $file_details = ['file_local' => $incomplete_example_file];
+
+    $this->importer->createImportJob($run_args, $file_details);
+    $this->importer->prepareFiles();
+
+    $exception_caught = FALSE;
+    ob_start();
+    try {
+      $this->importer->run();
+    } catch ( \Exception $e ) {
+      $exception_caught = TRUE;
+    }
+    $printed_output = ob_get_clean();
+    $this->assertStringContainsString("Could not find an organism", $printed_output, "Expected an error that an organism in the file 'incomplete_example.txt' could not be found in the database.");
+    $this->assertTrue($exception_caught, "Did not catch exception for trying to insert germplasm with a non-existant organism.");
+
+    // Test for existing organism, but non-existing stockID
+    $genus = 'Tripalus';
+    $run_args = ['genus_name' => $genus];
+
+    $this->importer->createImportJob($run_args, $file_details);
+    $this->importer->prepareFiles();
+
+    $exception_caught = FALSE;
+    ob_start();
+    try {
+      $this->importer->run();
+    } catch ( \Exception $e ) {
+      $exception_caught = TRUE;
+    }
+    $printed_output = ob_get_clean();
+    $this->assertStringContainsString('A stock already exists for accession "T1" but with a germplasm name of "Test1" which does not match the input file.', $printed_output, "Expected an error that a stock accession 'T1' already exists in the file 'incomplete_example.txt'");
+    $this->assertTrue($exception_caught, "Did not catch exception for trying to insert duplicate stock accession numbers.");
   }
 }

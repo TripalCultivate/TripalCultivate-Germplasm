@@ -250,6 +250,11 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     // this is an array of files, where each has a 'file_path' key specifying
     // where the file is located on the server.
     $file_path = $arguments['files'][0]['file_path'];
+    if (!file_exists($file_path)) {
+      throw new \Exception(
+        t("File does not exist: @file", ['@file' => $file_path])
+      );
+    }
 
     // Grab the genus name
     $genus_name = $arguments['run_args']['genus_name'];
@@ -260,7 +265,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     // Check if the stock_synonym table exists before moving forward
     if (!$this->connection->schema()->tableExists('stock_synonym')) {
       throw new \Exception(
-        t("Could not find stock_synonym table in the current database schema")
+        t("Could not find stock_synonym table in the current database schema.")
       );
     }
 
@@ -333,23 +338,33 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       ];
       $synonyms = $germplasm_columns[11] ?? '';
 
-      // STEP 1: Pull out the organism ID for the current germplasm
-      $organism_id = $this->getOrganismID($genus_name, $germplasm_species, $germplasm_subtaxa);
+      // Here we are calling 5 separate functions to check for and insert various
+      // parts of the input file. Everything is wrapped in a try-catch to ensure
+      // a useful error message can be passed onto the user and that all errors
+      // that the file encounters can be reported at one time and not committed
+      // to the database.
+      try {
+        // STEP 1: Pull out the organism ID for the current germplasm
+        $organism_id = $this->getOrganismID($genus_name, $germplasm_species, $germplasm_subtaxa);
 
-      // STEP 2: Check/Insert this germplasm into the Chado stock table
-      if ($organism_id) {
-        $stock_id = $this->getStockID($germplasm_name, $accession_number, $organism_id);
-      }
+        // STEP 2: Check/Insert this germplasm into the Chado stock table
+        if ($organism_id) {
+          $stock_id = $this->getStockID($germplasm_name, $accession_number, $organism_id);
+        }
 
-      if ($stock_id) {
-        // STEP 3: Load the external database info into Chado dbxref table
-        $dbxref_id = $this->getDbxrefID($external_database, $stock_id, $accession_number);
+        if (isset($stock_id) && ($stock_id != null)) {
+          // STEP 3: Load the external database info into Chado dbxref table
+          $dbxref_id = $this->getDbxrefID($external_database, $stock_id, $accession_number);
 
-        // STEP 4: Load stock properties
-        $load_props = $this->loadStockProperties($stock_id, $stock_properties);
+          // STEP 4: Load stock properties
+          $load_props = $this->loadStockProperties($stock_id, $stock_properties);
 
-        // STEP 5: Load synonyms
-        $load_synonyms = $this->loadSynonyms($stock_id, $synonyms, $organism_id);
+          // STEP 5: Load synonyms
+          $load_synonyms = $this->loadSynonyms($stock_id, $synonyms, $organism_id);
+        }
+      } catch ( \Exception $e ) {
+        $this->logger->error("An unusual error occurred when processing germplasm \"@germplasm\". Here is the stack trace: \n" . $e->getMessage() . "\n", ['@germplasm' => $germplasm_name] );
+        $this->error_tracker = TRUE;
       }
     }
     // Check the error flag
