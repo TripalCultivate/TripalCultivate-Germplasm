@@ -221,7 +221,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
    * Checks if our terms have been set already from the config file.
    * This is helpful for automated test functionality where terms are
    * set there using our setCVterm() function.
-   * If not already set, then the value of the term is set using setCVterm() 
+   * If not already set, then the value of the term is set using setCVterm()
    * here.
    */
   public function setUpCVterms(){
@@ -441,9 +441,9 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
 
     // First query the stock table:
     // 1. Using a regular condition to ensure the organism_id is a match
-    // 2. Create an OR condition group to look for records that match germplasm name OR 
+    // 2. Create an OR condition group to look for records that match germplasm name OR
     //    the uniquename. Since the unique constraint is organism_id/uniquename/type_id,
-    //    we have to make sure this combo doesn't already exist with a different germplasm 
+    //    we have to make sure this combo doesn't already exist with a different germplasm
     //    name.
     $query = $this->connection->select('1:stock', 's')
       ->fields('s', ['stock_id', 'name', 'uniquename', 'type_id'])
@@ -452,7 +452,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     $orGroup = $query->orConditionGroup()
       ->condition('s.name', $germplasm_name, '=')
       ->condition('s.uniquename', $accession_number, '=');
-    
+
     // Now add the OR condition group to the query
     $query->condition($orGroup);
     $record = $query->execute()->fetchAll();
@@ -461,7 +461,13 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     // share the accession_number. In this case, throw an error since there's no way to
     // enter a new record with a unique organism_id/uniquename/type_id combo in this scenario
     if (sizeof($record) >= 2) {
-      $this->logger->error("Found more than one stock ID for \"@germplasm_name\" and/or \"@accession\".", ['@germplasm_name' => $germplasm_name, '@accession' => $accession_number]);
+      $stock_string_array = [];
+      foreach ($record as $stock_hit) {
+        $stock_string = $stock_hit->name . " (uniquename=" . $stock_hit->uniquename . "; stock_id=" . $stock_hit->stock_id . ")";
+        array_push($stock_string_array, $stock_string);
+      }
+
+      $this->logger->error("Found more than one stock ID for \"@germplasm_name\" and/or \"@accession\". The existing stocks are: @stock_list", ['@germplasm_name' => $germplasm_name, '@accession' => $accession_number, '@stock_list' => implode(", ", $stock_string_array)]);
       $this->error_tracker = TRUE;
       return false;
     }
