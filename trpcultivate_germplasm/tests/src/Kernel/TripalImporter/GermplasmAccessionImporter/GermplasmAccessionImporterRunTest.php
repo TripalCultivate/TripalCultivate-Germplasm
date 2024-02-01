@@ -233,7 +233,7 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     $stock_relationship_type_id = $this->importer->getCVterm('stock_relationship_type_synonym');
 
     // --------------------------------------------------------------------
-    // 1. Insert one of the synonyms in our test file into the database as 
+    // 1. Insert one of the synonyms in our test file into the database as
     // a stock. This way we can ensure a stock_relationship record is created
 
     $stock_id_of_synonym = $this->connection->insert('1:stock')
@@ -276,7 +276,7 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     $this->assertEquals($stockprop_records[1]->stock_id, $stock_id, 'The inserted stock_id and the existing stock_id for the second stockprop does not match for stock Test5.');
     $this->assertEquals($stockprop_records[1]->type_id, $stockprop_bmDbId_type_id, 'The inserted type_id and the existing type_id for the second stockprop does not match for stock Test5.');
     $this->assertEquals($stockprop_records[1]->value, 'Breeder line', 'The value of the inserted stock property "Breeding Method" does not match what was in the file for stock Test5.');
-    
+
     // --------------------------------------------------------------------
     // 3. Check on our synonyms
 
@@ -354,7 +354,8 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     $this->assertStringContainsString("Could not find an organism", $printed_output, "Expected an error that an organism in the file 'incomplete_example.txt' could not be found in the database.");
     $this->assertTrue($exception_caught, "Did not catch exception for trying to insert germplasm with a non-existant organism.");
 
-    // Test for existing organism, but non-existing stockID
+    // Test for existing organism, but try to enter 2 germplasm with the same name but separate accession numbers
+    // Note: File used is still incomplete_example.txt
     $genus = 'Tripalus';
     $run_args = ['genus_name' => $genus];
 
@@ -371,5 +372,11 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     $printed_output = ob_get_clean();
     $this->assertStringContainsString('A stock already exists for accession "T1" but with a germplasm name of "Test1" which does not match the input file.', $printed_output, "Expected an error that a stock accession 'T1' already exists in the file 'incomplete_example.txt'");
     $this->assertTrue($exception_caught, "Did not catch exception for trying to insert duplicate stock accession numbers.");
+
+    // Now query stock table to ensure the database transaction was
+    // successfully rolled back
+    $stock_count_query = $this->connection->select('1:stock', 's')
+      ->countQuery()->execute()->fetchField();
+    $this->assertEquals($stock_count_query, 0, 'The chado.stock table is not empty despite a database rollback being triggered by an error.');
   }
 }
