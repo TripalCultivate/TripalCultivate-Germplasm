@@ -763,16 +763,16 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
           ->fields('s', ['synonym_id'])
           ->condition('s.name', $synonym, '=')
           ->condition('s.type_id', $synonym_type_id, '=');
-        $synonym_record = $synonym_query->execute()->fetchAll();
+        $synonym_ids = $synonym_query->execute()->fetchCol();
 
         // Make sure there aren't 2 or more records for this synonym
-        if (sizeof($synonym_record) >= 2) {
-          $this->logger->error("Found more than one synonym for \"@synonym\" in chado.synonym.", ['@synonym' => $synonym]);
+        if (sizeof($synonym_ids) >= 2) {
+          $this->logger->error("Found more than one synonym for \"@synonym\" in chado.synonym (synonym_ids @ids).", ['@synonym' => $synonym, '@ids' => implode(', ', $synonym_ids)]);
           $this->error_tracker = TRUE;
           return false;
         }
-        elseif (sizeof($synonym_record) == 1) {
-          $synonym_id = $synonym_record[0]->synonym_id;
+        elseif (sizeof($synonym_ids) == 1) {
+          $synonym_id = $synonym_ids[0];
         }
         // Can't find a synonym in the chado.synonym table, so insert it
         else {
