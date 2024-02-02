@@ -172,11 +172,11 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     // Make sure that the stockprop and synonyms table are empty
     $stockprop_count_query = $this->connection->select('1:stockprop', 'sp')
       ->countQuery()->execute()->fetchField();
-    $this->assertEquals($stockprop_count_query, 0, "The row count of the stockprop table is not empty, despite there be no stock properties to insert from simple_example.txt.");
+    $this->assertEquals(0, $stockprop_count_query, "The row count of the stockprop table is not empty, despite there be no stock properties to insert from simple_example.txt.");
 
     $synonym_count_query = $this->connection->select('1:synonym', 'syn')
       ->countQuery()->execute()->fetchField();
-    $this->assertEquals($synonym_count_query, 0, "The row count of the synonym table is not empty, despite there be no syonyms to insert from simple_example.txt.");
+    $this->assertEquals(0, $synonym_count_query, "The row count of the synonym table is not empty, despite there be no syonyms to insert from simple_example.txt.");
   }
 
   /**
@@ -213,7 +213,7 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     // Double check that neither germplasm made it to the database
     $stock_count_query = $this->connection->select('1:stock', 's')
       ->countQuery()->execute()->fetchField();
-    $this->assertEquals($stock_count_query, 0, "The row count of the stock table is not empty, despite expecting to skip stocks in missing_required_example.txt.");
+    $this->assertEquals(0, $stock_count_query, "The row count of the stock table is not empty, despite expecting to skip stocks in missing_required_example.txt.");
   }
 
   /**
@@ -261,7 +261,7 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     // Count the number of stock properties in the database
     $stockprop_count_query = $this->connection->select('1:stockprop', 'sp')
       ->countQuery()->execute()->fetchField();
-    $this->assertEquals($stockprop_count_query, 2, "The row count of the stockprop table after inserting 2 stock properties values is not correct.");
+    $this->assertEquals(2, $stockprop_count_query, "The row count of the stockprop table after inserting 2 stock properties values is not correct.");
 
     // Grab the stock ID
     $stock_query = $this->connection->select('1:stock', 's')
@@ -286,17 +286,17 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     // Count number of synonyms in the synonym table
     $synonym_count_query = $this->connection->select('1:synonym', 'sy')
       ->countQuery()->execute()->fetchField();
-    $this->assertEquals($synonym_count_query, 3, "Expected there to be 3 synonyms in the synonym table after inserting stock Test5.");
+    $this->assertEquals(3, $synonym_count_query, "Expected there to be 3 synonyms in the synonym table after inserting stock Test5.");
 
     // Count the number of records in stock_synonym
     $stock_synonym_count_query = $this->connection->select('1:stock_synonym', 'ssy')
       ->countQuery()->execute()->fetchField();
-    $this->assertEquals($stock_synonym_count_query, 3, "Expected there to be 3 records in the stock_synonym table after inserting stock Test5.");
+    $this->assertEquals(3, $stock_synonym_count_query, "Expected there to be 3 records in the stock_synonym table after inserting stock Test5.");
 
     // Count the number of records in stock_relationship
     $stock_relationship_count_query = $this->connection->select('1:stock_relationship', 'sr')
       ->countQuery()->execute()->fetchField();
-    $this->assertEquals($stock_relationship_count_query, 1, "Expected there to be 1 record in the stock_relationship table after inserting stock Test5.");
+    $this->assertEquals(1, $stock_relationship_count_query, "Expected there to be 1 record in the stock_relationship table after inserting stock Test5.");
 
     $stock_relationship_query = $this->connection->select('1:stock_relationship', 'sr')
       ->fields('sr', ['subject_id', 'object_id', 'type_id', 'value']);
@@ -380,6 +380,6 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     // successfully rolled back
     $stock_count_query = $this->connection->select('1:stock', 's')
       ->countQuery()->execute()->fetchField();
-    $this->assertEquals($stock_count_query, 0, 'The chado.stock table is not empty despite a database rollback being triggered by an error.');
+    $this->assertEquals(0, $stock_count_query, 'The chado.stock table is not empty despite a database rollback being triggered by an error.');
   }
 }
