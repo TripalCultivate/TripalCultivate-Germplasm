@@ -21,6 +21,8 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
 
   protected $importer;
 
+  protected $logger;
+
   protected $definitions = [
     'test-germplasm-accession' => [
       'id' => 'trpcultivate-germplasm-accession',
@@ -85,6 +87,7 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
         return NULL;
       });
     $container->set('tripal.logger', $mock_logger);
+    $this->logger = $mock_logger;
 
     $this->config_factory = \Drupal::configFactory();
     $this->importer = new \Drupal\trpcultivate_germplasm\Plugin\TripalImporter\GermplasmAccessionImporter(
@@ -140,13 +143,13 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     $simple_example_file = __DIR__ . '/../../../Fixtures/simple_example.txt';
 
     $genus = 'Tripalus';
-    $run_args = ['genus_name' => $genus];
+    $run_args = ['genus_name' => $genus, 'schema_name' => $this->testSchemaName];
     $file_details = ['file_local' => $simple_example_file];
 
     $this->importer->createImportJob($run_args, $file_details);
     $this->importer->prepareFiles();
     ob_start();
-    $this->importer->run();
+    tripal_run_importer_run($this->importer, $this->logger);
     $printed_output = ob_get_clean();
     $this->assertStringContainsString('Inserting "Test2".', $printed_output, "Did not get the expected output when running the run() method on simple_example.txt.");
 
@@ -187,7 +190,7 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     $problem_example_file = __DIR__ . '/../../../Fixtures/missing_required_example.txt';
 
     $genus = 'Tripalus';
-    $run_args = ['genus_name' => $genus];
+    $run_args = ['genus_name' => $genus, 'schema_name' => $this->testSchemaName];
     $file_details = ['file_local' => $problem_example_file];
 
     $this->importer->createImportJob($run_args, $file_details);
@@ -197,7 +200,7 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     $exception_caught = FALSE;
     try {
       ob_start();
-      $this->importer->run();
+      tripal_run_importer_run($this->importer, $this->logger);
     }
     catch ( \Exception $e ) {
       $exception_caught = TRUE;
@@ -224,7 +227,7 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     $complex_example_file = __DIR__ . '/../../../Fixtures/props_syns_example.txt';
 
     $genus = 'Tripalus';
-    $run_args = ['genus_name' => $genus];
+    $run_args = ['genus_name' => $genus, 'schema_name' => $this->testSchemaName];
     $file_details = ['file_local' => $complex_example_file];
 
     $stock_type_id = $this->importer->getCVterm('accession');
@@ -248,7 +251,7 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     $this->importer->createImportJob($run_args, $file_details);
     $this->importer->prepareFiles();
     ob_start();
-    $this->importer->run();
+    tripal_run_importer_run($this->importer, $this->logger);
     $printed_output = ob_get_clean();
     $this->assertStringContainsString('Inserting "Test5".Synonym "synonym1" was not found in the stock table, so no stock_relationship was made with stock ID "2".Synonym "synonym3" was not found in the stock table, so no stock_relationship was made with stock ID "2".', $printed_output, "Did not get the expected output regarding synonyms when running the run() method on props_syns_example.txt.");
 
@@ -318,7 +321,7 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     $non_existant_file = __DIR__ . '/does_not_exist.txt';
 
     $genus = 'Sally';
-    $run_args = ['genus_name' => $genus];
+    $run_args = ['genus_name' => $genus, 'schema_name' => $this->testSchemaName];
     $file_details = ['file_local' => $non_existant_file];
 
     $this->importer->createImportJob($run_args, $file_details);
@@ -326,7 +329,7 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
 
     $exception_caught = FALSE;
     try {
-      $this->importer->run();
+      tripal_run_importer_run($this->importer, $this->logger);
     } catch ( \Exception $e ) {
       $exception_caught = TRUE;
     }
@@ -337,7 +340,7 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
 
     // Test for a non-existant organism
     $genus = 'Sally';
-    $run_args = ['genus_name' => $genus];
+    $run_args = ['genus_name' => $genus, 'schema_name' => $this->testSchemaName];
     $file_details = ['file_local' => $incomplete_example_file];
 
     $this->importer->createImportJob($run_args, $file_details);
@@ -346,7 +349,7 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     $exception_caught = FALSE;
     ob_start();
     try {
-      $this->importer->run();
+      tripal_run_importer_run($this->importer, $this->logger);
     } catch ( \Exception $e ) {
       $exception_caught = TRUE;
     }
@@ -357,7 +360,7 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     // Test for existing organism, but try to enter 2 germplasm with the same name but separate accession numbers
     // Note: File used is still incomplete_example.txt
     $genus = 'Tripalus';
-    $run_args = ['genus_name' => $genus];
+    $run_args = ['genus_name' => $genus, 'schema_name' => $this->testSchemaName];
 
     $this->importer->createImportJob($run_args, $file_details);
     $this->importer->prepareFiles();
@@ -365,7 +368,7 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     $exception_caught = FALSE;
     ob_start();
     try {
-      $this->importer->run();
+      tripal_run_importer_run($this->importer, $this->logger);
     } catch ( \Exception $e ) {
       $exception_caught = TRUE;
     }
