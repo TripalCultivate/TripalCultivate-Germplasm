@@ -512,7 +512,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
         'type_id' => 9,
       ])
       ->execute();
-
+    
     // Attempt to load an empty string (ie. an empty column in the file)
     $stock1_synonym_empty = '';
     $this->importer->loadSynonyms($stock_id, $stock1_synonym_empty, $organism_id);
@@ -664,5 +664,15 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
 
     $this->assertEquals($synonyms_semicolon_record[0]->name, $syn3, "The synonym table does not contain the expected synonym syn3");
     $this->assertEquals($synonyms_semicolon_record[1]->name, $syn4, "The synonym table does not contain the expected synonym syn4");
+
+    // @todo: Test the case when a stock_relationship previously exists
+
+    // Do my final queries to ensure everything we expect to be in the tables is there
+    // stock table
+    // $stock_table_query = $this->connection->select('1:stock', 'st')
+    //   ->fields('st', ['stock_id', 'name', 'uniquename', 'organism_id']);
+    // $stock_table_records = $stock_table_query->execute();
+    // $stock_table_array_actual = $stock_table_records->fetchAllAssoc('stock_id');
+    // print_r($stock_table_records->fetchAllAssoc('stock_id'));
   }
 }

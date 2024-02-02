@@ -796,9 +796,9 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
           }
         }
         // ------------------------------------------------------------------------
-        // Create a synonym-stock relationship via chado.stock_synonym
+        // Create a synonym-stock connection via chado.stock_synonym
         // ------------------------------------------------------------------------
-        // First check if this stock-synonym relationship already exists
+        // First check if this stock-synonym connection already exists
         $synonym_stock_query = $this->connection->select('1:stock_synonym', 'ss')
           ->fields('ss', ['stock_synonym_id'])
           ->condition('ss.synonym_id', $synonym_id, '=')
@@ -806,12 +806,15 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
         $synonym_stock_record = $synonym_stock_query->execute()->fetchAll();
 
         // Make sure there aren't 2 or more records
+        // Should not be possible due to a unique constraint
         if (sizeof($synonym_stock_record) >= 2) {
-          $this->logger->error("Found more than one stock-synonym relationship for stock ID \"@stock\" and synonym \"@synonym\" in chado.stock_synonym.", ['@stock' => $stock_id, '@synonym' => $synonym]);
+          $this->logger->error("Found more than one stock-synonym connection for stock ID \"@stock\" and synonym \"@synonym\" in chado.stock_synonym.", ['@stock' => $stock_id, '@synonym' => $synonym]);
           $this->error_tracker = TRUE;
           return false;
         }
         // If 1 result was returned, just ignore it and move on
+
+        // Otherwise, create it
         elseif (sizeof($synonym_stock_record) == 0) {
           $values = [
               'synonym_id' => $synonym_id,
@@ -831,8 +834,9 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
         }
 
         // ------------------------------------------------------------------------
-        // Lastly, check if our synonym is in the stock table. If yes, THEN create
-        // a stock_relationship to connect this stock_id to the synonym.
+        // Lastly, check if our synonym name is in the stock table. If yes, THEN create
+        // a stock_relationship to connect these 2 stocks (ie: the current stock and the
+        // stock matching the name of the synonym).
         // ------------------------------------------------------------------------
         $stock_relationship_type_id = $this->getCVterm('stock_relationship_type_synonym');
 
@@ -844,26 +848,42 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
 
         // Make sure there aren't 2 or more records
         if (sizeof($stock_record) >= 2) {
-          $this->logger->error("Found more than one match for synonym name \"@synonym\" in chado.stock.", ['@synonym' => $synonym]);
-          $this->error_tracker = TRUE;
-          return false;
+          $this->logger->notice("Found more than one match for synonym name \"@synonym\" in chado.stock.", ['@synonym' => $synonym]);
         }
         elseif (sizeof($stock_record) == 1) {
+          // Query the stock_relationship table to see if this relationship already exists
           $stock_id_of_synonym = $stock_record[0]->stock_id;
-          $values = [
-            'subject_id' => $stock_id_of_synonym,
-            'type_id' => $stock_relationship_type_id,
-            'object_id' => $stock_id
-          ];
-          $result = $this->connection->insert('1:stock_relationship')
-            ->fields($values)
-            ->execute();
-
-          // If the primary key is not available, then the insert failed
-          if (!$result) {
-            $this->logger->error("Insertion of stock ID \"@stock\" and stock ID of its synonym \"@sid_synonym\" into chado.stock_relationship failed.", ['@stock' => $stock_id, '@sid_synonym' => $stock_id_of_synonym]);
+          $stock_relationship_query = $this->connection->select('1:stock_relationship', 'str')
+            ->fields('str', ['stock_relationship_id'])
+            ->condition('str.subject_id', $stock_id_of_synonym, '=')
+            ->condition('str.object_id', $stock_id, '=')
+            ->condition('type_id', $stock_relationship_type_id, '=');
+          $stock_relationship_record = $stock_relationship_query->execute()->fetchAll();
+          // If 2+ relationships exist, then report an error
+          if (sizeof($stock_relationship_record) >= 2) {
+            $this->logger->error("Found more than one stock relationship for synonym name \"@synonym\" and stock ID \"@stock\" in chado.stock_relationship.", ['@synonym' => $synonym, '@stock' => $stock_id]);
             $this->error_tracker = TRUE;
             return false;
+          }
+          // If 1 result, carry on
+
+          // If no results, create the stock relationship
+          if (sizeof($stock_relationship_record) == 0) {
+            $values = [
+              'subject_id' => $stock_id_of_synonym,
+              'type_id' => $stock_relationship_type_id,
+              'object_id' => $stock_id
+            ];
+            $result = $this->connection->insert('1:stock_relationship')
+              ->fields($values)
+              ->execute();
+
+            // If the primary key is not available, then the insert failed
+            if (!$result) {
+              $this->logger->error("Insertion of stock ID \"@stock\" and stock ID of its synonym \"@sid_synonym\" into chado.stock_relationship failed.", ['@stock' => $stock_id, '@sid_synonym' => $stock_id_of_synonym]);
+              $this->error_tracker = TRUE;
+              return false;
+            }
           }
         }
         else {
