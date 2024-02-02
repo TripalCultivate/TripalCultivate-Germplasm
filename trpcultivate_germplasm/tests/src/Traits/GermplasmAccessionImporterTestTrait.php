@@ -46,6 +46,9 @@ trait GermplasmAccessionImporterTestTrait {
       'primary key' => [
         'stock_synonym_id',
       ],
+      'unique_keys' => [
+        'stock_synonym_c1' => ['synonym_id', 'stock_id', 'pub_id'],
+      ],
       'indexes' => [
         'stock_synonym_idx1' => [
           0 => 'synonym_id',
