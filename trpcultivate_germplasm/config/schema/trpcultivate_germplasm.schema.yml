@@ -1,0 +1,47 @@
+trpcultivate_germplasm.settings:
+  type: config_object
+  label: 'Germplasm Package Configuration'
+  mapping:
+    terms:
+      type: mapping
+      label: 'Package default terms'
+      mapping:
+        accession:
+          type: integer
+          label: 'The cvterm ID of the accession for a germplasm'
+        genus:
+          type: integer
+          label: 'The cvterm ID of the genus of a germplasm'
+        species:
+          type: integer
+          label: 'The cvterm ID of the species of a germplasm'
+        name:
+          type: integer
+          label: 'The cvterm ID of the name of a germplasm'
+        institute_code:
+          type: integer
+          label: 'The cvterm ID of the institute code where the germplasm was bred'
+        institute_name:
+          type: integer
+          label: 'The cvterm ID of the institute name where the germplasm was bred'
+        pedigree:
+          type: integer
+          label: 'The cvterm ID of the pedigree information for a germplasm'
+        country_of_origin_code:
+          type: integer
+          label: 'The cvterm ID of the country of origin of a germplasm'
+        synonym:
+          type: integer
+          label: 'The cvterm ID of a synonym of a germplasm name'
+        biological_status_of_accession_code:
+          type: integer
+          label: 'The cvterm ID of the biological status of a germplasm accession'
+        breeding_method_DbId:
+          type: integer
+          label: 'The cvterm ID of the germplasm breeding method'
+        subtaxa:
+          type: integer
+          label: 'The cvterm ID of the subtaxa of a germplasm'
+        stock_relationship_type_synonym:
+          type: integer
+          label: 'The cvterm ID of the stock_relationship synonym'

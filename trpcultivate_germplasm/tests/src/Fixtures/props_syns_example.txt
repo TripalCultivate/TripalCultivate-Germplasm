@@ -1,0 +1,7 @@
+# These
+# are
+# header
+# lines
+
+Germplasm Name  External Database Accession Number  Germplasm Species Germplasm Subtaxa Institute Code  Institute Name  Country of Origin Code  Biological Status of Accession  Breeding Method Pedigree  Synonyms
+Test5	TestDB	T5	databasica	subspecies chadoii				500	Breeder line		synonym1;synonym2;synonym3
