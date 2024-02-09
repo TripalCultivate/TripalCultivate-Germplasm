@@ -175,7 +175,8 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     ob_start();
     $non_existent_organism_id = $this->importer->getOrganismID('Nullus', 'organismus', '');
     $printed_output = ob_get_clean();
-    $this->assertTrue($printed_output == 'Could not find an organism "Nullus organismus" in the database.', "Did not get the expected error message when testing for a non-existant organism.");
+    $this->assertEquals('Could not find an organism "Nullus organismus" in the database.', $printed_output,
+      "Did not get the expected error message when testing for a non-existant organism.");
 
     // Not testing if multiple organisms are retrieved, since Chado should be preventing such a situation
   }
@@ -217,7 +218,8 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     ob_start();
     $created_stock_id = $this->importer->getStockID('stock2', 'TEST:2', $organism_id);
     $printed_output = ob_get_clean();
-    $this->assertTrue($printed_output == 'Inserting "stock2".', "Did not get the expected notice message when inserting a new stock.");
+    $this->assertEquals('Inserting "stock2".', $printed_output,
+      "Did not get the expected notice message when inserting a new stock.");
 
     $stock2_query = $this->connection->select('1:stock', 's')
       ->fields('s', ['stock_id'])
@@ -234,7 +236,8 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     ob_start();
     $grabbed_dup_stock_name = $this->importer->getStockID('stock1', 'TEST:1000', $organism_id);
     $printed_output = ob_get_clean();
-    $this->assertTrue($printed_output == 'A stock already exists for "stock1" but with an accession of "TEST:1" which does not match the input file.', "Did not get the expected error message when testing for duplicate stock names.");
+    $this->assertEquals('A stock already exists for "stock1" but with an accession of "TEST:1" which does not match the input file.', $printed_output,
+      "Did not get the expected error message when testing for duplicate stock names.");
 
     // Now test for multiple stocks with the same name and accession, but different type_id
     $stock_id = $this->connection->insert('1:stock')
@@ -287,7 +290,8 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     ob_start();
     $non_existing_external_db = $this->importer->getDbxrefID('PRETEND', $stock_id, $accession);
     $printed_output = ob_get_clean();
-    $this->assertTrue($printed_output == 'Unable to find "PRETEND" in chado.db.', "Did not get the expected error message when looking up an external database that does not yet exist.");
+    $this->assertEquals('Unable to find "PRETEND" in chado.db.', $printed_output,
+      "Did not get the expected error message when looking up an external database that does not yet exist.");
 
     // Verify that the stock has an empty dbxref_id
     $empty_stock_query = $this->connection->select('1:stock', 's')
@@ -366,7 +370,8 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     ob_start();
     $multiple_dbxref_accessions = $this->importer->getDbxrefID($second_db_name, $stock_id, $accession);
     $printed_output = ob_get_clean();
-    $this->assertTrue($printed_output == 'There is already a primary dbxref_id for stock ID "1" that does not match the external database and accession provided in the file (Second Test DB:TEST:1).', "Did not get the expected error message when inserting a dbxref with an existing accession with a different db.");
+    $this->assertEquals('There is already a primary dbxref_id for stock ID "1" that does not match the external database and accession provided in the file (Second Test DB:TEST:1).', $printed_output,
+      "Did not get the expected error message when inserting a dbxref with an existing accession with a different db.");
   }
 
   /**
@@ -512,7 +517,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
         'type_id' => 9,
       ])
       ->execute();
-    
+
     // Attempt to load an empty string (ie. an empty column in the file)
     $stock1_synonym_empty = '';
     $this->importer->loadSynonyms($stock_id, $stock1_synonym_empty, $organism_id);
@@ -563,7 +568,9 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     $this->assertEquals($stock1_stock_relationship_count, 0, "Did not expect for one or more stock_relationships to be present in the stock_relationship table.");
 
     // We can also check the output of our command as we expect a notice to be given
-    $this->assertTrue($printed_output == 'Synonym "s1" was not found in the stock table, so no stock_relationship was made with stock ID "1".', "Did not get the expected notice message when adding a synonym that does not exist in the stock table.");
+    $this->assertEquals('Synonym "s1" was not found in the stock table, so no stock_relationship was made with stock ID "1".', $printed_output,
+      "Did not get the expected notice message when adding a synonym that does not exist in the stock table.");
+
     // ------------------------------------------------------------------------
 
     // Attempt to insert another synonym for stock1. This time, also add the
