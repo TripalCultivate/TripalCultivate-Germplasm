@@ -5,7 +5,7 @@ on: [push, workflow_dispatch]
 env:
   PKG_NAME: TripalCultivate-Germplasm
   MODULES: "trpcultivate_germplasm trpcultivate_germcollection"
-  IMAGE_TAG: drupal10.1.x-dev-php8.2-pgsql13
+  IMAGE_TAG: baseonly-drupal10.1.x-dev-php8.2-pgsql13
   SIMPLETEST_BASE_URL: "http://localhost"
   SIMPLETEST_DB: "pgsql://drupaladmin:drupaldevelopmentonlylocal@localhost/sitedb"
   BROWSER_OUTPUT_DIRECTORY: "/var/www/drupal/web/sites/default/files/simpletest"
@@ -24,13 +24,13 @@ jobs:
       # Here we pull the development tripaldocker image for this combo in our matrix
       - name: Pull TripalDocker Image
         run: |
-          docker pull tripalproject/tripaldocker:$IMAGE_TAG
+          docker pull knowpulse/tripalcultivate:$IMAGE_TAG
       # Just spin up docker the good ol' fashion way
       # mounting our currently checked out package inside the docker container.
       - name: Spin up Docker locally
         run: |
           docker run --publish=80:80 --name=tripaldocker -tid \
-            --volume=`pwd`:/var/www/drupal/web/modules/contrib/$PKG_NAME tripalproject/tripaldocker:$IMAGE_TAG
+            --volume=`pwd`:/var/www/drupal/web/modules/contrib/$PKG_NAME knowpulse/tripalcultivate:$IMAGE_TAG
       # Install the modules
       - name: Install our package in Docker
         run: |
