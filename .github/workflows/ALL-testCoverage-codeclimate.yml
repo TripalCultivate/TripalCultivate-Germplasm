@@ -20,7 +20,7 @@ jobs:
     steps:
       # Check out the repo
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       # Here we pull the development tripaldocker image for this combo in our matrix
       - name: Pull TripalDocker Image
         run: |
@@ -38,7 +38,7 @@ jobs:
           docker exec tripaldocker drush en $MODULES --yes
       # Ensure we have the variables we need.
       - name: Inject slug/short variables
-        uses: rlespinasse/github-slug-action@v3.x
+        uses: rlespinasse/github-slug-action@v4
       # Prepare for code coverage.
       - name: Prepare for Code Coverage
         run: |
