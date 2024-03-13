@@ -1,6 +1,6 @@
 # Run some PHPUnit tests
 name: Test Coverage
-on: [push]
+on: [push, workflow_dispatch]
 
 env:
   PKG_NAME: TripalCultivate-Germplasm
