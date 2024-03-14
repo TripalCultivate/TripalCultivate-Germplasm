@@ -24,6 +24,6 @@ jobs:
           modules: 'trpcultivate_germplasm trpcultivate_germcollection'
           build-image: TRUE
           dockerfile: 'Dockerfile'
-          php-version: '8.1'
+          php-version: '8.3'
           pgsql-version: '13'
-          drupal-version: '10.1.x-dev'
+          drupal-version: '10.2.x-dev'
