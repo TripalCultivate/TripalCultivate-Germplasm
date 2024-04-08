@@ -21,6 +21,10 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
 
   protected $importer;
 
+  protected $config_factory;
+
+  protected $connection;
+
   protected $logger;
 
   protected $definitions = [
