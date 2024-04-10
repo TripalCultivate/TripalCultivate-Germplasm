@@ -19,6 +19,10 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
 
   protected $importer;
 
+  protected $config_factory;
+
+  protected $connection;
+
   protected $definitions = [
     'test-germplasm-accession' => [
       'id' => 'trpcultivate-germplasm-accession',
