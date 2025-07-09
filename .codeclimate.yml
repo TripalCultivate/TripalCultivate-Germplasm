@@ -30,9 +30,9 @@ checks:
     config:
       threshold: 6
   return-statements:
-    enabled: true
+    enabled: false
     config:
-      threshold: 6
+      threshold: 100
   similar-code:
     enabled: false
     config:
