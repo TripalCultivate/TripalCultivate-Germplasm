@@ -2,6 +2,7 @@
 
 namespace Drupal\Tests\trpcultivate_germplasm\Functional;
 
+use Drupal\Core\Routing\RouteMatch;
 use Drupal\Core\Url;
 use Drupal\Tests\tripal_chado\Functional\ChadoTestBrowserBase;
 
@@ -14,7 +15,7 @@ use Drupal\Tests\tripal_chado\Functional\ChadoTestBrowserBase;
 class InstallTest extends ChadoTestBrowserBase {
 
   protected $defaultTheme = 'stark';
-  
+
   /**
    * The service for retreiving a connection with Chado.
    *
@@ -30,7 +31,7 @@ class InstallTest extends ChadoTestBrowserBase {
   protected static $modules = ['help', 'tripal_chado'];
 
   /**
-   * The name of your module in the .info.yml
+   * The name of your module in the .info.yml.
    */
   protected static $module_name = 'Germplasm';
 
@@ -55,7 +56,7 @@ class InstallTest extends ChadoTestBrowserBase {
     // Ensure we see all logging in tests.
     \Drupal::state()->set('is_a_test_environment', TRUE);
 
-    // Open connection to Chado
+    // Open connection to Chado.
     $this->connection = $this->getTestSchema(ChadoTestBrowserBase::PREPARE_TEST_CHADO);
 
     $moduleHandler = $this->container->get('module_handler');
@@ -85,7 +86,7 @@ class InstallTest extends ChadoTestBrowserBase {
     $this->drupalGet('admin/modules');
     $status_code = $session->getStatusCode();
     $this->assertEquals(200, $status_code, "The module install page should be able to load $context.");
-    $this->assertSession()->pageTextContains( self::$module_name );
+    $this->assertSession()->pageTextContains(self::$module_name);
 
   }
 
@@ -98,10 +99,7 @@ class InstallTest extends ChadoTestBrowserBase {
     $some_expected_text = self::$help_text_excerpt;
 
     // Ensure we have an admin user.
-    $permissions = ['access administration pages', 'administer modules'];
-    if (strncmp(\Drupal::VERSION, '10.2', 4) === 0) {
-      $permissions[] = 'access help pages';
-    }
+    $permissions = ['access administration pages', 'administer modules', 'access help pages'];
     $user = $this->drupalCreateUser($permissions);
     $this->drupalLogin($user);
 
@@ -109,7 +107,7 @@ class InstallTest extends ChadoTestBrowserBase {
 
     // Call the hook to ensure it is returning text.
     $name = 'help.page.' . $this::$module_machinename;
-    $match = $this->createStub(\Drupal\Core\Routing\RouteMatch::class);
+    $match = $this->createStub(RouteMatch::class);
     $hook_name = self::$module_machinename . '_help';
     $output = $hook_name($name, $match);
     $this->assertNotEmpty($output, "The help hook should return output $context.");
