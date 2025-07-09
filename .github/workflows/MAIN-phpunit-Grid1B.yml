@@ -3,27 +3,30 @@ on:
   push:
     branches:
       - 4.x
-  # Allows us to manually trigger this workflow.
-  # This is great if there is a change made to Tripal core that we want to test our modules on ASAP.
-  workflow_dispatch:
-  # Allows us to schedule when this workflow is run.
-  # This ensures we pick up any new changes committed to Tripal Core.
-  schedule:
-    # Run at 4am every morning.
-    - cron: '0 4 * * *'
+      - laceysanderson-patch-1
+
+## UPDATES
+## Update the version numbers in the job name and the action parameters
+## |  Drupal     |  10.3.x         |  10.4.x         |  10.5.x         | 11.0.x          | 11.1.x          |
+## |-------------|-----------------|-----------------|-----------------|-----------------|-----------------|
+## | **PHP 8.1** | ![Grid1A-Badge] | ![Grid2A-Badge] | ![Grid3A-Badge] |                 |                 |
+## | **PHP 8.2** | ![Grid1B-Badge] | ![Grid2B-Badge] | ![Grid3B-Badge] |                 |                 |
+## | **PHP 8.3** | ![Grid1C-Badge] | ![Grid2C-Badge] | ![Grid3C-Badge] | ![Grid4C-Badge] | ![Grid5C-Badge] |
+
 jobs:
-  run-tests:
+  grid-1B:
+    name: "Drupal 10.3.x-dev - PHP 8.2 - PostgreSQL 16"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
       - name: Run Automated testing
-        uses: tripal/test-tripal-action@v1.4
+        uses: tripal/test-tripal-action@v1.6
         with:
           directory-name: 'TripalCultivate-Germplasm'
           modules: 'trpcultivate_germplasm trpcultivate_germcollection'
           build-image: TRUE
           dockerfile: 'Dockerfile'
-          php-version: '8.1'
-          pgsql-version: '13'
-          drupal-version: '10.1.x-dev'
+          php-version: 8.2
+          pgsql-version: 16
+          drupal-version: 10.3.x-dev
