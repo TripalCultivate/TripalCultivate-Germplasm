@@ -13,6 +13,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\tripal_chado\Controller\ChadoCVTermAutocompleteController;
 use Drupal\tripal_chado\Controller\ChadoGenericAutocompleteController;
+use Drupal\trpcultivate\Plugin\Validators\EmptyCell;
 
 /**
  * This is a Germplasm Collection Importer.
@@ -208,17 +209,25 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
 
     $validators = [];
 
+    // Configure the valid delimitted file validator.
     $instance_delimited = $this->service_validatorPluginManager->createInstance('valid_delimited_file');
     $instance_delimited->setExpectedColumns(3, FALSE);
     $instance_delimited->setFileMimeType($file_mime_type);
     $validators['raw-row']['valid_delimited_file'] = $instance_delimited;
 
+    // Configure the header row validator.
     $instance_header_row = $this->service_validatorPluginManager->createInstance('valid_headers');
 
     $instance_header_row->setHeaders($this->headers);
     $instance_header_row->setExpectedColumns(count($this->headers), TRUE);
     $validators['header-row']['valid_headers'] = $instance_header_row;
 
+    // Configure the empty cell validator.
+    $instance_empty_cell = $this->service_validatorPluginManager->createInstance('empty_cell');
+    $instance_empty_cell->setIndices([0, 1, 2]);
+    $validators['data-row']['empty_cell'] = $instance_empty_cell;
+
+    // Configure the Germplasm Name Exists validator.
     $instance_name_exists = $this->service_validatorPluginManager->createInstance('germplasm_name_exists');
 
     $organism_id = 1;
@@ -235,13 +244,15 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
    */
   public function processValidationMessages($failures) {
     $messages = [];
-    // Create a $messages entry.
+    // Create a $messages entry for valid delimited file.
     $messages['valid_delimited_file'] = [
       'title' => 'File is delimitted correctly',
       'status' => 'todo',
       'details' => '',
     ];
 
+    // Call the processValidDelimitedFileFailures() method to check if there
+    // are any failures for the valid delimited file validator.
     if (array_key_exists('valid_delimited_file', $failures)) {
       if (!empty($failures['valid_delimited_file'])) {
         $messages['valid_delimited_file']['status'] = 'fail';
@@ -252,12 +263,15 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
       }
     }
 
+    // Create a $messages entry for valid headers.
     $messages['valid_headers'] = [
       'title' => 'File has valid headers',
       'status' => 'todo',
       'details' => '',
     ];
 
+    // Call the processValidHeadersFailures() method to check if there
+    // are any failures for the valid headers validator.
     if (array_key_exists('valid_headers', $failures)) {
       if (!empty($failures['valid_headers'])) {
         $messages['valid_headers']['status'] = 'fail';
@@ -268,12 +282,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
       }
     }
 
-    $messages['germplasm_name_exists'] = [
-      'title' => 'Germplasm Name exists in the database',
-      'status' => 'todo',
-      'details' => '',
-    ];
-
+    // Configure the metadata with valid headers.
     $metadata = [
       'column_headers' => [
         0 => 'Name',
@@ -283,7 +292,34 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
       ],
     ];
 
-    // Inspect validator-specific $failures and switch status accordingly.
+    // Create a $messages entry for empty cells.
+    $messages['empty_cell'] = [
+      'title' => 'No Empty Cells',
+      'status' => 'todo',
+      'details' => '',
+    ];
+
+    // Call the processListWithDescribedTable() method to check if there
+    // are any failures for the empty cell validator.
+    if (array_key_exists('empty_cell', $failures)) {
+      if (!empty($failures['empty_cell'])) {
+        $messages['empty_cell']['status'] = 'fail';
+        $messages['empty_cell']['details'] = EmptyCell::processListWithDescribedTable($failures['empty_cell'], $metadata);
+      }
+      else {
+        $messages['empty_cell']['status'] = 'pass';
+      }
+    }
+
+    // Create a $messages entry for germplasm name exists.
+    $messages['germplasm_name_exists'] = [
+      'title' => 'Germplasm Name exists in the database',
+      'status' => 'todo',
+      'details' => '',
+    ];
+
+    // Call the processListWithDescribedTable() method to check if there
+    // are any failures for the germplasm name exists validator.
     if (array_key_exists('germplasm_name_exists', $failures)) {
       if (!empty($failures['germplasm_name_exists'])) {
         $messages['germplasm_name_exists']['status'] = 'fail';
