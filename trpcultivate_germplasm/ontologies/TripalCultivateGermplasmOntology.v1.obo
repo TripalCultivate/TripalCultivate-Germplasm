@@ -1,0 +1,374 @@
+format-version: 1.2
+date: 2023September20
+default-namespace: Tripal Cultivate Germplasm Ontology
+ontology: TRPC
+idspace: TRPC https://knowpulse.usask.ca/cv/lookup/TRPC A collection of terms focused on supporting breeding-focused Tripal sites using the Tripal Cultivate package
+
+[Term]
+name: Germplasm Types
+id: TRPC:TYPES
+def: Terms used to categorize germplasm.
+comment: This term should only be used within the ontology to provide hierarchy.
+
+[Term]
+name: F1 Seeds
+is_a: TRPC:TYPES
+id: TRPC:0001
+def: After a female plant has been pollinated by a male plant as part of a manual cross, this term indicates the seeds collected from the female.
+comment: This will typically in the USASK lentil breeding program have a name such as 12345a (i.e. a cross number). Our field crew also typically uses the same name/label for the seed packet and the plot they plant all these seeds in (i.e. F1 Plot).
+
+[Term]
+name: F1
+is_a: TRPC:TYPES
+id: TRPC:0002
+def: The resulting plant from growing a single F1 seed.
+comment: This will typically in the lentil breeding program have a name such as 12345a-1.
+
+[Term]
+name: F2 Seeds
+is_a: TRPC:TYPES
+id: TRPC:0003
+def: These are the seeds from the F1 Plant and the process by which they were generated is indicated by the relationship between the F1 plant and the F2 seeds.
+comment: For example, if the F1 plant was self fertilized then we would use a is_progeny_of_selfing relationship but if selection pressure was applied then we would use is_selection_of as the relationship. In the USASK Lentil breeding program the F2 seeds would typically have the same name as the F1 plant.
+
+[Term]
+name: F2
+is_a: TRPC:TYPES
+id: TRPC:0004
+def: The resulting plant from growing a single F2 seed.
+comment:
+
+[Term]
+name: F3 Seeds
+id: TRPC:0005
+is_a: TRPC:TYPES
+id:
+def: These are the seeds from the F2 Plant and the process by which they were generated is indicated by the relationship between the F2 plant and the F3 seeds.
+comment: For example, if the F2 plant was self fertilized then we would use a is_progeny_of_selfing relationship but if selection pressure was applied then we would use is_selection_of as the relationship.
+
+[Term]
+name: F3
+is_a: TRPC:TYPES
+id: TRPC:0006
+def:The resulting plant from growing a single F3 seed.
+comment:
+
+[Term]
+name: F4 Seeds
+is_a: TRPC:TYPES
+id: TRPC:0007
+def: These are the seeds from the F3 Plant and the process by which they were generated is indicated by the relationship between the F3 plant and the F4 seeds.
+comment:
+
+[Term]
+name: F4
+is_a: TRPC:TYPES
+id: TRPC:0008
+def: The resulting plant from growing a single F4 seed.
+comment:
+
+[Term]
+name: F5 Seeds
+is_a: TRPC:TYPES
+id: TRPC:0009
+def: These are the seeds from the F4 Plant and the process by which they were generated is indicated by the relationship between the F4 plant and the F5 seeds.
+comment:
+
+[Term]
+name: F5
+is_a: TRPC:TYPES
+id: TRPC:0010
+def: The resulting plant from growing a single F5 seed.
+comment:
+
+[Term]
+name: F6 Seeds
+is_a: TRPC:TYPES
+id: TRPC:0011
+def: These are the seeds from the F5 Plant and the process by which they were generated is indicated by the relationship between the F5 plant and the F6 seeds.
+comment:
+
+[Term]
+name: F6
+is_a: TRPC:TYPES
+id: TRPC:0012
+def: The resulting plant from growing a single F6 seed.
+comment:
+
+[Term]
+name: F7 Seeds
+is_a: TRPC:TYPES
+id: TRPC:0013
+def: These are the seeds from the F6 Plant and the process by which they were generated is indicated by the relationship between the F6 plant and the F7 seeds.
+comment:
+
+[Term]
+name: F7
+is_a: TRPC:TYPES
+id: TRPC:0014
+def: The resulting plant from growing a single F7 seed.
+comment:
+
+[Term]
+name: F8 Seeds
+is_a: TRPC:TYPES
+id: TRPC:0015
+def: These are the seeds from the F7 Plant and the process by which they were generated is indicated by the relationship between the F7 plant and the F8 seeds.
+comment:
+
+[Term]
+name: F8
+is_a: TRPC:TYPES
+id: TRPC:0016
+def: The resulting plant from growing a single F8 seed.
+comment:
+
+[Term]
+name: Recombinant Inbred Line
+is_a: TRPC:TYPES
+id: TRPC:0017
+def: A recombinant inbred line (RIL) population is developed through single seed descent from the F2 generation.
+comment:
+
+[Term]
+name: Internal Accession
+is_a: TRPC:TYPES
+id: TRPC:0018
+def: This is a type for parents of crossing blocks which we want to keep private. It is the default type used for parents of crosses unless we know they can be made public (i.e. material from genebanks or cultivars).
+comment:
+
+[Term]
+name: Recombinant Inbred Line Population
+is_a: TRPC:TYPES
+id: TRPC:0019
+def: A group of recombinant inbred lines (RIL) produced from a single cross.
+comment: For example, the Recombinant inbred line population may be named LR-18 and indicates the full set of recombinant inbred lines (e.g. LR-18-2).
+
+[Term]
+name: Relationships
+id: TRPC:RELATE
+def: Terms used to describe relationships between two germplasm entities.
+comment: This term should only be used within the ontology to provide hierarchy.
+
+[Term]
+name: progeny of selfing
+is_a: TRPC:RELATE
+id: TRPC:0020
+def: This term is used to indicate the relationship between a parent germplasm and the progeny obtained from selfing it without selection involved. Specifically the subject is a population germplasm entry with a type such as F2 seeds and the object is the germplasm entry indicating the parent plant.
+comment: In practice this term is only used to indicate the relationship between F1 seeds and the F1 plant. This is due to the genetic homogeny of all F1 seeds resulting from a specific cross. Whenever there is genetic hetrogeny in a population, we will use selection to indicate the relationship. This is due to the fact that the growth environment will place selection pressure on the seeds even if the researcher did not intend selection to occur.
+
+[Term]
+name: selection
+is_a: TRPC:RELATE
+id: TRPC:0021
+def: This term is used to indicate the relationship between two germplasm entries where the object is the chosen individuals from the subject after a selection pressure is applied. As such the object is always a subset of the subject.
+comment: One usage for this term is to indicate a chosen progeny individual (the subject; e.g. type F3 plant) after growing out a set of seeds (the object; e.g. F2 seeds). This relationship term may indicate conscious application of selection pressure (e.g. choosing a plant with low lodging occurance) or unconscious/unintended selection pressure (e.g. choosing the only plant which germinated or one which survived a naturally occuring disease)
+
+[Term]
+name: maternal parent
+is_a: TRPC:RELATE
+id: TRPC:0022
+def: This term is used to indicate the relationship between a maternal parent (the subject; i.e. the plant producing seed in a sexual cross) and the seeds collected (the object; type F1 seeds).
+comment: This term should not be used if it is later determined the resulting progeny do not include donor genetics but rather are the progeny of selfing. In this case the relationship term should be changed based on the new information to progeny of selfing. The object in this relationship will usually also have an additional relationship indicating the paternal parent. However, in cases where the pollen donor is unknown or suspected, only the maternal parent may be indicated via relationship.
+
+[Term]
+name: paternal parent
+is_a: TRPC:RELATE
+id: TRPC:0023
+def: This term is used to indicate the relationship between a paternal parent (the subject; i.e. the plant donating pollen in a sexual cross) and the seeds collected from the cross (the object; type F1 seeds)
+comment: This term should only be used if the pollen is collected from a donor parent plant and manually applied to the maternal parent plant. In all other cases we suggest including metadata on the cross indicating a suspected or intended pollen donor.
+
+[Term]
+name: recurrent parent
+is_a: TRPC:RELATE
+id: TRPC:0024
+def: The parent (the subject) in a cross which provides the stable background (e.g. a cultivated variety) to reduce the genetic drag from the donor parent in the progeny (the object).
+comment: For example, this terminology is most notably used in backcross situations where the donor parent is crossed with the recurrent parent and then the resulting progeny are repeatedly crossed with the recurrent parent.
+
+[Term]
+name: donor parent
+is_a: TRPC:RELATE
+id: TRPC:0025
+def: The parent (the subject) in a cross which provides desired traits or introduces new genetic material to an exisiting germplasm to produce progeny (the object).
+comment: For example, this terminology is most notably used in backcross situations where the donor parent is crossed with the recurrent parent and then the resulting progeny are repeatedly crossed with the recurrent parent.
+
+[Term]
+name: register cultivar
+is_a: TRPC:RELATE
+id: TRPC:0026
+def: This term is used to indicate the relationship between the germplasm entry for a registered cultivar (the subject) and the original cross individual which was registered.
+comment:
+
+[Term]
+name: extracted
+is_a: TRPC:RELATE
+id: TRPC:0027
+def: This term is used to indicate relationship between the original plant material (the object) and the entry for a genetic extraction (the subject; e.g. DNA, RNA).
+comment: For the USASK Lentil research group, we create entries to indicate the specific DNA sample which was sent for sequencing. This relationship is used to ensure we know if the phenotypic data was collected on the same germplasm which was sequenced or a genetically similar one.
+
+[Term]
+name: synonym
+is_a: TRPC:RELATE
+id: TRPC:0028
+def: This term indicates that two germplasm entries are synonymous to each other.
+comment: For the USASK Lentil breeding/research program we keep synonyms as separate germplasm entries and then associate them via relationship. This is done to keep in mind that although two entries may be very similar genetically, if they underwent seed increase in different environments they will have diverged slightly due to environmental selection pressure.
+
+[Term]
+name: Metadata
+id: TRPC:METADATA
+def: Terms used to describe additional information about a particular germplasm entity.
+comment: This term should only be used within the ontology to provide hierarchy.
+
+[Term]
+name: F1 Seed Count
+is_a: TRPC:METADATA
+id: TRPC:0029
+def: The number of seeds collected from this germplasm when it was at the F1 filial generation.
+comment: For the USASK Lentil research program this term has historically been used to keep track of RIL individual seed counts at each generation.
+
+[Term]
+name: F2 Seed Count
+is_a: TRPC:METADATA
+id: TRPC:0030
+def:The number of seeds collected from this germplasm when it was at the F2 filial generation.
+comment: For the USASK Lentil research program this term has historically been used to keep track of RIL individual seed counts at each generation.
+
+[Term]
+name: F3 Seed Count
+is_a: TRPC:METADATA
+id: TRPC:0031
+def: The number of seeds collected from this germplasm when it was at the F3 filial generation.
+comment: For the USASK Lentil research program this term has historically been used to keep track of RIL individual seed counts at each generation.
+
+[Term]
+name: F4 Seed Count
+is_a: TRPC:METADATA
+id: TRPC:0032
+def: The number of seeds collected from this germplasm when it was at the F4 filial generation.
+comment: For the USASK Lentil research program this term has historically been used to keep track of RIL individual seed counts at each generation.
+
+[Term]
+name: F5 Seed Count
+is_a: TRPC:METADATA
+id: TRPC:0033
+def: The number of seeds collected from this germplasm when it was at the F5 filial generation.
+comment: For the USASK Lentil research program this term has historically been used to keep track of RIL individual seed counts at each generation.
+
+[Term]
+name: F6 Seed Count
+is_a: TRPC:METADATA
+id: TRPC:0034
+def: The number of seeds collected from this germplasm when it was at the F6 filial generation.
+comment: For the USASK Lentil research program this term has historically been used to keep track of RIL individual seed counts at each generation.
+
+[Term]
+name: F7 Seed Count
+is_a: TRPC:METADATA
+id: TRPC:0035
+def: The number of seeds collected from this germplasm when it was at the F7 filial generation.
+comment: For the USASK Lentil research program this term has historically been used to keep track of RIL individual seed counts at each generation.
+
+[Term]
+name: F8 Seed Count
+is_a: TRPC:METADATA
+id: TRPC:0036
+def: The number of seeds collected from this germplasm when it was at the F8 filial generation.
+comment: For the USASK Lentil research program this term has historically been used to keep track of RIL individual seed counts at each generation.
+
+[Term]
+name: Maternal Parent Number
+is_a: TRPC:METADATA
+id: TRPC:0037
+def: The number designated to a maternal parent within a specified crossing block
+comment: For the USASK Lentil breeding/research program, numbers are assigned to parents of a crossing block to keep track while out in the field. These numbers are commonly re-used each crossing block, and a parent can be used in multiple crossing blocks, so this number is specific to a particular crossing block season/year/parent combination only.
+
+[Term]
+name: Paternal Parent Number
+is_a: TRPC:METADATA
+id: TRPC:0038
+def: The number designated to a paternal parent within a specified crossing block
+comment: For the USASK Lentil breeding/research program, numbers are assigned to parents of a crossing block to keep track while out in the field. These numbers are commonly re-used each crossing block, and a parent can be used in multiple crossing blocks, so this number is specific to a particular crossing block season/year/parent combination only.
+
+[Term]
+name: Public
+is_a: TRPC:METADATA
+id: TRPC:0039
+def: Indicates whether or not a germplasm is publicly accessible and not restricted to the breeding program
+comment:
+
+[Term]
+name: Province of Origin
+is_a: TRPC:METADATA
+id: TRPC:0040
+def: The province where the germplasm was originally found
+comment:
+
+[Term]
+name: Market Class
+is_a: TRPC:METADATA
+id: TRPC:0041
+def: A classification of a germplasm based on its characteristics that make it marketable to a particular set of consumers
+comment: For the USASK Lentil research group in particular, we distinguish between market classes such as small red and large green, since consumers pay particular attention to the size and colour of the lentils they purchase.
+
+[Term]
+name: Variety Year Released
+is_a: TRPC:METADATA
+id: TRPC:0042
+def: The year that a variety was registered and released.
+comment:
+
+[Term]
+name: Source Institute
+is_a: TRPC:METADATA
+id: TRPC:0043
+def: The institution (university, college, breeding group) this germplasm was developed or made available through.
+comment: For the USASK Lentil research group, we use the following format for crossing blocks: [Season][Year]-P[parent number] where season is W-Winter, Sp-Spring, Sm-Summar, F-Fall.
+
+[Term]
+name: Crossing Block Parent
+is_a: TRPC:METADATA
+id: TRPC:0044
+def: Indicates that the current stock was a parent in the indicated crossing block
+comment:
+
+[Term]
+name: Country of Origin
+is_a: TRPC:METADATA
+id: TRPC:0045
+def: The country where the germplasm was originally found
+comment:
+
+[Term]
+name: Crossing Block Season
+is_a: TRPC:METADATA
+id: TRPC:0046
+def: Indicates the season in which the current stock was the progeny of a cross
+comment: For the USASK Lentil research group, we use the following format for crossing blocks: [Season][Year]-P[parent number] where season is W-Winter, Sp-Spring, Sm-Summar, F-Fall.
+
+[Term]
+name: Crossing Block Year
+is_a: TRPC:METADATA
+id: TRPC:0047
+def: Indicates the year in which the current stock was the progeny of a cross.
+comment: For the USASK Lentil research group, we use the following format for crossing blocks: [Season][Year]-P[parent number] where season is W-Winter, Sp-Spring, Sm-Summar, F-Fall.
+
+[Term]
+name: Cotyledon Colour
+is_a: TRPC:METADATA
+id: TRPC:0048
+def: The color of cotyledon, which can be different from seed coat color.
+comment:
+
+[Term]
+name: Seed Coat Colour
+is_a: TRPC:METADATA
+id: TRPC:0049
+def: The color of the seed coat.
+comment:
+
+[Term]
+name: Seed Type
+is_a: TRPC:METADATA
+id: TRPC:0050
+def: A breeder assigned name for the seed category
+comment: This is usually similar to the market class, but more cotyledon/seed coat colour focused (e.g Red). If possible, as the breeder to supply the seed coat colour, cotyledon colour and market class instead. This should only be used for historical data.
