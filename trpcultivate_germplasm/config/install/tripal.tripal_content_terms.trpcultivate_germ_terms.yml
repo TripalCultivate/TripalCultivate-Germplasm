@@ -2,18 +2,6 @@ id: 'trpcultivate_germ_terms'
 label: 'TripalCultivate Germplasm Terms'
 description: 'Default terms used by the TripalCultivate Germplasm collection of modules.'
 vocabularies:
-    -   name: 'THESAGRO'
-        label: 'Thesaurus Agrícola Nacional'
-        url: 'http://sistemas.agricultura.gov.br/tematres/vocab/thesagro/'
-        idSpaces:
-            -   name: 'THESAGRO'
-                description: 'Thesaurus Agrícola Nacional Ontology, see http://sistemas.agricultura.gov.br/tematres/vocab/thesagro/.'
-                urlPrefix: 'http://sistemas.agricultura.gov.br/tematres/vocab/{db}/{accession}'
-
-        terms:
-            -   id: 'THESAGRO:9138'
-                name: 'breeding methods'
-                description: ''
     -   name: 'PBO'
         label: 'Plant Breeding Ontology'
         url: 'http://purl.obolibrary.org/obo/PBO'
@@ -25,14 +13,3 @@ vocabularies:
             -   id: 'PBO:0000055'
                 name: 'pedigree'
                 description: 'A record of ancestry of an individual, family, or strain.'
-    -   name: 'ncit'
-        label: 'NCI Thesaurus OBO Edition'
-        url: 'https://www.ebi.ac.uk/ols4/ontologies/ncit'
-        idSpaces:
-            -   name: 'NCIT'
-                description: 'The NCIt is a reference terminology that includes broad coverage of the cancer domain, including cancer related diseases, findings and abnormalities. NCIt OBO Edition releases should be considered experimental.'
-                urlPrefix: 'http://www.ebi.ac.uk/ncit/{db}_{accession}'
-        terms:
-            -   id: 'NCIT:C52469'
-                name: 'synonym'
-                description: 'A word having the same or nearly the same meaning as another word or other words in a language; a word or an expression that serves as a figurative or symbolic substitute for another.'

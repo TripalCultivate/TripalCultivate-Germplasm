@@ -1,13 +1,14 @@
 <?php
+
 /**
  * @file
  * Provides functionality required for installation of the module.
  */
 
 /**
- * Implement hook_install()
+ * Implements hook_install().
  */
-function trpcultivate_germplasm_install(){
+function trpcultivate_germplasm_install() {
 
   // Now create the stock_synonym linking table.
   $table = 'stock_synonym';
@@ -87,4 +88,7 @@ function trpcultivate_germplasm_install(){
   $custom_tables = \Drupal::service('tripal_chado.custom_tables');
   $custom_table = $custom_tables->create($table, $schema_name);
   $custom_table->setTableSchema($schema);
+
+  // Install the terms needed by this module.
+  trpcultivate_germplasm_install_terms();
 }
