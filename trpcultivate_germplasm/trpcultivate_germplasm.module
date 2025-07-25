@@ -24,3 +24,15 @@ function trpcultivate_germplasm_help($route_name, RouteMatchInterface $route_mat
     default:
   }
 }
+
+/**
+ * Insert terms needed by this module into the default chado instance.
+ *
+ * Expected but not required to be run by a Tripal Job.
+ */
+function trpcultivate_germplasm_install_terms() {
+  $config_id = 'trpcultivate_germ_terms';
+
+  $terms_setup = \Drupal::service('tripal_chado.terms_init');
+  $terms_setup->installTerms($config_id);
+}
