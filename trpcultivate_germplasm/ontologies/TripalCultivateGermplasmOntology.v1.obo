@@ -321,6 +321,7 @@ comment:
 name: Source Institute
 is_a: TRPC:METADATA
 id: TRPC:0043
+xref: CO_020:0000088 "FAO WIEWS code of the institute where the accession is maintained"
 def: The institution (university, college, breeding group) this germplasm was developed or made available through.
 comment: For the USASK Lentil research group, we use the following format for crossing blocks: [Season][Year]-P[parent number] where season is W-Winter, Sp-Spring, Sm-Summar, F-Fall.
 
@@ -335,6 +336,7 @@ comment:
 name: Country of Origin
 is_a: TRPC:METADATA
 id: TRPC:0045
+xref: CO_020:0000013 "3-letter ISO 3166-1 code of the country in which the sample was originally collected, bred or selected"
 def: The country where the germplasm was originally found
 comment:
 
@@ -370,5 +372,12 @@ comment:
 name: Seed Type
 is_a: TRPC:METADATA
 id: TRPC:0050
-def: A breeder assigned name for the seed category
+def: A breeder assigned name for the seed category.
 comment: This is usually similar to the market class, but more cotyledon/seed coat colour focused (e.g Red). If possible, as the breeder to supply the seed coat colour, cotyledon colour and market class instead. This should only be used for historical data.
+
+[Term]
+name: Breeding Method
+is_a: TRPC:METADATA
+id: TRPC:0051
+def: The method used to generate or develop a germplasm.
+comment: This can also be used by BrAPI as the breedingMethodDbId and then more details for the method would be retrieved via the /breedingmethods call.
