@@ -52,19 +52,29 @@ function trpcultivate_germplasm_install_terms() {
   // Iterate through each ontology and install them with the OBO Importer.
   foreach ($ontologies as $ontology) {
 
-    // Insert the obo record if it's not already there.
-    $query = $drupal_connection->upsert('tripal_cv_obo')
-      ->fields(['name', 'path'])
-      ->key('name');
-    $query->values($ontology);
-    $query->execute();
-
-    // Get obo id.
+    // Make sure an OBO with the same name doesn't already exist.
     $obo_id = $drupal_connection->select('tripal_cv_obo', 'tco')
       ->fields('tco', ['obo_id'])
       ->condition('name', $ontology['name'])
       ->execute()
       ->fetchField();
+
+    if ($obo_id) {
+      $drupal_connection->update('tripal_cv_obo')
+        ->fields([
+          'path' => $ontology['path'],
+        ])
+        ->condition('name', $ontology['name'])
+        ->execute();
+    }
+    else {
+      $obo_id = $drupal_connection->insert('tripal_cv_obo')
+        ->fields([
+          'name' => $ontology['name'],
+          'path' => $ontology['path'],
+        ])
+        ->execute();
+    }
 
     if (!$obo_id) {
       \Drupal::logger('trpcultivate_germplasm')->notice("Importing " . $ontology['name']);
@@ -75,7 +85,7 @@ function trpcultivate_germplasm_install_terms() {
       $obo_importer->postRun();
     }
     else {
-      \Drupal::logger('trpcultivate_germplasm')->error("Tripal Cultivate Germplasm could not find an obo record for ontology " . $ontology['name']);
+      \Drupal::logger('trpcultivate_germplasm')->error("Tripal Cultivate Germplasm could not insert or find an obo record for ontology " . $ontology['name']);
     }
   }
 }
