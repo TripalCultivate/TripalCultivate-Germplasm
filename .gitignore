@@ -1,7 +1,4 @@
-*
-!configs
-!configs/**
-!hooks
-!hooks/**
-!qlty.toml
-!.gitignore
+supervisord*
+.phpunit.result.cache
+composer.lock
+*.DS_Store
