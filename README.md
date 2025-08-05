@@ -53,7 +53,7 @@ drush en trpcultivate_germplasm
 
 This package is dedicated to a high standard of automated testing. We use
 PHPUnit for testing and QLTY Cloud to ensure good test coverage and maintainability.
-There are more details on [our QTLY Cloud project page] describing our specific
+There are more details on [our QLTY Cloud project page] describing our specific
 maintainability issues and test coverage.
 
 [![Maintainability](https://qlty.sh/gh/TripalCultivate/projects/TripalCultivate/maintainability.svg)](https://qlty.sh/gh/TripalCultivate/projects/TripalCultivate-Germplasm)
