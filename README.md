@@ -67,7 +67,7 @@ The following compatibility is proven via automated testing workflows.
 | **PHP 8.2** | ![Grid1B-Badge] | ![Grid2B-Badge] | ![Grid3B-Badge] |                 |                 |
 | **PHP 8.3** | ![Grid1C-Badge] | ![Grid2C-Badge] | ![Grid3C-Badge] | ![Grid4C-Badge] | ![Grid5C-Badge] |
 
-[our QLTY Cloud project page]: https://qlty.sh/gh/TripalCultivate/projects/TripalCultivate
+[our QLTY Cloud project page]: https://qlty.sh/gh/TripalCultivate/projects/TripalCultivate-Germplasm
 
 [Grid1A-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-Grid1A.yml/badge.svg
 [Grid1B-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-Grid1B.yml/badge.svg
