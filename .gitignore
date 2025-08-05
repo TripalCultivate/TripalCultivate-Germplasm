@@ -1,3 +1,4 @@
 supervisord*
 .phpunit.result.cache
-.DS_Store
+composer.lock
+*.DS_Store

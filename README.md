@@ -52,12 +52,12 @@ drush en trpcultivate_germplasm
 ### Automated Testing
 
 This package is dedicated to a high standard of automated testing. We use
-PHPUnit for testing and CodeClimate to ensure good test coverage and maintainability.
-There are more details on [our CodeClimate project page] describing our specific
+PHPUnit for testing and QLTY Cloud to ensure good test coverage and maintainability.
+There are more details on [our QLTY Cloud project page] describing our specific
 maintainability issues and test coverage.
 
-![MaintainabilityBadge]
-![TestCoverageBadge]
+[![Maintainability](https://qlty.sh/gh/TripalCultivate/projects/TripalCultivate/maintainability.svg)](https://qlty.sh/gh/TripalCultivate/projects/TripalCultivate-Germplasm)
+[![Code Coverage](https://qlty.sh/gh/TripalCultivate/projects/TripalCultivate/coverage.svg)](https://qlty.sh/gh/TripalCultivate/projects/TripalCultivate-Germplasm)
 
 The following compatibility is proven via automated testing workflows.
 
@@ -67,9 +67,7 @@ The following compatibility is proven via automated testing workflows.
 | **PHP 8.2** | ![Grid1B-Badge] | ![Grid2B-Badge] | ![Grid3B-Badge] |                 |                 |
 | **PHP 8.3** | ![Grid1C-Badge] | ![Grid2C-Badge] | ![Grid3C-Badge] | ![Grid4C-Badge] | ![Grid5C-Badge] |
 
-[our CodeClimate project page]: https://codeclimate.com/github/TripalCultivate/TripalCultivate-Germplasm
-[MaintainabilityBadge]: https://api.codeclimate.com/v1/badges/0619dcf991bd5e5114fb/maintainability
-[TestCoverageBadge]: https://api.codeclimate.com/v1/badges/0619dcf991bd5e5114fb/test_coverage
+[our QLTY Cloud project page]: https://qlty.sh/gh/TripalCultivate/projects/TripalCultivate-Germplasm
 
 [Grid1A-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-Grid1A.yml/badge.svg
 [Grid1B-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-Grid1B.yml/badge.svg
