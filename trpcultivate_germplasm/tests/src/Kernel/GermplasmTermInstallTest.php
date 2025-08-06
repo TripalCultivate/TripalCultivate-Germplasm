@@ -20,6 +20,8 @@ class GermplasmTermInstallTest extends ChadoTestKernelBase {
   protected static $modules = [
     'system',
     'tripal',
+    'tripal_chado',
+    'tripal_biodb',
     'trpcultivate_germplasm',
   ];
 
@@ -42,6 +44,9 @@ class GermplasmTermInstallTest extends ChadoTestKernelBase {
     // Create a test chado instance as needed by our service.
     $this->chado_connection = $this->createTestSchema(ChadoTestKernelBase::PREPARE_TEST_CHADO);
 
+    $this->prepareEnvironment(['TripalTerm']);
+    $this->installSchema('tripal_chado', ['tripal_cv_obo']);
+
     // Install module configuration.
     $this->installConfig(['trpcultivate_germplasm']);
   }
@@ -53,17 +58,31 @@ class GermplasmTermInstallTest extends ChadoTestKernelBase {
 
     trpcultivate_germplasm_install_terms();
 
-    // Call defineTerms in Term Service.
-    $terms = \Drupal::service('trpcultivate_germplasm.terms')
-      ->defineTerms();
+    // Install terms install 2 sets of term - config (YML) and ontologies (OBO).
+    // Test config type terms:
+    $config = \Drupal::service('config.factory')
+      ->get('tripal.tripal_content_terms.trpcultivate_germ_terms');
 
-    foreach ($terms as $term) {
-      // Check if the term exists in the database.
-      $exists = $this->chado_connection->query('SELECT * FROM {1:cvterm} WHERE name = :name', [':name' => $term['name']])->fetchField();
+    $vocabs = $config->get('vocabularies');
+    foreach ($vocabs as $vocab_info) {
+      foreach ($vocab_info['terms'] as $term) {
+        $term_name = $term['name'];
 
-      // Assert that the term exists.
-      $this->assertNotEmpty($exists, "The term '{$term['name']}' should exist in the database.");
+        $term_name_ins = $this->chado_connection->select('1:cvterm', 'c')
+          ->fields('c', ['name'])
+          ->condition('c.name', $term_name, '=')
+          ->execute()
+          ->fetchField();
+
+        $this->assertEquals(
+          $term_name,
+          $term_name_ins,
+          'Install failed to insert the term: ' . $term_name
+        );
+      }
     }
+
+    // Test ontology type terms:
   }
 
 }
