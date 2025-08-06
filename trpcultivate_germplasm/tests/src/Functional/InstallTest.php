@@ -5,23 +5,29 @@ namespace Drupal\Tests\trpcultivate_germplasm\Functional;
 use Drupal\Core\Routing\RouteMatch;
 use Drupal\Core\Url;
 use Drupal\Tests\tripal_chado\Functional\ChadoTestBrowserBase;
+use Drupal\tripal_chado\Database\ChadoConnection;
 
 /**
- * Simple test to ensure that main page loads with module enabled.
+ * Tests to ensure that the module is enabled and terms are installed.
  *
  * @group TripalCultivate-Germplasm
  * @group Installation
  */
 class InstallTest extends ChadoTestBrowserBase {
 
+  /**
+   * Theme used in the test environment.
+   *
+   * @var string
+   */
   protected $defaultTheme = 'stark';
 
   /**
-   * The service for retreiving a connection with Chado.
+   * A Database query interface for querying Chado using Tripal DBX.
    *
    * @var Drupal\tripal_chado\Database\ChadoConnection
    */
-  protected $connection;
+  protected ChadoConnection $chado_connection;
 
   /**
    * Modules to enable.
@@ -32,17 +38,22 @@ class InstallTest extends ChadoTestBrowserBase {
 
   /**
    * The name of your module in the .info.yml.
+   *
+   * @var string
    */
   protected static $module_name = 'Germplasm';
 
   /**
    * The machine name of this module.
+   *
+   * @var string
    */
   protected static $module_machinename = 'trpcultivate_germplasm';
 
   /**
-   * A small excert from your help page.
-   * Do not cross newlines.
+   * A small excerpt from your help page. Do not cross newlines.
+   *
+   * @var string
    */
   protected static $help_text_excerpt = 'specialized Tripal fields and importers for germplasm';
 
@@ -57,7 +68,7 @@ class InstallTest extends ChadoTestBrowserBase {
     \Drupal::state()->set('is_a_test_environment', TRUE);
 
     // Open connection to Chado.
-    $this->connection = $this->getTestSchema(ChadoTestBrowserBase::PREPARE_TEST_CHADO);
+    $this->chado_connection = $this->getTestSchema(ChadoTestBrowserBase::PREPARE_TEST_CHADO);
 
     $moduleHandler = $this->container->get('module_handler');
     $moduleInstaller = $this->container->get('module_installer');
