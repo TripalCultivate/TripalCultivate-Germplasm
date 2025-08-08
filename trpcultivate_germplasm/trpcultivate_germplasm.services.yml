@@ -1,0 +1,8 @@
+# TripalCultivate Germplasm Services.
+
+services:
+  trpcultivate_germplasm.preparer:
+    class: 'Drupal\trpcultivate_germplasm\EventSubscriber\Preparer'
+    arguments: ['@state', '@current_user', '@tripal_chado.database', '@tripal_chado.terms_init', '@database', '@tripal.importer', '@tripal.job']
+    tags:
+      - { name: event_subscriber }

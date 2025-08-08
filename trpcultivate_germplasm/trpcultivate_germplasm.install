@@ -89,6 +89,10 @@ function trpcultivate_germplasm_install() {
   $custom_table = $custom_tables->create($table, $schema_name);
   $custom_table->setTableSchema($schema);
 
-  // Install the terms needed by this module.
-  trpcultivate_germplasm_install_terms();
+  // Setup terms from config (YML) and OBO.
+  // This is an even subscriber and performed after install. This is to ensure
+  // that OBO importer and Tripal Jobs dependencies (entity, user, datetime etc)
+  // are fully setup, ready, installed and available before execution.
+  // @see trpcultivate_germplasm.services.yml
+  \Drupal::state()->set('trpcultivate_germplasm.preparer', TRUE);
 }
