@@ -69,7 +69,6 @@ class InstallTest extends ChadoTestBrowserBase {
 
     // Open connection to Chado.
     $this->chado_connection = $this->getTestSchema(ChadoTestBrowserBase::PREPARE_TEST_CHADO);
-    $this->prepareEnvironment(['TripalImporter']);
 
     $moduleHandler = $this->container->get('module_handler');
     $moduleInstaller = $this->container->get('module_installer');
