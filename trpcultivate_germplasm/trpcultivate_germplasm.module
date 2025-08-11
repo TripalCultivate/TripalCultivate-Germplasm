@@ -24,3 +24,93 @@ function trpcultivate_germplasm_help($route_name, RouteMatchInterface $route_mat
     default:
   }
 }
+
+/**
+ * Import ontologies and insert terms needed by this module.
+ *
+ * Expected but not required to be run by a Tripal Job.
+ */
+function trpcultivate_germplasm_install_terms() {
+
+  $container = \Drupal::getContainer();
+  $tripal_job = $container->get('tripal.job');
+  $schema_name = $container->get('tripal_chado.database')
+    ->getSchemaName();
+
+  $drupal_connection = $container->get('database');
+  $user_id = $container->get('current_user')
+    ->id();
+
+  // Insert our config terms (config YML).
+  $config_id = 'trpcultivate_germ_terms';
+  $container->get('tripal_chado.terms_init')
+    ->installTerms($config_id);
+
+  // Insert our OBO terms (OBO file).
+  $ontologies = [];
+  $ontologies[] = [
+    'name' => 'Multi-Crop Passport Ontology',
+    'path' => '{trpcultivate_germplasm}/ontologies/mcpd_v2.1_151215.obo',
+  ];
+  $ontologies[] = [
+    'name' => 'TripalCultivate Germplasm Ontology',
+    'path' => '{trpcultivate_germplasm}/ontologies/TripalCultivateGermplasmOntology.v1.obo',
+  ];
+
+  // Iterate through each ontology and install them with the OBO Importer.
+  foreach ($ontologies as $ontology) {
+    // Make sure an OBO with the same name doesn't already exist.
+    $obo_id = $drupal_connection->select('tripal_cv_obo', 'tco')
+      ->fields('tco', ['obo_id'])
+      ->condition('name', $ontology['name'])
+      ->execute()
+      ->fetchField();
+
+    if ($obo_id) {
+      $drupal_connection->update('tripal_cv_obo')
+        ->fields([
+          'path' => $ontology['path'],
+        ])
+        ->condition('name', $ontology['name'])
+        ->execute();
+    }
+    else {
+      $obo_id = $drupal_connection->insert('tripal_cv_obo')
+        ->fields([
+          'name' => $ontology['name'],
+          'path' => $ontology['path'],
+        ])
+        ->execute();
+    }
+
+    $import_id = $drupal_connection->insert('tripal_import')
+      ->fields(
+      [
+        'uid' => $user_id,
+        'class' => 'chado_obo_loader',
+        'submit_date' => time(),
+        'arguments' => base64_encode(serialize([
+          'run_args' => [
+            'obo_id' => $obo_id,
+            'schema_name' => $schema_name,
+          ],
+          'files' => [
+            'file_local' => $ontology['path'],
+            'file_path' => $ontology['path'],
+          ],
+        ])),
+      ]
+    )
+      ->execute();
+
+    $tripal_job->create([
+      'job_name' => 'Insert TripalCultivate Germplasm Terms: OBO - ' . $ontology['name'],
+      'modulename' => 'trpcultivate_germplasm',
+      'callback' => 'tripal_run_importer',
+      'arguments' => [$import_id],
+      'uid' => $user_id,
+    ]);
+
+    $tripal_job->run();
+  }
+}

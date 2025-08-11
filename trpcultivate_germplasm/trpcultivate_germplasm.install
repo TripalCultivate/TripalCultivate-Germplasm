@@ -5,8 +5,6 @@
  * Provides functionality required for installation of the module.
  */
 
-use Drupal\trpcultivate_germplasm\Event\InstallTermEvent;
-
 /**
  * Implements hook_install().
  */
@@ -91,10 +89,6 @@ function trpcultivate_germplasm_install() {
   $custom_table = $custom_tables->create($table, $schema_name);
   $custom_table->setTableSchema($schema);
 
-  // Setup terms from config (YML) and OBO.
-  // This is an even subscriber and performed after install. This is to ensure
-  // that OBO importer and Tripal Jobs dependencies (entity, user, datetime etc)
-  // are fully setup, ready, installed and available before execution.
-  // @see trpcultivate_germplasm.services.yml
-  \Drupal::service('event_dispatcher')->dispatch(new InstallTermEvent(), InstallTermEvent::INSTALL_TERM);
+  // Setup terms from config (YML) and OBO file required by this module.
+  trpcultivate_germplasm_install_terms();
 }
