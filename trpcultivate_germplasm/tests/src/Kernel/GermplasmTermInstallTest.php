@@ -4,6 +4,7 @@ namespace Drupal\Tests\trpcultivate_germplasm\Kernel;
 
 use Drupal\Tests\tripal_chado\Kernel\ChadoTestKernelBase;
 use Drupal\tripal_chado\Database\ChadoConnection;
+use Drupal\user\Entity\User;
 
 /**
  * Tests term install by the trpcultivate_germplasm.module.
@@ -18,7 +19,17 @@ class GermplasmTermInstallTest extends ChadoTestKernelBase {
    * @var array
    */
   protected static $modules = [
+    'datetime',
+    'file',
     'system',
+    'user',
+    'path',
+    'path_alias',
+    'views',
+    'field',
+    'field_ui',
+    'markup',
+    'field_group',
     'tripal',
     'tripal_chado',
     'trpcultivate_germplasm',
@@ -45,16 +56,31 @@ class GermplasmTermInstallTest extends ChadoTestKernelBase {
     $this->prepareEnvironment(['TripalTerm']);
     $this->installSchema('tripal_chado', ['tripal_cv_obo']);
     $this->installSchema('tripal', ['tripal_import', 'tripal_jobs']);
+    $this->installEntitySchema('user');
+    $this->installEntitySchema('date_format');
+
+    $user = User::create([
+      'name' => 'user-collector',
+      'roles' => ['authenticated user'],
+    ]);
+    $user->save();
+
+    \Drupal::currentUser()->setAccount($user);
 
     $this->installConfig(['trpcultivate_germplasm']);
     $this->container->get('module_installer')
-      ->install(['trpcultivate_germplasm']);
+      ->install(['tripal', 'tripal_chado', 'trpcultivate_germplasm']);
+
+    $this->container->get('date.formatter');
+    $this->container->get('current_user');
   }
 
   /**
    * Test trpcultivate_germplasm_install_terms() method.
    */
   public function testInstallOntologyTerms() {
+
+    // trpcultivate_germplasm_install_terms();
 
     // Install terms install 2 sets of term - config(YML) and ontologies(OBO) .
     // Test config type terms:
