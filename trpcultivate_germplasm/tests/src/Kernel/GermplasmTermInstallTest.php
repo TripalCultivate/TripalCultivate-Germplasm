@@ -19,17 +19,10 @@ class GermplasmTermInstallTest extends ChadoTestKernelBase {
    * @var array
    */
   protected static $modules = [
-    'datetime',
-    'file',
     'system',
+    'file',
     'user',
-    'path',
     'path_alias',
-    'views',
-    'field',
-    'field_ui',
-    'markup',
-    'field_group',
     'tripal',
     'tripal_chado',
     'trpcultivate_germplasm',
@@ -43,6 +36,13 @@ class GermplasmTermInstallTest extends ChadoTestKernelBase {
   protected ChadoConnection $chado_connection;
 
   /**
+   * A Database query interface for querying Drupal database.
+   *
+   * @var \Drupal\core\Database\Database
+   */
+  protected $drupal_connection;
+
+  /**
    * {@inheritdoc}
    */
   protected function setUp(): void {
@@ -51,28 +51,107 @@ class GermplasmTermInstallTest extends ChadoTestKernelBase {
     // Set test environment.
     \Drupal::state()->set('is_a_test_environment', TRUE);
 
-    // // Create a test chado instance as needed by our service.
+    // Create a test chado instance as needed by our service.
     $this->chado_connection = $this->createTestSchema(ChadoTestKernelBase::PREPARE_TEST_CHADO);
-    $this->prepareEnvironment(['TripalTerm']);
-    $this->installSchema('tripal_chado', ['tripal_cv_obo']);
-    $this->installSchema('tripal', ['tripal_import', 'tripal_jobs']);
-    $this->installEntitySchema('user');
-    $this->installEntitySchema('date_format');
 
+    // Setup test evironment.
+    $this->prepareEnvironment(['TripalTerm']);
+
+    $this->installSchema('tripal', ['tripal_import', 'tripal_jobs']);
+    $this->installSchema('tripal_chado', [
+      'tripal_cv_obo',
+      'tripal_custom_tables',
+      'tripal_mviews',
+    ]);
+
+    $this->installEntitySchema('user');
+    $this->installEntitySchema('path_alias');
+
+    $this->installConfig([
+      'system',
+      'trpcultivate_germplasm',
+    ]);
+
+    $this->container->get('module_installer')->install([
+      'tripal',
+      'tripal_chado',
+      'trpcultivate_germplasm',
+    ]);
+
+    // Create test user.
     $user = User::create([
       'name' => 'user-collector',
       'roles' => ['authenticated user'],
     ]);
     $user->save();
 
-    \Drupal::currentUser()->setAccount($user);
+    $this->container->get('current_user')
+      ->setAccount($user);
 
-    $this->installConfig(['trpcultivate_germplasm']);
-    $this->container->get('module_installer')
-      ->install(['tripal', 'tripal_chado', 'trpcultivate_germplasm']);
+    // Insert the queries required to populate the materialized views.
+    $this->drupal_connection = $this->container->get('database');
+    $schema_name = $this->container->get('tripal_chado.database')
+      ->getSchemaName();
 
-    $this->container->get('date.formatter');
-    $this->container->get('current_user');
+    $insert_custom_tables = [
+      'cv_root_mview' => [
+        1,
+        'a:4:{s:5:"table";s:13:"cv_root_mview";s:11:"description";s:93:"A list of the root terms for all controlled vocabularies. This is needed for viewing CV trees";s:6:"fields";a:4:{s:4:"name";a:3:{s:4:"type";s:7:"varchar";s:6:"length";i:255;s:8:"not null";b:1;}s:9:"cvterm_id";a:3:{s:4:"size";s:3:"big";s:4:"type";s:3:"int";s:8:"not null";b:1;}s:5:"cv_id";a:3:{s:4:"size";s:3:"big";s:4:"type";s:3:"int";s:8:"not null";b:1;}s:7:"cv_name";a:3:{s:4:"type";s:7:"varchar";s:6:"length";i:255;s:8:"not null";b:1;}}s:7:"indexes";a:2:{s:19:"cv_root_mview_indx1";a:1:{i:0;s:9:"cvterm_id";}s:19:"cv_root_mview_indx2";a:1:{i:0;s:5:"cv_id";}}}',
+        1,
+        $schema_name,
+      ],
+      'db2cv_mview' => [
+        2,
+        'a:4:{s:5:"table";s:11:"db2cv_mview";s:11:"description";s:88:"A table for quick lookup of the vocabularies and the databases they are associated with.";s:6:"fields";a:5:{s:5:"cv_id";a:2:{s:4:"type";s:3:"int";s:8:"not null";b:1;}s:6:"cvname";a:3:{s:4:"type";s:7:"varchar";s:6:"length";s:3:"255";s:8:"not null";b:1;}s:5:"db_id";a:2:{s:4:"type";s:3:"int";s:8:"not null";b:1;}s:6:"dbname";a:3:{s:4:"type";s:7:"varchar";s:6:"length";s:3:"255";s:8:"not null";b:1;}s:9:"num_terms";a:2:{s:4:"type";s:3:"int";s:8:"not null";b:1;}}s:7:"indexes";a:4:{s:9:"cv_id_idx";a:1:{i:0;s:5:"cv_id";}s:10:"cvname_idx";a:1:{i:0;s:6:"cvname";}s:9:"db_id_idx";a:1:{i:0;s:5:"db_id";}s:10:"dbname_idx";a:1:{i:0;s:5:"db_id";}}}',
+        1,
+        $schema_name,
+      ],
+    ];
+
+    foreach ($insert_custom_tables as $table => $val) {
+      $this->drupal_connection->insert('tripal_custom_tables')
+        ->fields([
+          'table_id' => $val[0],
+          'table_name' => $table,
+          'schema' => $val[1],
+          'locked' => $val[2],
+          'chado' => $val[3],
+        ])
+        ->execute();
+    }
+
+    $insert_tripal_mviews = [
+      'cv_root_mview' => [
+        1,
+        1,
+        'SELECT DISTINCT CVT.name, CVT.cvterm_id, CV.cv_id, CV.name FROM cvterm CVT LEFT JOIN cvterm_relationship CVTR ON CVT.cvterm_id = CVTR.subject_id INNER JOIN cvterm_relationship CVTR2 ON CVT.cvterm_id = CVTR2.object_id INNER JOIN cv CV on CV.cv_id = CVT.cv_id WHERE CVTR.subject_id is NULL and CVT.is_relationshiptype = 0 and CVT.is_obsolete = 0',
+        1667003601,
+        'Populated with 9 rows',
+        'A list of the root terms for all controlled vocabularies. This is needed for viewing CV trees',
+      ],
+      'db2cv_mview' => [
+        2,
+        2,
+        'SELECT DISTINCT CV.cv_id, CV.name as cvname, DB.db_id, DB.name as dbname, COUNT(CVT.cvterm_id) as num_terms FROM cv CV INNER JOIN cvterm CVT on CVT.cv_id = CV.cv_id INNER JOIN dbxref DBX on DBX.dbxref_id = CVT.dbxref_id INNER JOIN db DB on DB.db_id = DBX.db_id WHERE CVT.is_relationshiptype = 0 and CVT.is_obsolete = 0 GROUP BY CV.cv_id, CV.name, DB.db_id, DB.name ORDER BY DB.name',
+        1667003601,
+        'Populated with 41 rows',
+        'A table for quick lookup of the vocabularies and the databases they are associated with.',
+      ],
+    ];
+
+    foreach ($insert_tripal_mviews as $table => $val) {
+      $this->drupal_connection->insert('tripal_mviews')
+        ->fields([
+          'mview_id' => $val[0],
+          'table_id' => $val[1],
+          'name' => $table,
+          'query' => $val[2],
+          'last_update' => $val[3],
+          'status' => $val[4],
+          'comment' => $val[5],
+        ])
+        ->execute();
+    }
   }
 
   /**
@@ -80,20 +159,11 @@ class GermplasmTermInstallTest extends ChadoTestKernelBase {
    */
   public function testInstallOntologyTerms() {
 
-    // trpcultivate_germplasm_install_terms();
+    trpcultivate_germplasm_install_terms();
 
-    // Install terms install 2 sets of term - config(YML) and ontologies(OBO) .
-    // Test config type terms:
-    /*
-
-    // This test will fail due to terms not being created, likely the install
-    // reoutine was not executed in this test.
-
-    // The line to install trpcultivate_germplasm at line 50 is not triggering
-    // the install term routine.
-
-    // Note: The functional test InstallTest.php executes the install routine.
-
+    // Test proper install of ontologies.
+    // Install terms install 2 sets of term - config (YML) and ontologies (OBO).
+    // Test config type terms (YML):
     $config = \Drupal::service('config.factory')
       ->get('tripal.tripal_content_terms.trpcultivate_germ_terms');
 
@@ -101,12 +171,12 @@ class GermplasmTermInstallTest extends ChadoTestKernelBase {
     foreach ($vocabs as $vocab_info) {
       $source_terms = array_column($vocab_info['terms'], 'name');
       $inserted_terms = $this->chado_connection->select('1:cvterm', 'c')
-        ->fields('c', ['name'])
-        ->condition('c.name', $source_terms, 'IN')
+        ->fields('c', ['cvterm_id', 'name'])
+        ->condition('c.name', array_values($source_terms), 'IN')
         ->execute()
         ->fetchAllKeyed();
 
-      $inserted_terms = array_keys($inserted_terms);
+      $inserted_terms = array_values($inserted_terms);
       $this->assertEquals(
         count($source_terms),
         count($inserted_terms),
@@ -116,10 +186,96 @@ class GermplasmTermInstallTest extends ChadoTestKernelBase {
       $this->assertEquals(
         $source_terms,
         $inserted_terms,
-        'Install failed to insert terms: ' . array_diff($source_terms, $inserted_terms)
+        'Install failed to insert config terms'
       );
     }
-    */
+
+    // Test ontology terms (OBO):
+    $ontologies = [
+      'multicrop passport ontology' => [
+        'ontology' => 'CO_020',
+        'count' => 111,
+        'sample' => ['collecting number', 'genus', 'species', '13 long term', '99 other'],
+        'obo_path' => '{trpcultivate_germplasm}/ontologies/mcpd_v2.1_151215.obo',
+      ],
+      'Tripal Cultivate Germplasm Ontology' => [
+        'ontology' => 'TRPC',
+        'count' => 55,
+        'sample' => ['Germplasm Types', 'recurrent parent', 'F5 Seed Count', 'Public', 'Breeding Method'],
+        'obo_path' => '{trpcultivate_germplasm}/ontologies/TripalCultivateGermplasmOntology.v1.obo',
+      ],
+    ];
+
+    foreach ($ontologies as $ontology => $expected) {
+      // Test proper install of cv-ontology.
+      $obo_path = $this->drupal_connection->select('tripal_cv_obo', 't')
+        ->fields('t', ['path'])
+        ->condition('t.name', $ontology, '=')
+        ->execute()
+        ->fetchField();
+
+      $this->assertEquals(
+        $obo_path,
+        $expected['obo_path'],
+        'Install failed to set the correct obo file path for obo: ' . $ontology
+      );
+
+      // All sample terms are found.
+      $terms = $this->chado_connection->select('1:cvterm', 'c')
+        ->fields('c', ['dbxref_id', 'cv_id', 'name'])
+        ->condition('c.name', $expected['sample'], 'IN')
+        ->execute()
+        ->fetchAllAssoc('name');
+
+      $term_names = array_keys($terms);
+      $this->assertEmpty(
+        array_diff($term_names, $expected['sample']),
+        'Install failed to install ontology terms'
+      );
+
+      // Pick one term from sample and inspect cv, count, db and otology setup.
+      $a_term = $term_names[mt_rand(0, count($term_names) - 1)];
+
+      $term_cv_name = $this->chado_connection->select('1:cv', 'c')
+        ->fields('c', ['name'])
+        ->condition('c.cv_id', $terms[$a_term]->cv_id, '=')
+        ->execute()
+        ->fetchField();
+
+      $this->assertEquals(
+        $term_cv_name,
+        $ontology,
+        'Install failed to set the correct cv name to term'
+      );
+
+      $terms_in_cv_count = $this->chado_connection->select('1:cvterm', 'c')
+        ->condition('c.cv_id', $terms[$a_term]->cv_id, '=')
+        ->countQuery()
+        ->execute()
+        ->fetchField();
+
+      $this->assertEquals(
+        $terms_in_cv_count,
+        $expected['count'],
+        'Install failed to insert the expected numnber of terms'
+      );
+
+      $subquery = $this->chado_connection->select('1:dbxref', 'x')
+        ->fields('x', ['db_id'])
+        ->condition('x.dbxref_id', $terms[$a_term]->dbxref_id, '=');
+
+      $term_db = $this->chado_connection->select('1:db', 'd')
+        ->fields('d', ['name'])
+        ->condition('d.db_id', $subquery, '=')
+        ->execute()
+        ->fetchField();
+
+      $this->assertEquals(
+        $term_db,
+        $expected['ontology'],
+        'Install failed to set the correct ontology to term'
+      );
+    }
   }
 
 }

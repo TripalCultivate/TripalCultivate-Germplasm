@@ -16,7 +16,6 @@ function trpcultivate_germplasm_help($route_name, RouteMatchInterface $route_mat
     case 'help.page.trpcultivate_germplasm':
       $output = '';
       $output .= '<h3>' . t('About') . '</h3>';
-
       $output .= '<p>' . t('This module provides specialized Tripal fields and importers for germplasm.') . '</p>';
 
       return $output;
@@ -33,17 +32,23 @@ function trpcultivate_germplasm_help($route_name, RouteMatchInterface $route_mat
 function trpcultivate_germplasm_install_terms() {
 
   $container = \Drupal::getContainer();
-  $logger = \Drupal::logger('trpcultivate_germplasm');
-
-  // Insert our config terms (YML file).
-  $config_id = 'trpcultivate_germ_terms';
-  $container->get('tripal_chado.terms_init')
-    ->installTerms($config_id);
-
-  // Insert our ontologies (OBO file).
-  $drupal_connection = $container->get('database');
   $tripal_job = $container->get('tripal.job');
 
+  // Insert our config terms (YML file).
+  $job_id = $tripal_job->create([
+    'modulename' => 'trpcultivate_germplasm',
+    'job_name' => 'Istall Tripal Cultivate Germplasm Terms',
+    'callback' => 'trpcultivate_germplasm_add_config_term',
+    'arguments' => [],
+    'uid' => $container->get('current_user')->id(),
+  ]);
+
+  $tripal_job->load($job_id);
+  $tripal_job->run();
+
+  // Insert our ontologies (OBO file).
+  $logger = \Drupal::logger('trpcultivate_germplasm');
+  $drupal_connection = $container->get('database');
   $schema_name = $container->get('tripal_chado.database')
     ->getSchemaName();
 
@@ -52,11 +57,11 @@ function trpcultivate_germplasm_install_terms() {
 
   $ontologies = [
     [
-      'name' => 'Multi-Crop Passport Ontology',
+      'name' => 'multicrop passport ontology',
       'path' => '{trpcultivate_germplasm}/ontologies/mcpd_v2.1_151215.obo',
     ],
     [
-      'name' => 'TripalCultivate Germplasm Ontology',
+      'name' => 'Tripal Cultivate Germplasm Ontology',
       'path' => '{trpcultivate_germplasm}/ontologies/TripalCultivateGermplasmOntology.v1.obo',
     ],
   ];
@@ -110,4 +115,15 @@ function trpcultivate_germplasm_install_terms() {
       $logger->error("Tripal Cultivate Germplasm could not insert or find an obo record for ontology " . $ontology['name']);
     }
   }
+}
+
+/**
+ * Add terms from a config YML.
+ */
+function trpcultivate_germplasm_add_config_term() {
+
+  $config_id = 'trpcultivate_germ_terms';
+
+  \Drupal::service('tripal_chado.terms_init')
+    ->installTerms($config_id);
 }

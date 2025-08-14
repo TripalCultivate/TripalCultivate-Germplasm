@@ -90,5 +90,6 @@ function trpcultivate_germplasm_install() {
   $custom_table->setTableSchema($schema);
 
   // Setup terms from config (YML) and OBO file required by this module.
+  // @see trpcultivate_germplasm.module
   trpcultivate_germplasm_install_terms();
 }
