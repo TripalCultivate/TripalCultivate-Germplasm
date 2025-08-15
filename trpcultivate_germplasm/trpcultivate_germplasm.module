@@ -105,11 +105,12 @@ function trpcultivate_germplasm_install_terms() {
           'file_local' => $ontology['path'],
         ]
       );
+      $obo_importer->run();
+      $obo_importer->postRun();
 
-      $job_id = $obo_importer->submitJob();
-
-      $tripal_job->load($job_id);
-      $tripal_job->run();
+      // $job_id = $obo_importer->submitJob();
+      // $tripal_job->load($job_id);
+      // $tripal_job->run();
     }
     else {
       $logger->error("Tripal Cultivate Germplasm could not insert or find an obo record for ontology " . $ontology['name']);

@@ -34,7 +34,12 @@ class InstallTest extends ChadoTestBrowserBase {
    *
    * @var array
    */
-  protected static $modules = ['help', 'tripal_chado'];
+  protected static $modules = [
+    'help',
+    'tripal',
+    'tripal_chado',
+    'trpcultivate_germplasm',
+  ];
 
   /**
    * The name of your module in the .info.yml.
@@ -69,11 +74,6 @@ class InstallTest extends ChadoTestBrowserBase {
 
     // Open connection to Chado.
     $this->chado_connection = $this->getTestSchema(ChadoTestBrowserBase::PREPARE_TEST_CHADO);
-
-    $moduleHandler = $this->container->get('module_handler');
-    $moduleInstaller = $this->container->get('module_installer');
-    $this->assertFalse($moduleHandler->moduleExists('trpcultivate_germplasm'));
-    $this->assertTrue($moduleInstaller->install(['trpcultivate_germplasm']));
   }
 
   /**

@@ -200,7 +200,7 @@ class GermplasmTermInstallTest extends ChadoTestKernelBase {
       ],
       'Tripal Cultivate Germplasm Ontology' => [
         'ontology' => 'TRPC',
-        'count' => 55,
+        'count' => 54,
         'sample' => ['Germplasm Types', 'recurrent parent', 'F5 Seed Count', 'Public', 'Breeding Method'],
         'obo_path' => '{trpcultivate_germplasm}/ontologies/TripalCultivateGermplasmOntology.v1.obo',
       ],
