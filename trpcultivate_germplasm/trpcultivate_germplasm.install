@@ -8,7 +8,7 @@
 /**
  * Implements hook_install().
  */
-function trpcultivate_germplasm_enable() {
+function trpcultivate_germplasm_install() {
 
   // Now create the stock_synonym linking table.
   $table = 'stock_synonym';
