@@ -12,6 +12,22 @@ use Drupal\tripal\TripalImporter\Attribute\TripalImporter;
 /**
  * Provides an importer for loading germplasm accessions from a tab-delimited
  * file.
+ *
+ * @TripalImporter(
+ *   id = "trpcultivate-germplasm-accession",
+ *   label = @Translation("Tripal Cultivate: Germplasm Accessions"),
+ *   description = @Translation("Imports germplasm accessions into Chado with metadata meeting BrAPI standards."),
+ *   file_types = {"tsv", "txt"},
+ *   use_analysis = FALSE,
+ *   require_analysis = FALSE,
+ *   upload_title = "Germplasm Accession Import",
+ *   button_text = "Import Germplasm Accessions",
+ *   file_upload = True,
+ *   file_load = True,
+ *   file_remote = True,
+ *   file_required = True,
+ *   cardinality = 1
+ * )
  */
 #[TripalImporter(
    id: 'trpcultivate-germplasm-accession',
