@@ -106,11 +106,11 @@ class GermplasmTermInstallTest extends ChadoTestKernelBase {
    */
   public function testInstallOntologyTerms() {
 
+    // Call our install method.
+    // @see trpcultivate-germplasm.module
     trpcultivate_germplasm_install_terms();
 
-    // Test proper install of ontologies.
-    // Install terms install 2 sets of term - config (YML) and ontologies (OBO).
-    // Test config type terms (YML):
+    // Test proper install of config type terms (YML):
     $config = \Drupal::service('config.factory')
       ->get('tripal.tripal_content_terms.trpcultivate_germ_terms');
 
@@ -137,7 +137,7 @@ class GermplasmTermInstallTest extends ChadoTestKernelBase {
       );
     }
 
-    // Test ontology terms (OBO):
+    // Test proper install of ontology terms (OBO):
     $ontologies = [
       'multicrop passport ontology' => [
         'ontology' => 'CO_020',
@@ -180,7 +180,7 @@ class GermplasmTermInstallTest extends ChadoTestKernelBase {
         'Install failed to install ontology terms'
       );
 
-      // Pick one term from sample and inspect cv, count, db and otology setup.
+      // Pick one term from sample and inspect cv, count, db and ontology setup.
       $a_term = $term_names[mt_rand(0, count($term_names) - 1)];
 
       $term_cv_name = $this->chado_connection->select('1:cv', 'c')
@@ -204,7 +204,7 @@ class GermplasmTermInstallTest extends ChadoTestKernelBase {
       $this->assertEquals(
         $terms_in_cv_count,
         $expected['count'],
-        'Install failed to insert the expected numnber of terms'
+        'Install failed to insert the expected number of terms'
       );
 
       $subquery = $this->chado_connection->select('1:dbxref', 'x')
