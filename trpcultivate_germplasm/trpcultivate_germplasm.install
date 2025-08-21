@@ -89,7 +89,15 @@ function trpcultivate_germplasm_install() {
   $custom_table = $custom_tables->create($table, $schema_name);
   $custom_table->setTableSchema($schema);
 
-  // Setup terms from config (YML) and OBO file required by this module.
+  // Install terms from config (YML) and OBO file required by this module.
   // @see trpcultivate_germplasm.module
-  trpcultivate_germplasm_install_terms();
+  // This is done within a Tripal job.
+  $current_user = \Drupal::currentUser();
+  \Drupal::service('tripal.job')->create([
+    'job_name' => t("Insert terms used by the Tripal Cultivate Germplasm package"),
+    'modulename' => 'trpcultivate_germplasm',
+    'callback' => 'trpcultivate_germplasm_install_terms',
+    'arguments' => [],
+    'uid' => $current_user->id(),
+  ]);
 }
