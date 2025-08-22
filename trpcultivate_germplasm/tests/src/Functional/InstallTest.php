@@ -7,6 +7,7 @@ use Drupal\Core\Url;
 use Drupal\Tests\tripal_chado\Functional\ChadoTestBrowserBase;
 use Drupal\Tests\trpcultivate_germplasm\Traits\TripalMviewQueriesTestTrait;
 use Drupal\tripal_chado\Database\ChadoConnection;
+use PHPUnit\Framework\Attributes\Group;
 
 /**
  * Tests to ensure that the module is enabled and terms are installed.
@@ -14,6 +15,8 @@ use Drupal\tripal_chado\Database\ChadoConnection;
  * @group TripalCultivate-Germplasm
  * @group Installation
  */
+#[Group('TripalCultivate-Germplasm')]
+#[Group('Installation')]
 class InstallTest extends ChadoTestBrowserBase {
 
   /**

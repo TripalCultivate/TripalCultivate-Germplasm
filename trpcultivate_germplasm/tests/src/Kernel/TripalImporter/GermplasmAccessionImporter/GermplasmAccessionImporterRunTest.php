@@ -6,6 +6,7 @@ use Drupal\Core\Url;
 use Drupal\Tests\tripal_chado\Kernel\ChadoTestKernelBase;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\Tests\trpcultivate_germplasm\Traits\GermplasmAccessionImporterTestTrait;
+use PHPUnit\Framework\Attributes\Group;
 
 /**
  * Tests the functionality of the Germplasm Accession Importer.
@@ -142,6 +143,7 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
    *
    * @group germ_accession_importer
    */
+  #[Group('germ_accession_importer')]
   public function testGermplasmAccessionImporterRunSimple() {
 
     $simple_example_file = __DIR__ . '/../../../Fixtures/simple_example.txt';
@@ -189,6 +191,7 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
    *
    * @group germ_accession_importer
    */
+  #[Group('germ_accession_importer')]
   public function testGermplasmAccessionImporterRunMissing() {
 
     $problem_example_file = __DIR__ . '/../../../Fixtures/missing_required_example.txt';
@@ -226,6 +229,7 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
    *
    * @group germ_accession_importer
    */
+  #[Group('germ_accession_importer')]
   public function testGermplasmAccessionImporterRunComplex() {
 
     $complex_example_file = __DIR__ . '/../../../Fixtures/props_syns_example.txt';
@@ -319,6 +323,7 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
    *
    * @group germ_accession_importer
    */
+  #[Group('germ_accession_importer')]
   public function testGermplasmAccessionImporterRunIncomplete() {
 
     // Test for a non-existant file
