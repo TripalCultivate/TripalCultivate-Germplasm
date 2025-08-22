@@ -6,6 +6,8 @@ use Drupal\tripal_chado\TripalImporter\ChadoImporterBase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\tripal_chado\Database\ChadoConnection;
 use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\tripal\TripalImporter\Attribute\TripalImporter;
 
 /**
  * Provides an importer for loading germplasm accessions from a tab-delimited
@@ -27,6 +29,21 @@ use Drupal\Core\Config\ConfigFactoryInterface;
  *   cardinality = 1
  * )
  */
+#[TripalImporter(
+   id: 'trpcultivate-germplasm-accession',
+   label: new TranslatableMarkup('Tripal Cultivate: Germplasm Accessions'),
+   description: new TranslatableMarkup('Imports germplasm accessions into Chado with metadata meeting BrAPI standards.'),
+   file_types: ['tsv', 'txt'],
+   use_analysis: FALSE,
+   require_analysis: FALSE,
+   upload_title: new TranslatableMarkup('Germplasm Accession Import'),
+   button_text: new TranslatableMarkup('Import Germplasm Accessions'),
+   file_upload: TRUE,
+   file_local: TRUE,
+   file_remote: TRUE,
+   file_required: TRUE,
+   cardinality: 1
+ )]
 class GermplasmAccessionImporter extends ChadoImporterBase {
 
   /**

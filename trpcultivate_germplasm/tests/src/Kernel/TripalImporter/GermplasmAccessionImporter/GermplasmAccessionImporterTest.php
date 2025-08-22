@@ -5,6 +5,7 @@ namespace Drupal\Tests\trpcultivate_germplasm\Kernel\TripalImporter;
 use Drupal\Core\Url;
 use Drupal\Tests\tripal_chado\Kernel\ChadoTestKernelBase;
 use Drupal\Tests\trpcultivate_germplasm\Traits\GermplasmAccessionImporterTestTrait;
+use PHPUnit\Framework\Attributes\Group;
 
 /**
  * Tests the functionality of the Germplasm Accession Importer.
@@ -110,6 +111,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
    *
    * @group germ_accession_importer
    */
+  #[Group('germ_accession_importer')]
   public function testGermplasmAccessionImporterForm() {
 
 		$plugin_id = 'trpcultivate-germplasm-accession';
@@ -158,6 +160,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
    *
    * @group germ_accession_importer
    */
+  #[Group('germ_accession_importer')]
   public function testGermplasmAccessionImporterGetOrganismID() {
 
     // Insert an organism
@@ -190,6 +193,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
    *
    * @group germ_accession_importer
    */
+  #[Group('germ_accession_importer')]
   public function testGermplasmAccessionImporterGetStockID() {
 
     // Insert an organism
@@ -264,6 +268,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
    *
    * @group germ_accession_importer
    */
+  #[Group('germ_accession_importer')]
   public function testGermplasmAccessionImporterGetDbxrefID() {
 
     // Insert an organism
@@ -383,6 +388,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
    *
    * @group germ_accession_importer
    */
+  #[Group('germ_accession_importer')]
   public function testGermplasmAccessionImporterLoadStockProperties() {
     // Insert an organism
     $subtaxa_cvterm_id = $this->getCVtermID('TAXRANK', '0000023');
@@ -498,6 +504,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
    *
    * @group germ_accession_importer
    */
+  #[Group('germ_accession_importer')]
   public function testGermplasmAccessionImporterLoadSynonyms() {
 
     // Insert an organism
