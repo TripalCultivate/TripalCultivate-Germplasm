@@ -45,6 +45,28 @@ use Drupal\trpcultivate\Plugin\Validators\ValidHeaders;
  *   callback_path = "",
  * )
  */
+#[TripalImporter(
+  id: 'trpcultivate-germplasm-population-importer',
+  label: new TranslatableMarkup('Tripal Importer: Germplasm Collection Importer'),
+  description: new TranslatableMarkup('Imports germplasm populations (i.e. RIL, NAM, cross progeny) into testchado.'),
+  file_types: ['tsv', 'txt'],
+  upload_description: new TranslatableMarkup('Germplasm file should be a <strong>TAB Separated Values</strong> file (.tsv) containing a header with the following columns:<ol><li><strong>Name</strong>: The name of the RIL individual.</li><li><strong>Type</strong>: The vocabulary database name + : + cvterm (ie. schema:F1) which should be used for the stock record, must exist.</li><li><strong>Scientific Name</strong>: The genus + species of the organism to be used for the stock record, must exist.</li><li><strong>Uniquename</strong>: (optional) The uniquename to use if you do not want to use the pattern/prefix below. Custom value for this column must be unique for every line.</li></ol><p>Each row in the file should describe a specific individual to be created and linked to the Population Entry with the specified relationship.</p><p><strong>NOTE:</strong> This importer will not permit duplicate lines with identical Name + Type + Scientific Name + Uniquename in the file.<br />A warning will be issued when duplicate line, with the exception Uniquename has been detected and the Importer may proceed.</p>'),
+  upload_title: new TranslatableMarkup('<strong>Population Individuals*</strong>'),
+  use_analysis: FALSE,
+  require_analysis: FALSE,
+  use_button: TRUE,
+  submit_disabled: FALSE,
+  button_text: new TranslatableMarkup('Import'),
+  file_upload: TRUE,
+  file_local: FALSE,
+  file_remote: FALSE,
+  file_required: TRUE,
+  cardinality: 1,
+  menu_path: '',
+  callback: '',
+  callback_module: '',
+  callback_path: '',
+)]
 class GermplasmCollectionImporter extends ChadoImporterBase implements ContainerFactoryPluginInterface {
 
   use StringTranslationTrait;
