@@ -14,6 +14,10 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\tripal_chado\Controller\ChadoCVTermAutocompleteController;
 use Drupal\tripal_chado\Controller\ChadoGenericAutocompleteController;
 use Drupal\trpcultivate\Plugin\Validators\EmptyCell;
+use Drupal\trpcultivate\Plugin\Validators\GermplasmNameExists;
+use Drupal\trpcultivate\Plugin\Validators\ValidDataFile;
+use Drupal\trpcultivate\Plugin\Validators\ValidDelimitedFile;
+use Drupal\trpcultivate\Plugin\Validators\ValidHeaders;
 
 /**
  * This is a Germplasm Collection Importer.
@@ -209,6 +213,12 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
 
     $validators = [];
 
+    // Configure the valid data file validator.
+    $instance_data_file = $this->service_validatorPluginManager->createInstance('valid_data_file');
+    $instance_data_file->setFileMimeType($file_mime_type);
+    $instance_data_file->setSupportedMimeTypes(['tsv', 'txt']);
+    $validators['file']['valid_data_file'] = $instance_data_file;
+
     // Configure the valid delimitted file validator.
     $instance_delimited = $this->service_validatorPluginManager->createInstance('valid_delimited_file');
     $instance_delimited->setExpectedColumns(3, FALSE);
@@ -244,6 +254,27 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
    */
   public function processValidationMessages($failures) {
     $messages = [];
+
+    // Create a $messages entry for valid data file.
+    $messages['valid_data_file'] = [
+      'title' => 'File is a valid data file',
+      'status' => 'todo',
+      'details' => '',
+    ];
+
+    // Call the processItemWithSimpleList() method in ValidDataFile
+    // class to check if there are any failures for the valid data
+    // file validator.
+    if (array_key_exists('valid_data_file', $failures)) {
+      if (!empty($failures['valid_data_file'])) {
+        $messages['valid_data_file']['status'] = 'fail';
+        $messages['valid_data_file']['details'] = ValidDataFile::processItemWithSimpleList($failures['valid_data_file']);
+      }
+      else {
+        $messages['valid_data_file']['status'] = 'pass';
+      }
+    }
+
     // Create a $messages entry for valid delimited file.
     $messages['valid_delimited_file'] = [
       'title' => 'File is delimitted correctly',
@@ -251,12 +282,19 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
       'details' => '',
     ];
 
-    // Call the processValidDelimitedFileFailures() method to check if there
-    // are any failures for the valid delimited file validator.
+    // Configure the valid_delimited_file metadata.
+    $valid_delimited_file_metadata = [
+      'strict_flag' => TRUE,
+      'number_of_columns' => 3,
+    ];
+
+    // Call the processListWithDescribedTable() method in ValidDelimitedFile
+    // class to check if there are any failures for the valid delimited
+    // file validator.
     if (array_key_exists('valid_delimited_file', $failures)) {
       if (!empty($failures['valid_delimited_file'])) {
         $messages['valid_delimited_file']['status'] = 'fail';
-        $messages['valid_delimited_file']['details'] = $this->processValidDelimitedFileFailures($failures['valid_delimited_file']);
+        $messages['valid_delimited_file']['details'] = ValidDelimitedFile::processListWithDescribedTable($failures['valid_delimited_file'], $valid_delimited_file_metadata);
       }
       else {
         $messages['valid_delimited_file']['status'] = 'pass';
@@ -270,20 +308,8 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
       'details' => '',
     ];
 
-    // Call the processValidHeadersFailures() method to check if there
-    // are any failures for the valid headers validator.
-    if (array_key_exists('valid_headers', $failures)) {
-      if (!empty($failures['valid_headers'])) {
-        $messages['valid_headers']['status'] = 'fail';
-        $messages['valid_headers']['details'] = $this->processValidHeadersFailures($failures['valid_headers']);
-      }
-      else {
-        $messages['valid_headers']['status'] = 'pass';
-      }
-    }
-
     // Configure the metadata with valid headers.
-    $metadata = [
+    $headers_metadata = [
       'column_headers' => [
         0 => 'Name',
         1 => 'Type',
@@ -292,6 +318,18 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
       ],
     ];
 
+    // Call the processListWithDescribedTable() method in ValidHeaders class
+    // to check if there are any failures for the valid headers validator.
+    if (array_key_exists('valid_headers', $failures)) {
+      if (!empty($failures['valid_headers'])) {
+        $messages['valid_headers']['status'] = 'fail';
+        $messages['valid_headers']['details'] = ValidHeaders::processListWithDescribedTable($failures['valid_headers'], $headers_metadata);
+      }
+      else {
+        $messages['valid_headers']['status'] = 'pass';
+      }
+    }
+
     // Create a $messages entry for empty cells.
     $messages['empty_cell'] = [
       'title' => 'No Empty Cells',
@@ -299,12 +337,12 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
       'details' => '',
     ];
 
-    // Call the processListWithDescribedTable() method to check if there
-    // are any failures for the empty cell validator.
+    // Call the processListWithDescribedTable() method in EmptyCell class to
+    // check if there are any failures for the empty cell validator.
     if (array_key_exists('empty_cell', $failures)) {
       if (!empty($failures['empty_cell'])) {
         $messages['empty_cell']['status'] = 'fail';
-        $messages['empty_cell']['details'] = EmptyCell::processListWithDescribedTable($failures['empty_cell'], $metadata);
+        $messages['empty_cell']['details'] = EmptyCell::processListWithDescribedTable($failures['empty_cell'], $headers_metadata);
       }
       else {
         $messages['empty_cell']['status'] = 'pass';
@@ -318,12 +356,13 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
       'details' => '',
     ];
 
-    // Call the processListWithDescribedTable() method to check if there
-    // are any failures for the germplasm name exists validator.
+    // Call the processListWithDescribedTable() method in GermplasmNameExists
+    // class to check if there are any failures for the germplasm name exists
+    // validator.
     if (array_key_exists('germplasm_name_exists', $failures)) {
       if (!empty($failures['germplasm_name_exists'])) {
         $messages['germplasm_name_exists']['status'] = 'fail';
-        $messages['germplasm_name_exists']['details'] = self::processListWithDescribedTable($failures['germplasm_name_exists'], $metadata);
+        $messages['germplasm_name_exists']['details'] = GermplasmNameExists::processListWithDescribedTable($failures['germplasm_name_exists'], $headers_metadata);
       }
       else {
         $messages['germplasm_name_exists']['status'] = 'pass';
@@ -622,504 +661,5 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
    * {@inheritdoc}
    */
   public function postRun() {}
-
-  /**
-   * Process failed validation from GermplasmNameExists into a render array.
-   *
-   * This process method renders up to 2 tables, one for germplasm missing from
-   * the database, and one for duplicate germplasm entries based on the name.
-   * NOTE: The rendered validation result does NOT include information on the
-   * duplicate records, but only lists the germplasm names. Future work may
-   * include a separate process method that displays the information stored in
-   * 'duplicates' of the 'failedItems' array.
-   *
-   * @param array $validation_results
-   *   An associative array that stores the validation failures by the
-   *   GermplasmNameExists validator. It is keyed by the line number of the
-   *   input file where validation failed, and the value is an associative
-   *   array returned by the validator. The overall structure is:
-   *   - [LINE NUMBER]:
-   *     - 'case': a developer-focused string describing the case checked.
-   *     - 'valid': FALSE to indicate that validation failed.
-   *     - 'failedItems': an array of items that failed, where the key => value
-   *       pairs map to the index => cell value(s) that failed validation.
-   *       @see validateRow()
-   * @param array $metadata
-   *   An array of additional metadata (or contextual information) needed by the
-   *   process method. Here, the following keys are expected:
-   *   - 'column_headers': This contains an array of headers for columns that
-   *     are expected to contain germplasm names. The index in this array MUST
-   *     match the position (starting with 0) of the column in the input file.
-   *     Eg: 'column_headers' => [
-   *           '2' => 'Maternal Germplasm Name', // Header of column #3
-   *           '4' => 'Paternal Germplasm Name', // Header of column #5
-   *         ];.
-   * @param array $tokens
-   *   [OPTIONAL] An array of values to use for token replacement.
-   *   @see $mapping
-   *   The following tokens can be specfied as keys, with value as the
-   *   replacement value for the token. These apply to all failure cases.
-   *   - 'contact-admin': the phrase to use when the user needs a privileged
-   *     administrator to fix the problem.
-   *   The following token keys will substitute the entire existing case message
-   *   to the user with the value of that token.
-   *   - 'case-empty-germplasm': the message when a cell that should contain a
-   *    germplasm name is empty.
-   *   - 'case-missing-germplasm': the message when a germplasm name is missing
-   *     in the database.
-   *   - 'case-duplicate-germplasm': the message when a germplasm name is
-   *     duplicated in the database.
-   *
-   * @return array
-   *   A render array of type "unordered list" used to display feedback to the
-   *   user about the validation failure, where each item is a markup block
-   *   containing:
-   *   - A message describing the case triggered
-   *   - A table that lists the row and column combinations with failures for
-   *     this case.
-   *   Each case triggered will have its own markup block. The table headers for
-   *   each case are:
-   *     - Germplasm name is empty: 'Row Number', 'Column Header'
-   *     - Duplicate germplasm name seen in the database:
-   *       'Row Number', 'Column Header', 'Germplasm Name'
-   *     - Missing germplasm name from the database:
-   *       'Row Number', 'Column Header', 'Germplasm Name'
-   *
-   * @throws \Exception
-   *   - If key 'column_headers' is missing from $metadata
-   *   - If a validation status array was not formatted properly.
-   *   - If the message for token 'case-empty-germplasm' is an empty string.
-   *   - If the case string returned by the validator implied validation passed.
-   *   - If the case string returned by the validator is not recognized.
-   */
-  public function processListWithDescribedTable(array $validation_results, array $metadata, array $tokens = []) {
-
-    // Validate that metadata contains the expected keys.
-    if (!array_key_exists('column_headers', $metadata)) {
-      throw new \Exception("Expected metadata to contain 'column_headers' when processing failures from GermplasmNameExists, but it does not.");
-    }
-
-    // We use the Tripal Token Parser service to ensure that more complicated
-    // tokens are supported.
-    // NOTE: Dependency injection is NOT used since this is a static method.
-    $service_TripalTokensParser = \Drupal::service('tripal.token_parser');
-    // Grab the default messages for all of our tokens (ones with default-msg).
-    $default_tokens = array_column(self::$mapping, 'default-msg', 'token');
-    // Combine our provided and our default token arrays. Because array_merge
-    // will overwrite values in the first array with values from the second
-    // array for the same keys, we provide our default tokens first.
-    $combined_tokens = array_merge($default_tokens, $tokens);
-
-    // For this validator there can be up to 2 tables:
-    // - 'table'->'missing_cells': Germplasm name not found in the database.
-    // - 'table'->'duplicate_cells': Germplasm name has multiple records.
-    $table = [];
-
-    // Loop through each row in the $failures array and piece apart the
-    // different cases into different tables.
-    foreach ($validation_results as $line_no => $validation_status) {
-      // Check the format of this line's validation status.
-      ImportValidationHelper::checkValidationStatusArray($validation_status, 'GermplasmNameExists', $line_no);
-
-      // If any cells were found to be empty, this case takes presendence over
-      // any other cases, and we return a warning message right away.
-      if ($validation_status['case'] == 'Unable to lookup germplasm with empty values') {
-        // Add a token for the column header names of the germplasm columns.
-        $combined_tokens['column-headers'] = implode(', ', $metadata['column_headers']);
-        $message = $service_TripalTokensParser->replaceTokens(
-          $combined_tokens['case-empty-germplasm'],
-          $combined_tokens
-        );
-        return self::renderSimpleWarningMessage(
-          $message,
-          ['case-message', 'tc-germplasm-name-exists-empty'],
-        );
-      }
-      // Keeps track of which table this one line's validation result gets added
-      // to based on the case it triggered.
-      $table_case = [];
-      if ($validation_status['case'] == 'Missing germplasm name(s) in the database') {
-        $table_case = ['missing_cells'];
-      }
-      elseif ($validation_status['case'] == 'Duplicate(s) found in the database for germplasm name(s)') {
-        $table_case = ['duplicate_cells'];
-      }
-      elseif ($validation_status['case'] == 'Missing germplasm name(s) and found duplicate(s) in the database') {
-        $table_case = ['missing_cells', 'duplicate_cells'];
-      }
-      elseif ($validation_status['case'] == 'Germplasm name(s) exist(s) in the database') {
-        throw new \Exception("The case string returned by the GermplasmNameExists validator at line #$line_no implies validation passed, but valid is set to FALSE.");
-      }
-      else {
-        throw new \Exception("The case string returned by the GermplasmNameExists validator at line #$line_no is not recognized as a potential case.");
-      }
-      // Now set values that should appear for this row in the table(s) for this
-      // particular case.
-      foreach ($table_case as $case) {
-        // Declare the array storing content for this table, if not already.
-        if (!array_key_exists($case, $table)) {
-          // Set the first column to hold the line number of the failure.
-          // Use -1 to ensure it is the first column and doesn't conflict with
-          // column indices in the input file.
-          $table[$case]['header'][-1] = 'Line Number';
-          $table[$case]['rows'] = [];
-        }
-        // Define a new row in our table for this line number.
-        $table[$case]['rows'][$line_no][-1] = $line_no;
-        // For each index with an failed germplasm, grab the column name from
-        // $metadata and add it to our table header.
-        foreach ($validation_status['failedItems'][$case] as $index => $germplasm) {
-          // Grab the column name based on the index of the germplasm
-          // and add it to this table header if it's not already there.
-          $column_name = $metadata['column_headers'][$index];
-          if (!array_key_exists($column_name, $table[$case]['header'])) {
-            $table[$case]['header'][$index] = $column_name;
-          }
-          // Now add a cell to the table to indicate this germplasm.
-          // We reuse the index from the original file as the key to preserve
-          // the same order of the columns. We also key the row with the line
-          // number to ensure that a line with more then one failure is
-          // compiled into a single row.
-          $table[$case]['rows'][$line_no][$index] = $germplasm['germplasm_name'];
-        }
-      }
-    }
-    // Check which tables were created, and assign the correct message.
-    // Note that both tables can exist at the same time, hence not an 'elseif'.
-    if (array_key_exists('missing_cells', $table)) {
-      $table['missing_cells']['message'] = $combined_tokens['case-missing-germplasm'];
-    }
-    if (array_key_exists('duplicate_cells', $table)) {
-      $table['duplicate_cells']['message'] = $combined_tokens['case-duplicate-germplasm'];
-    }
-
-    // Finally, loop through our tables and build our render array.
-    $tables = [];
-    foreach ($table as $table_key => &$table_case) {
-      // If our table(s) have more than 2 columns with failed values, then
-      // iterate through and pad each table with empty strings where necessary.
-      self::fillTableGaps($table_case['header'], $table_case['rows']);
-      array_push($tables, [
-        [
-          '#prefix' => '<div class="case-message case-' . $table_key . '">',
-          // Replace any tokens that are in our table message.
-          '#markup' => $service_TripalTokensParser->replaceTokens($table_case['message'], $combined_tokens),
-          '#suffix' => '</div>',
-        ],
-        [
-          '#type' => 'table',
-          '#header' => $table_case['header'],
-          '#attributes' => [
-            'class' => [
-              'table-case-' . $table_key,
-            ],
-          ],
-          '#rows' => $table_case['rows'],
-        ],
-      ]);
-    }
-    $render_array = [
-      '#theme' => 'item_list',
-      '#type' => 'ul',
-      '#attributes' => [
-        'class' => [
-          'tc-germplasm-name-exists-failures',
-        ],
-      ],
-      '#items' => $tables,
-    ];
-
-    return $render_array;
-  }
-
-  /**
-   * Fill missing cells in a table's rows with empty cells.
-   *
-   * Since the params are passed in by reference, they are updated as follows:
-   * - Headers are sorted by index.
-   * - Rows are sorted by index and have column keys added with an empty value
-   *   where missing cells were previously.
-   *
-   * @param array $header
-   *   The contents of the table's header, where key = index of the column
-   *   header, and value = content of the column header.
-   *   ie. $header[COLUMN INDEX][COLUMN VALUE].
-   * @param array $rows
-   *   The contents of the table's rows. Each row is keyed by the line number of
-   *   the original input file that triggered validation failure, followed by
-   *   the index of the column, followed by the column's contents.
-   *   ie. [LINE NUMBER][COLUMN INDEX][COLUMN VALUE].
-   *
-   * @return void
-   *   NOTE: $header and $rows are passed in by reference, meaning that the
-   *   original arrays are modified directly and thus there is no return value.
-   */
-  public static function fillTableGaps(array &$header, array &$rows) {
-    // Sort the table header.
-    ksort($header);
-    if (count($header) > 2) {
-      foreach (array_keys($rows) as $line_no) {
-        foreach (array_keys($header) as $index) {
-          if (!array_key_exists($index, $rows[$line_no])) {
-            $rows[$line_no][$index] = '';
-          }
-        }
-        // Finally, sort the row by keys.
-        ksort($rows[$line_no]);
-      }
-    }
-  }
-
-  /**
-   * A helper method that will process any simple message into a render array.
-   *
-   * @param string $message
-   *   A non-empty string that is the message to be displayed to the user. If
-   *   desired, this string may include HTML tags.
-   * @param array $classes
-   *   [OPTIONAL] An array of strings to give to '#wrapper_attributes' of the
-   *   render array as a set of css classes. By default, this method adds the
-   *   class:
-   *   - 'simple-validation-warning'.
-   *
-   * @return array
-   *   A render array of type "html_tag", used to display a warning to the user
-   *   regarding a failed validation result.
-   *
-   * @throws \Exception
-   *   - If $message is an empty string.
-   */
-  public static function renderSimpleWarningMessage(string $message, array $classes = []) {
-
-    if (empty($message)) {
-      throw new \Exception('Expected a non-empty string for the message passed into renderSimpleWarningMessage().');
-    }
-
-    // Add our universal class for simple validation warning messages.
-    $classes[] = 'simple-validation-warning';
-
-    return [
-      '#type' => 'html_tag',
-      '#tag' => 'div',
-      '#value' => $message,
-      '#attributes' => [
-        'class' => $classes,
-      ],
-    ];
-  }
-
-  /**
-   * Valid delimited file process message.
-   *
-   * @todo Remove this method and any reference when the process method for
-   * ValidDelimitedFile becomes available.
-   *
-   * REMOVE IF NOT REQUIRED.
-   *
-   * @param array $failures
-   *   Failures array.
-   *
-   * @return array
-   *   A render array.
-   */
-  public function processValidDelimitedFileFailures(array $failures) {
-
-    // Define our table headers.
-    $table_header = ['Line Number', 'Line Contents'];
-
-    // For this validator there can be up to 2 tables:
-    // - 'table'->'unsupported': Empty rows or no supported delimiters present.
-    // - 'table'->'delimited': Rows that don't delimit to the expected number of
-    //   columns.
-    $table = [];
-
-    // Loop through each row in the $failures array and piece apart the
-    // different cases into different tables.
-    foreach ($failures as $line_no => $validation_result) {
-      // Check the format of the validation_result parameter.
-      ImportValidationHelper::checkValidationStatusArray($validation_result, 'ValidDelimitedFile', $line_no);
-      // Keeps track of which table this one line's validation result gets added
-      // to based on the case it triggered.
-      $table_case = '';
-      if (($validation_result['case'] == 'Raw row is empty') ||
-          ($validation_result['case'] == 'None of the delimiters supported by the file type was used')) {
-        $table_case = 'unsupported';
-      }
-      elseif (($validation_result['case'] == 'Raw row exceeds number of strict columns') ||
-            ($validation_result['case'] == 'Raw row has insufficient number of columns')) {
-        $table_case = 'delimited';
-        if (!isset($num_expected_columns)) {
-          $num_expected_columns = $validation_result['failedItems']['expected_columns'];
-          $strict = $validation_result['failedItems']['strict'];
-        }
-      }
-      elseif (($validation_result['case'] == 'Raw row has expected number of columns') ||
-             ($validation_result['case'] == 'Raw row is delimited')) {
-        throw new \Exception("The case string returned by the ValidDelimitedFile validator at line #$line_no implies validation passed, but valid is set to FALSE.");
-      }
-      else {
-        throw new \Exception("The case string returned by the ValidDelimitedFile validator at line #$line_no is not recognized as a potential case.");
-      }
-
-      // Checked all cases, now add a row to our appropriate table.
-      if (!array_key_exists($table_case, $table)) {
-        // Declare the array storing rows for this table, if not already.
-        $table[$table_case]['rows'] = [];
-      }
-      $table[$table_case]['rows'][] = [
-        $line_no,
-        $validation_result['failedItems']['raw_row'],
-      ];
-    }
-    // Check which tables were created, and assign the correct message.
-    // Note that both tables can exist at the same time.
-    if (array_key_exists('unsupported', $table)) {
-      $table['unsupported']['message'] = 'The following lines in the input file do not contain a valid delimiter supported by this importer.';
-    }
-    if (array_key_exists('delimited', $table)) {
-      // Check if number of columns is strict, then set the message accordingly.
-      if ($strict) {
-        $strict_or_min = 'strict';
-      }
-      else {
-        $strict_or_min = 'minimum';
-      }
-      $message = "This importer requires a $strict_or_min number of $num_expected_columns columns for each line. The following lines do not contain the expected number of columns.";
-      $table['delimited']['message'] = $message;
-    }
-
-    // Finally, loop through our tables and build our render array.
-    $tables = [];
-    foreach ($table as $table_key => $table_case) {
-      $tables[] = [
-        [
-          '#prefix' => '<div class="case-message case-' . $table_key . '">',
-          '#markup' => $table_case['message'],
-          '#suffix' => '</div>',
-        ],
-        [
-          '#type' => 'table',
-          '#header' => $table_header,
-          '#attributes' => [
-            'class' => [
-              'tcp-raw-row',
-              'table-case-' . $table_key,
-            ],
-          ],
-          '#rows' => $table_case['rows'],
-        ],
-      ];
-    }
-
-    $render_array = [
-      '#theme' => 'item_list',
-      '#type' => 'ul',
-      '#attributes' => [
-        'class' => [
-          'tcp-valid-delimited-file-failures',
-        ],
-      ],
-      '#items' => $tables,
-    ];
-
-    return $render_array;
-  }
-
-  /**
-   * Processes failed validation from ValidHeaders into a render array.
-   *
-   * @param array $validation_result
-   *   An associative array that was returned by the ValidHeaders validator in
-   *   the event of failed validation. It contains the following keys:
-   *   - 'case': a developer-focused string describing the case checked.
-   *   - 'valid': FALSE to indicate that validation failed.
-   *   - 'failedItems': an array of items that failed, either:
-   *     - 'headers': A string indicating the header row is empty.
-   *     - an array of column headers that was in the input file.
-   *
-   * @return array
-   *   A render array of type unordered list which is used to display feedback
-   *   to the user about the case that failed and the failed items from the
-   *   input file. This unordered list will include a table with a row of the
-   *   expected headers followed by a row of the provided headers.
-   *
-   * @throws \Exception
-   *   - If the validation_result parameter was not formatted properly.
-   *   - If the case string returned by the validator implied validation passed.
-   *   - If the case string returned by the validator is not recognized.
-   */
-  public function processValidHeadersFailures(array $validation_result) {
-    // Check the format of the validation_result parameter.
-    ImportValidationHelper::checkValidationStatusArray($validation_result, 'ValidHeaders');
-
-    if ($validation_result['case'] == 'Header row is an empty value') {
-      $message = 'The file has an empty row where the header was expected.';
-      $provided_headers = [];
-    }
-    elseif ($validation_result['case'] == 'Headers do not match expected headers') {
-      $message = 'One or more of the column headers in the input file does not match what was expected. Please check if your column header is in the correct order and matches the template exactly.';
-      $provided_headers = $validation_result['failedItems'];
-    }
-    elseif ($validation_result['case'] == 'Headers provided does not have the expected number of headers') {
-      $num_expected_columns = count($this->headers);
-      $message = "This importer requires a strict number of $num_expected_columns column headers. Please ensure your column header matches the template exactly and remove any additional column headers from the file.";
-      $provided_headers = $validation_result['failedItems'];
-    }
-    elseif ($validation_result['case'] == 'Headers exist and match expected headers') {
-      throw new \Exception('The case string returned by the ValidHeaders validator implies validation passed, but valid is set to FALSE.');
-    }
-    else {
-      throw new \Exception('The case string returned by the ValidHeaders validator is not recognized as a potential case.');
-    }
-    // Get the expected and actual headers to build the rows in our table render
-    // array.
-    $expected_headers = array_column($this->headers, 'name');
-
-    // Build the render array.
-    $render_array = [
-      '#theme' => 'item_list',
-      '#type' => 'ul',
-      '#attributes' => [
-        'class' => [
-          'tcp-valid-headers-failures',
-        ],
-      ],
-      '#items' => [
-        [
-          [
-            '#prefix' => '<div class="case-message">',
-            '#markup' => $message,
-            '#suffix' => '</div>',
-          ],
-          [
-            '#type' => 'table',
-            '#attributes' => [],
-            '#rows' => [
-              [
-                'data' => [
-                  'header' => [
-                    'data' => 'Expected Headers',
-                    'header' => TRUE,
-                  ],
-                ] + $expected_headers,
-                'class' => ['expected-headers'],
-              ],
-              [
-                'data' => [
-                  'header' => [
-                    'data' => 'Provided Headers',
-                    'header' => TRUE,
-                  ],
-                ] + $provided_headers,
-                'class' => ['provided-headers'],
-              ],
-            ],
-          ],
-        ],
-      ],
-    ];
-
-    return $render_array;
-  }
 
 }
