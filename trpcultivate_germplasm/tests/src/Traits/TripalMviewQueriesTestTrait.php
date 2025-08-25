@@ -3,10 +3,14 @@
 namespace Drupal\Tests\trpcultivate_germplasm\Traits;
 
 /**
- * A trait class used by tests that rely on module install.
+ * Helps setup tests that rely on materialized views, custom tables and importers.
  *
  * Inserts necessary materialized views in Drupal that are missing in a testing
  * environment.
+ *
+ * This is needed because Tripal Core does not yet setup the Drupal side of  
+ * the test environment correctly when it comes to materialized views and  
+ * custom tables. Hopefully that will be resolved in the future.
  */
 trait TripalMviewQueriesTestTrait {
 

@@ -84,6 +84,9 @@ class InstallTest extends ChadoTestBrowserBase {
     $this->chado_connection = $this->getTestSchema(ChadoTestBrowserBase::PREPARE_TEST_CHADO);
 
     // Set up our necessary materialized views.
+    // This is needed because Tripal Core does not yet setup the Drupal side of
+    // the test environment correctly when it comes to materialized views and
+    // custom tables. Hopefully that will be resolved in the future.
     $this->materializedViewSetUp();
 
     // Install the Tripal Cultivate Germplasm module.

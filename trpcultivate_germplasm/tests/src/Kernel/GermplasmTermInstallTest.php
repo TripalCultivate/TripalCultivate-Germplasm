@@ -8,7 +8,7 @@ use Drupal\tripal_chado\Database\ChadoConnection;
 use Drupal\user\Entity\User;
 
 /**
- * Tests term install by the trpcultivate_germplasm.module.
+ * Tests terms added by trpcultivate_germplasm_install_terms() during install.
  *
  * @group trpcultivate_germplasm
  */
@@ -98,6 +98,9 @@ class GermplasmTermInstallTest extends ChadoTestKernelBase {
       ->setAccount($user);
 
     // Set up our necessary materialized views.
+    // This is needed because Tripal Core does not yet setup the Drupal side of  
+    // the test environment correctly when it comes to materialized views and  
+    // custom tables. Hopefully that will be resolved in the future.
     $this->materializedViewSetUp();
   }
 
