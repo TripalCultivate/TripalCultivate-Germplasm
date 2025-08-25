@@ -10,8 +10,11 @@ use Drupal\user\Entity\User;
 /**
  * Tests terms added by trpcultivate_germplasm_install_terms() during install.
  *
- * @group trpcultivate_germplasm
+ * @group TripalCultivate-Germplasm
+ * @group Installation
  */
+#[Group('TripalCultivate-Germplasm')]
+#[Group('Installation')]
 class GermplasmTermInstallTest extends ChadoTestKernelBase {
 
   /**
@@ -98,8 +101,8 @@ class GermplasmTermInstallTest extends ChadoTestKernelBase {
       ->setAccount($user);
 
     // Set up our necessary materialized views.
-    // This is needed because Tripal Core does not yet setup the Drupal side of  
-    // the test environment correctly when it comes to materialized views and  
+    // This is needed because Tripal Core does not yet setup the Drupal side of
+    // the test environment correctly when it comes to materialized views and
     // custom tables. Hopefully that will be resolved in the future.
     $this->materializedViewSetUp();
   }
