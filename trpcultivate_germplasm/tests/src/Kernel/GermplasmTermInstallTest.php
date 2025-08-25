@@ -107,7 +107,7 @@ class GermplasmTermInstallTest extends ChadoTestKernelBase {
   public function testInstallOntologyTerms() {
 
     // Call our install method.
-    // @see trpcultivate-germplasm.module
+    // @see trpcultivate_germplasm.module
     trpcultivate_germplasm_install_terms();
 
     // Test proper install of config type terms (YML):
