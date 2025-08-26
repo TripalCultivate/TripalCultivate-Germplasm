@@ -18,6 +18,8 @@ use Drupal\trpcultivate\Plugin\Validators\GermplasmNameExists;
 use Drupal\trpcultivate\Plugin\Validators\ValidDataFile;
 use Drupal\trpcultivate\Plugin\Validators\ValidDelimitedFile;
 use Drupal\trpcultivate\Plugin\Validators\ValidHeaders;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\trpcultivate\TripalImporter\Attribute\TripalImporter;
 
 /**
  * This is a Germplasm Collection Importer.
@@ -532,6 +534,27 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
               $failures[$validator_name][$line_no] = $result;
             }
           }
+          // Organism:
+          // Use the genus and species encoded in the Scientific Name to
+          // determine the organism.
+          $organism_id = $this->parseOrganism($data_row[2]);
+
+          // Throw exception if organism is not valid.
+          if ($organism_id == NULL) {
+            $failed_validator = TRUE;
+            throw new \Exception('Scientific Name: ' . $data_row[2] . ' is not valid. Please provide a valid Scientific Name.');
+          }
+
+          // Type:
+          // Use the database name and cvterm encoded in Type to determine
+          // the stock type.
+          $type_id = $this->parseTerm($data_row[1]);
+
+          // Throw exception if type is not valid.
+          if ($type_id == NULL) {
+            $failed_validator = TRUE;
+            throw new \Exception('Type: ' . $data_row[1] . ' is not valid. Please provide a valid Type.');
+          }
         }
       }
 
@@ -677,7 +700,216 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
   /**
    * {@inheritDoc}
    */
-  public function run() {}
+  public function run() {
+
+    // Get the arguments from the form.
+    $arguments = $this->getArguments();
+
+    // Get the population entry stock id.
+    $population_entry_stock_id = ChadoGenericAutocompleteController::getPkeyId($arguments['run_args']['fld_text_population_entry']);
+
+    // Form values.
+    $population = [
+      'entry' => $population_entry_stock_id,
+      'verb' => $arguments['run_args']['fld_select_relationship_verb'],
+      'position' => $arguments['run_args']['fld_radio_stock_position'],
+      'individuals' => $this->arguments['files'][0]['fid'],
+    ];
+
+    $this->importPopulation($population);
+  }
+
+  /**
+   * Function callback, create population.
+   *
+   * @param array $population
+   *   Array, with the following keys:
+   *   entry: Form field value for Population Entry field.
+   *   verb : Form field value for Relationship Verb field.
+   *   position: Form field value for Stock Position field.
+   *   individuals: Form file field value for Population Individuals Field.
+   */
+  public function importPopulation($population) {
+    $file = $this->service_entityTypeManager->getStorage('file')->load($population['individuals']);
+    $this->setTotalItems($file->filesize);
+    $this->setItemsHandled(0);
+    // Get the mime type which is used to validate the file and split the rows.
+    $file_mime_type = $file->getMimeType();
+
+    if ($file && $file->filesize > 0) {
+      $file_uri = $file->getFileUri();
+      $handle = fopen($file_uri, 'r');
+      if ($handle) {
+        $i = 0;
+
+        // Fetch the last stock_id auto-increment inserted, increment
+        // the value each time a stock is added. This value is concatenated
+        // to the prefix (when provided) that will make up the uniquename of
+        // the stock.
+        // Skip this when file has provided a custom uniquename.
+        $id = $this->chado_connection->select('stock', 's')
+          ->fields('s', ['stock_id'])
+          ->orderBy('stock_id', 'DESC')
+          ->execute()
+          ->fetchField();
+        $last_id = $id[0] ?? 0;
+
+        while ($cur_line = fgets($handle)) {
+          // Add all individuals in file into stock table
+          // and simultaneously creating the Relationship verb.
+          if ($i == 0) {
+            // This is the header row.
+            $i++;
+            continue;
+          }
+
+          // Data rows.
+          if ($cur_line) {
+            $data_row = ImportValidationHelper::splitRowIntoColumns($cur_line, $file_mime_type);
+            [$val_name, $val_type, $val_sciname, $val_uniqname] = $data_row;
+
+            // Construct uniquename:
+            // If line has no uniquename by using the prefix system
+            // configuration and next sequence id of stock.
+            $uniquename = ($val_uniqname == '')
+              ? 'uniquename' . $population['entry'] . ($last_id + $i) : $val_uniqname;
+            // Always encode in uppercase form.
+            $uniquename = strtoupper($uniquename);
+
+            // Organism:
+            // Use the genus and species encoded in the Scientific Name to
+            // determine the organism.
+            $organism_id = $this->parseOrganism($val_sciname);
+
+            // Type:
+            // Use the database name and cvterm encoded in Type to determine
+            // the stock type.
+            $type_id = $this->parseTerm($val_type);
+
+            // STOCK:
+            $stock = [
+              'name'      => $val_name,
+              'uniquename'  => $uniquename,
+              'organism_id'  => $organism_id,
+              'type_id'   => $type_id,
+            ];
+
+            // Save the id of the individual being added
+            // and use it in the relationship below.
+            $individual_query = $this->chado_connection->insert('1:stock')
+              ->fields($stock)
+              ->execute();
+
+            // Fetch the inserted stock_id (if needed)
+            $individual = NULL;
+            if ($individual_query) {
+              $individual = $individual_query;
+            }
+
+            // Create Relationship:
+            $relation = [];
+            // Verb.
+            $relation['type_id'] = $this->parseTerm($population['verb']);
+
+            // Position.
+            if ($population['position'] == 'evi') {
+              // Entry - Verb - Individual.
+              $relation['subject_id'] = $population['entry'];
+              $relation['object_id'] = $individual;
+            }
+            elseif ($population['position'] == 'ive') {
+              // Individual - Verb - Entry.
+              $relation['object_id'] = $population['entry'];
+              $relation['subject_id'] = $individual;
+            }
+
+            $this->chado_connection->insert('1:stock_relationship')
+              ->fields($relation)
+              ->execute();
+            unset($individual);
+
+            $i++;
+          }
+        }
+
+        // Close file.
+        fclose($handle);
+      }
+    }
+  }
+
+  /**
+   * Parse form values for cvterm name (Type).
+   *
+   * Fetch the matching row in chado.cvterm..
+   *
+   * @param string $value
+   *   String, containing the the type.
+   *
+   * @return int
+   *   Cvterm id number that matched the resolved cvterm id
+   *   from the input string.
+   */
+  public function parseTerm($value) {
+    $result = '';
+
+    // Capture the database name and cvterm name.
+    preg_match('/^(.*)\s\(([A-Za-z0-9_]+:\d+)\)$/', $value, $match);
+    if ($match !== FALSE && ($match[1] && $match[2])) {
+      $values = [
+        'name' => $match[1],
+      ];
+
+      // Fetch cvterm that match the dbname and cvterm name
+      // in the input string form value. The dbname will
+      // ensure that a specific term will be returned.
+      $result = $this->chado_connection->select('1:cvterm', 'c')
+        ->fields('c', ['cvterm_id'])
+        ->condition('c.name', $values['name'], '=')
+        ->execute()
+        ->fetchField();
+    }
+
+    return $result;
+  }
+
+  /**
+   * Parse form values for Scientific Name (ogranism: genus+species).
+   *
+   * Fetch the matching row in chado.organism.
+   *
+   * @param string $value
+   *   String, containing the genus and species in the
+   *   following notation: Genus\sSpecies. ie. Lens culinaris.
+   */
+  public function parseOrganism($value) {
+    $result = '';
+
+    // Capture the genus and species from Scientific Name value.
+    preg_match('/^(\w+)\s{1}(.*)/', $value, $match);
+    if ($match !== FALSE && ($match[1] && $match[2])) {
+      $values = [
+        'genus' => $match[1],
+        'species' => $match[2],
+      ];
+
+      // Fetch organism using the genus+species and return
+      // the organism_id number.
+      $query = $this->chado_connection->select('1:organism', 'o')
+        ->fields('o', ['organism_id'])
+        ->condition('o.genus', $values['genus'], '=')
+        ->condition('o.species', $values['species'], '=')
+        ->execute();
+
+      $result = NULL;
+      if ($organism_id = $query->fetchField()) {
+        $result = $organism_id;
+      }
+
+    }
+
+    return $result;
+  }
 
   /**
    * {@inheritdoc}
