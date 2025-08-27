@@ -180,6 +180,13 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
   ];
 
   /**
+   * Looked up organism ids, keyed by scientific name.
+   *
+   * @var array
+   */
+  protected $organism_ids = [];
+
+  /**
    * Constructs the Germpalsm Collection importer.
    *
    * @param array $configuration
@@ -264,9 +271,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
     // Configure the Germplasm Name Exists validator.
     $instance_name_exists = $this->service_validatorPluginManager->createInstance('germplasm_name_exists');
 
-    $organism_id = 1;
     $indices = [0];
-    $instance_name_exists->setOrganismID($organism_id);
     $instance_name_exists->setIndices($indices);
     $validators['data-row']['germplasm_name_exists'] = $instance_name_exists;
 
@@ -518,6 +523,31 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
           // importer.
           $data_row = ImportValidationHelper::splitRowIntoColumns($line, $file_mime_type);
 
+          // Organism:
+          $organism_id = $this->getOrganismIds($data_row[2]);
+
+          if ($organism_id == NULL) {
+            $failed_validator = TRUE;
+            throw new \Exception('Scientific Name: ' . $data_row[2] . ' is not valid. Please provide a valid Scientific Name.');
+          }
+
+          if ($validators['data-row']['germplasm_name_exists']) {
+            // Set failures for this validator name to an empty array to signal
+            // that this validator has been run, but ONLY if it doesn't exist.
+            // (ie. this validator may have already failed on a previous row, so
+            // we don't want to overwrite previous validation failures.)
+            if (!array_key_exists('germplasm_name_exists', $failures)) {
+              $failures['germplasm_name_exists'] = [];
+            }
+            $validators['data-row']['germplasm_name_exists']->setOrganismID($this->organism_ids[$data_row[2]]);
+            $result = $validators['data-row']['germplasm_name_exists']->validateRow($data_row);
+            // Check if validation failed.
+            if (array_key_exists('valid', $result) && $result['valid'] === FALSE) {
+              $failed_validator = TRUE;
+              $failures['germplasm_name_exists'][$line_no] = $result;
+            }
+          }
+
           // Call each validator on this row of the file.
           foreach ($validators['data-row'] as $validator_name => $validator) {
             // Set failures for this validator name to an empty array to signal
@@ -533,16 +563,6 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
               $failed_validator = TRUE;
               $failures[$validator_name][$line_no] = $result;
             }
-          }
-          // Organism:
-          // Use the genus and species encoded in the Scientific Name to
-          // determine the organism.
-          $organism_id = $this->parseOrganism($data_row[2]);
-
-          // Throw exception if organism is not valid.
-          if ($organism_id == NULL) {
-            $failed_validator = TRUE;
-            throw new \Exception('Scientific Name: ' . $data_row[2] . ' is not valid. Please provide a valid Scientific Name.');
           }
 
           // Type:
@@ -776,15 +796,37 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
             // Always encode in uppercase form.
             $uniquename = strtoupper($uniquename);
 
+            // Germplasm Name:
+            // Use the germplasm name to determine if the germplasm
+            // exists in the database.
+            // If it does not exist, throw an exception.
+            $stock_id = $this->parseStock($val_name);
+
+            if ($stock_id == NULL) {
+              throw new \Exception('Germplasm Name: ' . $val_name . ' does not exists. Please provide a valid Germplasm Name.');
+            }
+
             // Organism:
-            // Use the genus and species encoded in the Scientific Name to
-            // determine the organism.
-            $organism_id = $this->parseOrganism($val_sciname);
+            if (!array_key_exists($val_sciname, $this->organism_ids)) {
+              $organism_id = $this->getOrganismIds($val_sciname);
+            }
+            else {
+              $organism_id = $this->organism_ids[$val_sciname];
+            }
+            // Throw exception if organism is not valid.
+            if ($organism_id == NULL) {
+              throw new \Exception('Scientific Name: ' . $val_sciname . ' is not valid. Please provide a valid Scientific Name.');
+            }
 
             // Type:
             // Use the database name and cvterm encoded in Type to determine
             // the stock type.
             $type_id = $this->parseTerm($val_type);
+
+            // Throw exception if type is not valid.
+            if ($type_id == NULL) {
+              throw new \Exception('Type: ' . $val_type . ' is not valid. Please provide a valid Type.');
+            }
 
             // STOCK:
             $stock = [
@@ -874,41 +916,75 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
   }
 
   /**
-   * Parse form values for Scientific Name (ogranism: genus+species).
+   * Parse form values for Stock/Germplasm (Population Entry).
    *
-   * Fetch the matching row in chado.organism.
+   * Fetch the matching row in chado.stock table.
    *
    * @param string $value
-   *   String, containing the genus and species in the
-   *   following notation: Genus\sSpecies. ie. Lens culinaris.
+   *   String, containing the stock name and  in
+   *   the following notation: Stock Name.
+   *
+   * @return int
+   *   Stock id number that matched the resolved stock id
+   *   from the input string.
    */
-  public function parseOrganism($value) {
+  public function parseStock($value) {
     $result = '';
 
-    // Capture the genus and species from Scientific Name value.
-    preg_match('/^(\w+)\s{1}(.*)/', $value, $match);
-    if ($match !== FALSE && ($match[1] && $match[2])) {
-      $values = [
-        'genus' => $match[1],
-        'species' => $match[2],
-      ];
+    // Fetch the germplasm name and return
+    // the stock_id number.
+    $query = $this->chado_connection->select('1:stock', 's')
+      ->fields('s', ['stock_id'])
+      ->condition('s.name', $value, '=')
+      ->execute();
 
-      // Fetch organism using the genus+species and return
-      // the organism_id number.
-      $query = $this->chado_connection->select('1:organism', 'o')
-        ->fields('o', ['organism_id'])
-        ->condition('o.genus', $values['genus'], '=')
-        ->condition('o.species', $values['species'], '=')
-        ->execute();
-
-      $result = NULL;
-      if ($organism_id = $query->fetchField()) {
-        $result = $organism_id;
-      }
-
+    $result = NULL;
+    if ($stock_id = $query->fetchField()) {
+      $result = $stock_id;
     }
 
     return $result;
+  }
+
+  /**
+   * Get organism ids, or use the previously looked up organisms.
+   *
+   * @param string $organism
+   *   The scientific name of the organism.
+   */
+  public function getOrganismIds($organism) {
+    // Organism:
+    // Use the genus and species encoded in the Scientific Name to
+    // determine the organism.
+    if (array_key_exists($organism, $this->organism_ids)) {
+      $organism_id = $this->organism_ids[$organism];
+    }
+    else {
+      // Not previously looked up, so do it now.
+      // Capture the genus and species from Scientific Name.
+      preg_match('/^(\w+)\s{1}(.*)/', $organism, $match);
+      if ($match !== FALSE && ($match[1] && $match[2])) {
+        $values = [
+          'genus' => $match[1],
+          'species' => $match[2],
+        ];
+
+        // Fetch organism using the genus+species and get
+        // the organism_id number.
+        $query = $this->chado_connection->select('1:organism', 'o')
+          ->fields('o', ['organism_id'])
+          ->condition('o.genus', $values['genus'], '=')
+          ->condition('o.species', $values['species'], '=')
+          ->execute();
+
+        $organism_id = NULL;
+        if ($organism_id = $query->fetchField()) {
+          $organism_id = $organism_id;
+        }
+      }
+      $this->organism_ids[$organism] = $organism_id;
+    }
+    return $organism_id;
   }
 
   /**
