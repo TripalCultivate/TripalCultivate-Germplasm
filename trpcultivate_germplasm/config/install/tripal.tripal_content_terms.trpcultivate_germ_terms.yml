@@ -1,0 +1,15 @@
+id: 'trpcultivate_germ_terms'
+label: 'TripalCultivate Germplasm Terms'
+description: 'Default terms used by the TripalCultivate Germplasm collection of modules.'
+vocabularies:
+    -   name: 'PBO'
+        label: 'Plant Breeding Ontology'
+        url: 'http://purl.obolibrary.org/obo/PBO'
+        idSpaces:
+            -   name: 'PBO'
+                description: 'Plant Breeding Ontology (PBO): an ontology for the plant breeding community which captures more than 2200 entries where 80 represent the core terms.'
+                urlPrefix: 'http://purl.obolibrary.org/obo/{db}_{accession}'
+        terms:
+            -   id: 'PBO:0000055'
+                name: 'pedigree'
+                description: 'A record of ancestry of an individual, family, or strain.'

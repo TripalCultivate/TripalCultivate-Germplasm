@@ -1,13 +1,14 @@
 <?php
+
 /**
  * @file
  * Provides functionality required for installation of the module.
  */
 
 /**
- * Implement hook_install()
+ * Implements hook_install().
  */
-function trpcultivate_germplasm_install(){
+function trpcultivate_germplasm_install() {
 
   // Now create the stock_synonym linking table.
   $table = 'stock_synonym';
@@ -87,4 +88,16 @@ function trpcultivate_germplasm_install(){
   $custom_tables = \Drupal::service('tripal_chado.custom_tables');
   $custom_table = $custom_tables->create($table, $schema_name);
   $custom_table->setTableSchema($schema);
+
+  // Install terms from config (YML) and OBO file required by this module.
+  // @see trpcultivate_germplasm.module
+  // This is done within a Tripal job.
+  $current_user = \Drupal::currentUser();
+  \Drupal::service('tripal.job')->create([
+    'job_name' => t("Insert terms used by the Tripal Cultivate Germplasm package"),
+    'modulename' => 'trpcultivate_germplasm',
+    'callback' => 'trpcultivate_germplasm_install_terms',
+    'arguments' => [],
+    'uid' => $current_user->id(),
+  ]);
 }
