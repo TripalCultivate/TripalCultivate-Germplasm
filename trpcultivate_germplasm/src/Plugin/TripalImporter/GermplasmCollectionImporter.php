@@ -536,7 +536,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
               // Organism ID:
               // If Scientific Name is present, lookup the organism ID
               // and set it in the validator.
-              if ($$data_row[2]) {
+              if ($data_row[2]) {
                 $organism_id = $this->getOrganismIds($data_row[2]);
               }
               else {
