@@ -523,31 +523,6 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
           // importer.
           $data_row = ImportValidationHelper::splitRowIntoColumns($line, $file_mime_type);
 
-          // Organism:
-          $organism_id = $this->getOrganismIds($data_row[2]);
-
-          if ($organism_id == NULL) {
-            $failed_validator = TRUE;
-            throw new \Exception('Scientific Name: ' . $data_row[2] . ' is not valid. Please provide a valid Scientific Name.');
-          }
-
-          if ($validators['data-row']['germplasm_name_exists']) {
-            // Set failures for this validator name to an empty array to signal
-            // that this validator has been run, but ONLY if it doesn't exist.
-            // (ie. this validator may have already failed on a previous row, so
-            // we don't want to overwrite previous validation failures.)
-            if (!array_key_exists('germplasm_name_exists', $failures)) {
-              $failures['germplasm_name_exists'] = [];
-            }
-            $validators['data-row']['germplasm_name_exists']->setOrganismID($this->organism_ids[$data_row[2]]);
-            $result = $validators['data-row']['germplasm_name_exists']->validateRow($data_row);
-            // Check if validation failed.
-            if (array_key_exists('valid', $result) && $result['valid'] === FALSE) {
-              $failed_validator = TRUE;
-              $failures['germplasm_name_exists'][$line_no] = $result;
-            }
-          }
-
           // Call each validator on this row of the file.
           foreach ($validators['data-row'] as $validator_name => $validator) {
             // Set failures for this validator name to an empty array to signal
@@ -557,23 +532,34 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
             if (!array_key_exists($validator_name, $failures)) {
               $failures[$validator_name] = [];
             }
+            if ($validator_name == 'germplasm_name_exists') {
+              // Organism ID:
+              // If Scientific Name is present, lookup the organism ID
+              // and set it in the validator.
+              if ($$data_row[2]) {
+                $organism_id = $this->getOrganismIds($data_row[2]);
+              }
+              else {
+                $organism_id = NULL;
+              }
+              if ($organism_id == NULL) {
+                // Manually set failures array.
+                $failed_validator = TRUE;
+                $failures[$validator_name][$line_no] = [
+                  'case' => 'Unable to lookup germplasm with empty values',
+                  'valid' => FALSE,
+                  'failedItems' => ['empty_cells' => $line_no],
+                ];
+                continue;
+              }
+              $validator->setOrganismID($this->organism_ids[$data_row[2]]);
+            }
             $result = $validator->validateRow($data_row);
             // Check if validation failed.
             if (array_key_exists('valid', $result) && $result['valid'] === FALSE) {
               $failed_validator = TRUE;
               $failures[$validator_name][$line_no] = $result;
             }
-          }
-
-          // Type:
-          // Use the database name and cvterm encoded in Type to determine
-          // the stock type.
-          $type_id = $this->parseTerm($data_row[1]);
-
-          // Throw exception if type is not valid.
-          if ($type_id == NULL) {
-            $failed_validator = TRUE;
-            throw new \Exception('Type: ' . $data_row[1] . ' is not valid. Please provide a valid Type.');
           }
         }
       }
@@ -756,6 +742,10 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
     // Get the mime type which is used to validate the file and split the rows.
     $file_mime_type = $file->getMimeType();
 
+    $temp_lines = [];
+    $temp_uname = [];
+    $duplicate  = [];
+
     if ($file && $file->filesize > 0) {
       $file_uri = $file->getFileUri();
       $handle = fopen($file_uri, 'r');
@@ -786,7 +776,10 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
           // Data rows.
           if ($cur_line) {
             $data_row = ImportValidationHelper::splitRowIntoColumns($cur_line, $file_mime_type);
-            [$val_name, $val_type, $val_sciname, $val_uniqname] = $data_row;
+            $val_name = $data_row[0];
+            $val_type = $data_row[1];
+            $val_sciname = $data_row[2];
+            $val_uniqname = $data_row[3] ?? NULL;
 
             // Construct uniquename:
             // If line has no uniquename by using the prefix system
@@ -807,11 +800,12 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
             }
 
             // Organism:
-            if (!array_key_exists($val_sciname, $this->organism_ids)) {
+            // If Scientific Name is present, lookup the organism ID.
+            if ($val_sciname) {
               $organism_id = $this->getOrganismIds($val_sciname);
             }
             else {
-              $organism_id = $this->organism_ids[$val_sciname];
+              $organism_id = NULL;
             }
             // Throw exception if organism is not valid.
             if ($organism_id == NULL) {
@@ -821,11 +815,86 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
             // Type:
             // Use the database name and cvterm encoded in Type to determine
             // the stock type.
-            $type_id = $this->parseTerm($val_type);
+            if ($val_type) {
+              $type_id = $this->parseTerm($val_type);
+            }
+            else {
+              $type_id = NULL;
+            }
 
             // Throw exception if type is not valid.
             if ($type_id == NULL) {
               throw new \Exception('Type: ' . $val_type . ' is not valid. Please provide a valid Type.');
+            }
+
+            // DUPLICATE LINE:
+            // Line name+type+organism+uniquename must be unique regardless of
+            // the case format of the name ie. Germ1 GERM1 or GerM1.
+            // Note: uniquename is always uppercase.
+            $line_text = strtolower($val_name . $val_type . $val_sciname);
+            if (in_array($line_text . $val_uniqname, $temp_lines)) {
+              // Inspect if this name has same type, ogranism and uniquename.
+              $duplicate_line = array_search($line_text . $val_uniqname, $temp_lines);
+              throw new \Exception('Duplicate in lines: #' . $duplicate_line . ' and #' . ($i + 1));
+            }
+            else {
+              if (preg_grep("/$line_text.*/", $temp_lines)) {
+                $duplicate[] = $val_name;
+              }
+
+              // Record instance.
+              $temp_lines[$i + 1] = $line_text . $val_uniqname;
+            }
+
+            // Uniquename:
+            // If provided in the file, check if the uniquename
+            // already exists in the database.
+            // If it does, throw an exception.
+            if ($val_uniqname) {
+              $query = $this->chado_connection->select('1:stock', 's')
+                ->fields('s', ['stock_id'])
+                ->condition('s.uniquename', $val_uniqname, '=')
+                ->execute();
+
+              $result = NULL;
+              if ($stock_id = $query->fetchField()) {
+                $result = $stock_id;
+              }
+              if ($result) {
+                // A uniquename is already used in database.
+                throw new \Exception('Uniquename is already used by another germplasm.');
+              }
+              else {
+                // Check if the uniquename is duplicated
+                // in the file. If it is, throw an exception.
+                if (in_array($val_uniqname, $temp_uname)) {
+                  // Duplicate uniquename in file.
+                  $duplicate_uname = array_search($val_uniqname, $temp_uname);
+                  throw new \Exception('Duplicate Uniquename in lines: #' . $duplicate_uname . ' and ' . ($i + 1));
+                }
+                else {
+                  // If uniquename is not duplicated, add it to the temp array
+                  // to check against for future lines in the file.
+                  $temp_uname[$i + 1] = $val_uniqname;
+                }
+              }
+            }
+
+            // Stock Name+Type+Scientific Name combination must be unique.
+            // Check if the combination already exists in the database.
+            // If it does, throw an exception.
+            $query = $this->chado_connection->select('1:stock', 's')
+              ->fields('s', ['stock_id'])
+              ->condition('s.name', $val_name, '=')
+              ->condition('s.type_id', $type_id, '=')
+              ->condition('s.organism_id', $organism_id, '=')
+              ->execute();
+            $result = NULL;
+            if ($stock_id = $query->fetchField()) {
+              $result = $stock_id;
+            }
+            if ($result) {
+              throw new \Exception('Term already exists in the database.');
             }
 
             // STOCK:
@@ -953,6 +1022,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
    *   The scientific name of the organism.
    */
   public function getOrganismIds($organism) {
+    $organism_id = '';
     // Organism:
     // Use the genus and species encoded in the Scientific Name to
     // determine the organism.
@@ -978,8 +1048,8 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
           ->execute();
 
         $organism_id = NULL;
-        if ($organism_id = $query->fetchField()) {
-          $organism_id = $organism_id;
+        if ($result = $query->fetchField()) {
+          $organism_id = $result;
         }
       }
       $this->organism_ids[$organism] = $organism_id;
