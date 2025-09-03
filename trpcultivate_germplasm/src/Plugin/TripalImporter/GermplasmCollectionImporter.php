@@ -29,7 +29,7 @@ use Drupal\trpcultivate\TripalImporter\Attribute\TripalImporter;
  *   label = @Translation("Tripal Importer: Germplasm Collection Importer"),
  *   description = @Translation("Imports germplasm populations (i.e. RIL, NAM, cross progeny) into testchado."),
  *   file_types = {"tsv", "txt"},
- *   upload_description = @Translation("Germplasm file should be a <strong>TAB Separated Values</strong> file (.tsv) containing a header with the following columns:<ol><li><strong>Name</strong>: The name of the RIL individual.</li><li><strong>Type</strong>: The vocabulary database name + : + cvterm (ie. schema:F1) which should be used for the stock record, must exist.</li><li><strong>Scientific Name</strong>: The genus + species of the organism to be used for the stock record, must exist.</li><li><strong>Uniquename</strong>: (optional) The uniquename to use if you do not want to use the pattern/prefix below. Custom value for this column must be unique for every line.</li></ol><p>Each row in the file should describe a specific individual to be created and linked to the Population Entry with the specified relationship.</p><p><strong>NOTE:</strong> This importer will not permit duplicate lines with identical Name + Type + Scientific Name + Uniquename in the file.<br />A warning will be issued when duplicate line, with the exception Uniquename has been detected and the Importer may proceed.</p>"),
+ *   upload_description = @Translation("Please provide a data file."),
  *   upload_title = @Translation("<strong>Population Individuals*</strong>"),
  *   use_analysis = FALSE,
  *   require_analysis = FALSE,
@@ -52,7 +52,7 @@ use Drupal\trpcultivate\TripalImporter\Attribute\TripalImporter;
   label: new TranslatableMarkup('Tripal Importer: Germplasm Collection Importer'),
   description: new TranslatableMarkup('Imports germplasm populations (i.e. RIL, NAM, cross progeny) into testchado.'),
   file_types: ['tsv', 'txt'],
-  upload_description: new TranslatableMarkup('Germplasm file should be a <strong>TAB Separated Values</strong> file (.tsv) containing a header with the following columns:<ol><li><strong>Name</strong>: The name of the RIL individual.</li><li><strong>Type</strong>: The vocabulary database name + : + cvterm (ie. schema:F1) which should be used for the stock record, must exist.</li><li><strong>Scientific Name</strong>: The genus + species of the organism to be used for the stock record, must exist.</li><li><strong>Uniquename</strong>: (optional) The uniquename to use if you do not want to use the pattern/prefix below. Custom value for this column must be unique for every line.</li></ol><p>Each row in the file should describe a specific individual to be created and linked to the Population Entry with the specified relationship.</p><p><strong>NOTE:</strong> This importer will not permit duplicate lines with identical Name + Type + Scientific Name + Uniquename in the file.<br />A warning will be issued when duplicate line, with the exception Uniquename has been detected and the Importer may proceed.</p>'),
+  upload_description: new TranslatableMarkup('Please provide a data file.'),
   upload_title: new TranslatableMarkup('<strong>Population Individuals*</strong>'),
   use_analysis: FALSE,
   require_analysis: FALSE,
@@ -72,40 +72,6 @@ use Drupal\trpcultivate\TripalImporter\Attribute\TripalImporter;
 class GermplasmCollectionImporter extends ChadoImporterBase implements ContainerFactoryPluginInterface {
 
   use StringTranslationTrait;
-  /**
-   * Mapping of validation cases to messages.
-   *
-   * @var array
-   */
-  protected static array $mapping = [
-    'case-empty-germplasm' => [
-      'token' => 'case-empty-germplasm',
-      'dev-case' => 'Unable to lookup germplasm with empty values',
-      'default-msg' => 'One or more cells which are required to contain germplasm names were empty. Please ensure that you have entered existing germplasm names for all cells in the following columns: [column-headers]',
-    ],
-    'case-missing-germplasm' => [
-      'token' => 'case-missing-germplasm',
-      'dev-case' => 'Missing germplasm name(s) in the database',
-      'default-msg' => 'The following germplasm names do not match any existing in this site. Please make sure you have entered the names exactly as they appear on the germplasm pages or [contact-admin] to have them added if they do not yet exist.',
-    ],
-    'case-duplicate-germplasm' => [
-      'token' => 'case-duplicate-germplasm',
-      'dev-case' => 'Duplicate(s) found in the database for germplasm name(s)',
-      'default-msg' => 'The following germplasm names in your file have been duplicated in this site (i.e. there are two or more pages for the same germplasm). If there is a more specific germplasm already existing in the site, then use that in your file. Regardless, [contact-admin] to have the duplications resolved in the site.',
-    ],
-    'case-missing-and-duplicate-germplasm' => [
-      'token' => 'case-missing-and-duplicate-germplasm',
-      'dev-case' => 'Missing germplasm name(s) and found duplicate(s) in the database',
-    ],
-    'case-valid' => [
-      'token' => 'case-valid',
-      'dev-case' => 'Germplasm name(s) exist(s) in the database',
-    ],
-    'contact-admin' => [
-      'token' => 'contact-admin',
-      'default-msg' => 'contact your administrator',
-    ],
-  ];
 
   /**
    * The key to reference the validation result array in Drupal storage system.
@@ -157,22 +123,22 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
    * NOTE: Order MUST reflect the desired order of headers in the input file.
    */
   protected array $headers = [
-    'name' => [
+    [
       'name' => 'Name',
       'description' => 'The name of the germplasm individual.',
       'type' => 'required',
     ],
-    'type' => [
+    [
       'name' => 'Type',
       'description' => 'The type of the germplasm individual, as a controlled vocabulary term.',
       'type' => 'required',
     ],
-    'scientific_name' => [
+    [
       'name' => 'Scientific Name',
       'description' => 'The scientific name of the germplasm individual.',
       'type' => 'required',
     ],
-    'uniquename' => [
+    [
       'name' => 'Uniquename',
       'description' => '(optional) A unique identifier for the germplasm individual.',
       'type' => 'optional',
@@ -244,6 +210,16 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
 
     $validators = [];
 
+    // Make the header columns into a simplified array for easy reference:
+    // - Keyed by the column header name.
+    // - Values are the column header's position in the $headers property (ie.
+    //   its index if we assume no keys were assigned).
+    $header_index = [];
+    $headers = $this->headers;
+    foreach ($headers as $i => $column_details) {
+      $header_index[$column_details['name']] = $i;
+    }
+
     // Configure the valid data file validator.
     $instance_data_file = $this->service_validatorPluginManager->createInstance('valid_data_file');
     $instance_data_file->setFileMimeType($file_mime_type);
@@ -252,7 +228,11 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
 
     // Configure the valid delimitted file validator.
     $instance_delimited = $this->service_validatorPluginManager->createInstance('valid_delimited_file');
-    $instance_delimited->setExpectedColumns(3, FALSE);
+    // Filter the headers with type = 'required' then Count the result.
+    $required_column_count = count(array_filter($this->headers, function ($h) {
+      return $h['type'] == 'required';
+    }));
+    $instance_delimited->setExpectedColumns($required_column_count, FALSE);
     $instance_delimited->setFileMimeType($file_mime_type);
     $validators['raw-row']['valid_delimited_file'] = $instance_delimited;
 
@@ -265,13 +245,20 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
 
     // Configure the empty cell validator.
     $instance_empty_cell = $this->service_validatorPluginManager->createInstance('empty_cell');
-    $instance_empty_cell->setIndices([0, 1, 2]);
+    $indices = [
+      $header_index['Name'],
+      $header_index['Type'],
+      $header_index['Scientific Name'],
+    ];
+    $instance_empty_cell->setIndices($indices);
     $validators['data-row']['empty_cell'] = $instance_empty_cell;
 
     // Configure the Germplasm Name Exists validator.
     $instance_name_exists = $this->service_validatorPluginManager->createInstance('germplasm_name_exists');
 
-    $indices = [0];
+    $indices = [
+      $header_index['Name'],
+    ];
     $instance_name_exists->setIndices($indices);
     $validators['data-row']['germplasm_name_exists'] = $instance_name_exists;
 
@@ -284,9 +271,12 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
   public function processValidationMessages($failures) {
     $messages = [];
 
+    // Get the header names from the headers array.
+    $header_names = array_column($this->headers, 'name');
+
     // Create a $messages entry for valid data file.
     $messages['valid_data_file'] = [
-      'title' => 'File is a valid data file',
+      'title' => 'File is valid and not empty',
       'status' => 'todo',
       'details' => '',
     ];
@@ -306,15 +296,20 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
 
     // Create a $messages entry for valid delimited file.
     $messages['valid_delimited_file'] = [
-      'title' => 'File is delimitted correctly',
+      'title' => 'Lines are properly delimited',
       'status' => 'todo',
       'details' => '',
     ];
 
+    // Filter the headers with type = 'required' then Count the result.
+    $required_column_count = count(array_filter($this->headers, function ($h) {
+      return $h['type'] == 'required';
+    }));
+
     // Configure the valid_delimited_file metadata.
     $valid_delimited_file_metadata = [
       'strict_flag' => TRUE,
-      'number_of_columns' => 3,
+      'number_of_columns' => $required_column_count,
     ];
 
     // Call the processListWithDescribedTable() method in ValidDelimitedFile
@@ -332,19 +327,9 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
 
     // Create a $messages entry for valid headers.
     $messages['valid_headers'] = [
-      'title' => 'File has valid headers',
+      'title' => 'File has all of the column headers expected',
       'status' => 'todo',
       'details' => '',
-    ];
-
-    // Configure the metadata with valid headers.
-    $headers_metadata = [
-      'column_headers' => [
-        0 => 'Name',
-        1 => 'Type',
-        2 => 'Scientific Name',
-        3 => 'Uniquename',
-      ],
     ];
 
     // Call the processListWithDescribedTable() method in ValidHeaders class
@@ -352,7 +337,12 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
     if (array_key_exists('valid_headers', $failures)) {
       if (!empty($failures['valid_headers'])) {
         $messages['valid_headers']['status'] = 'fail';
-        $messages['valid_headers']['details'] = ValidHeaders::processListWithDescribedTable($failures['valid_headers'], $headers_metadata);
+
+        // Configure the metadata.
+        $metadata = [
+          'column_headers' => $header_names,
+        ];
+        $messages['valid_headers']['details'] = ValidHeaders::processListWithDescribedTable($failures['valid_headers'], $metadata);
       }
       else {
         $messages['valid_headers']['status'] = 'pass';
@@ -361,7 +351,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
 
     // Create a $messages entry for empty cells.
     $messages['empty_cell'] = [
-      'title' => 'No Empty Cells',
+      'title' => 'Required cells contain a value',
       'status' => 'todo',
       'details' => '',
     ];
@@ -371,7 +361,15 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
     if (array_key_exists('empty_cell', $failures)) {
       if (!empty($failures['empty_cell'])) {
         $messages['empty_cell']['status'] = 'fail';
-        $messages['empty_cell']['details'] = EmptyCell::processListWithDescribedTable($failures['empty_cell'], $headers_metadata);
+        // Configure the metadata.
+        $metadata = [
+          'column_headers' => [
+            0 => $header_names[0],
+            1 => $header_names[1],
+            2 => $header_names[2],
+          ],
+        ];
+        $messages['empty_cell']['details'] = EmptyCell::processListWithDescribedTable($failures['empty_cell'], $metadata);
       }
       else {
         $messages['empty_cell']['status'] = 'pass';
@@ -380,7 +378,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
 
     // Create a $messages entry for germplasm name exists.
     $messages['germplasm_name_exists'] = [
-      'title' => 'Germplasm Name exists in the database',
+      'title' => 'Germplasm exist(s) in the database',
       'status' => 'todo',
       'details' => '',
     ];
@@ -391,7 +389,13 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
     if (array_key_exists('germplasm_name_exists', $failures)) {
       if (!empty($failures['germplasm_name_exists'])) {
         $messages['germplasm_name_exists']['status'] = 'fail';
-        $messages['germplasm_name_exists']['details'] = GermplasmNameExists::processListWithDescribedTable($failures['germplasm_name_exists'], $headers_metadata);
+        // Configure the metadata.
+        $metadata = [
+          'column_headers' => [
+            0 => $header_names[0],
+          ],
+        ];
+        $messages['germplasm_name_exists']['details'] = GermplasmNameExists::processListWithDescribedTable($failures['germplasm_name_exists'], $metadata);
       }
       else {
         $messages['germplasm_name_exists']['status'] = 'pass';
@@ -533,6 +537,9 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
               $failures[$validator_name] = [];
             }
             if ($validator_name == 'germplasm_name_exists') {
+              // @todo Validate the organism first, once we have a organism
+              // validator plugin, then only set the organism ID if the organism
+              // is valid.
               // Organism ID:
               // If Scientific Name is present, lookup the organism ID
               // and set it in the validator.
@@ -597,18 +604,15 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
     $form = parent::form($form, $form_state);
 
     // INFO:
-    $form['info'] = [
-      '#type' => 'item',
-      '#weight' => -3000,
-      '#markup' => $this->t('This importer will create individuals of a population and
+    $info = $this->t('This importer will create individuals of a population and
         relate them back to the population stock. More specifically, for every line
         in the file, a new chado stock record with that information will be created.
         Then a relationship as specified in this form will be made between that new
         stock record and the population stock selected in this form. As such this
         importer can be used in any case where you want to create a number of new
         stock records related to an existing stock. Examples of such situations are
-        recombinant inbred line populations or nested association mapping panels.'),
-    ];
+        recombinant inbred line populations or nested association mapping panels.');
+    $this->service_Messenger->addStatus($info);
 
     $storage = $form_state->getStorage();
     if (isset($storage[self::VALIDATION_RESULT])) {
