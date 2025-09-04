@@ -1,0 +1,272 @@
+<?php
+
+namespace Drupal\Tests\trpcultivate_germplasm\Kernel\TripalImporter;
+
+use Drupal\Core\Form\FormState;
+use Drupal\Tests\tripal_chado\Kernel\ChadoTestKernelBase;
+use PHPUnit\Framework\Attributes\Group;
+use Drupal\tripal_chado\Database\ChadoConnection;
+use Drupal\tripal\Services\TripalLogger;
+use Drupal\Tests\trpcultivate\Traits\TripalCultivateImporterTestTrait;
+use Drupal\Tests\user\Traits\UserCreationTrait;
+
+/**
+ * Tests form + form-related functionality of the Germplasm Collection Importer.
+ *
+ * @group collectionImporter
+ */
+#[Group('collectionImporter')]
+class GermplasmCollectionImporterFormTest extends ChadoTestKernelBase {
+
+  use UserCreationTrait;
+  use TripalCultivateImporterTestTrait;
+
+  /**
+   * Modules to enable.
+   *
+   * @var array
+   */
+  protected static $modules = [
+    'system',
+    'user',
+    'file',
+    'tripal',
+    'tripal_chado',
+    'tripal_layout',
+    'trpcultivate',
+    'trpcultivate_germplasm',
+  ];
+
+  /**
+   * A Database query interface for querying Chado using Tripal DBX.
+   *
+   * @var \Drupal\tripal_chado\Database\ChadoConnection
+   */
+  protected ChadoConnection $chado_connection;
+
+  /**
+   * Phenotypes Share Importer plugin instance.
+   *
+   * @var \Drupal\trpcultivate_gemplasm\src\Plugin\TripalImporter\GermplasmCollectionImporter
+   */
+  protected $germplasm_collection_importer;
+
+  /**
+   * A default listing of annotations associated with the importer.
+   *
+   * @var array
+   */
+  protected array $definitions = [
+    'test-collection-importer' => [
+      'id' => 'trpcultivate-germplasm-population-importer',
+      'label' => 'Tripal Importer: Germplasm Collection Importer',
+      'description' => 'Imports germplasm populations (i.e. RIL, NAM, cross progeny) into testchado.',
+      'file_types' => ['tsv', 'txt'],
+      'upload_title' => 'Population Individuals*',
+      'upload_description' => 'This should not be visible!',
+      'use_analysis' => FALSE,
+      'require_analysis' => FALSE,
+      'use_button' => TRUE,
+      'submit_disabled' => FALSE,
+      'button_text' => 'Import',
+      'file_upload' => TRUE,
+      'file_local' => FALSE,
+      'file_remote' => FALSE,
+      'file_required' => TRUE,
+      'cardinality' => 1,
+      'menu_path' => '',
+      'callback' => '',
+      'callback_module' => '',
+      'callback_path' => '',
+    ],
+  ];
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function setUp(): void {
+    parent::setUp();
+
+    // Ensure we see all logging in tests.
+    \Drupal::state()->set('is_a_test_environment', TRUE);
+
+    // Open connection to Chado.
+    $this->chado_connection = $this->getTestSchema(ChadoTestKernelBase::PREPARE_TEST_CHADO);
+
+    // Ensure we can access file_managed related functionality from Drupal.
+    // ... users need access to system.action config?
+    $this->installConfig(['system', 'trpcultivate_germplasm', 'trpcultivate']);
+    // ... managed files are associated with a user.
+    $this->installEntitySchema('user');
+    // ... Finally the file module + tables itself.
+    $this->installEntitySchema('file');
+    $this->installSchema('file', ['file_usage']);
+    $this->installSchema('tripal_chado', ['tripal_custom_tables']);
+    // Ensure we have our tripal import tables.
+    $this->installSchema('tripal', ['tripal_import', 'tripal_jobs']);
+    // Create and log-in a user.
+    $this->setUpCurrentUser();
+
+    // We need to mock the logger to test the progress reporting.
+    $container = \Drupal::getContainer();
+    $mock_logger = $this->getMockBuilder(TripalLogger::class)
+      ->onlyMethods(['error'])
+      ->getMock();
+    $mock_logger->method('error')
+      ->willReturnCallback(function ($message, $context, $options) {
+        // @todo Revisit print out of log messages, but perhaps setting an option
+        // for log messages to not print to the UI?
+        // print str_replace(array_keys($context), $context, $message);
+        return NULL;
+      });
+    $container->set('tripal.logger', $mock_logger);
+
+    $this->module_path = $this->container->get('module_handler')
+      ->getModule('trpcultivate_germplasm')
+      ->getPath();
+  }
+
+  /**
+   * Tests building the importer form.
+   */
+  public function testCollectionImporterFormValid() {
+    $plugin_id = 'trpcultivate-germplasm-population-importer';
+    $importer_label = 'Tripal Importer: Germplasm Collection Importer';
+
+    // Configure the module.
+    $organism_id = $this->chado_connection->insert('1:organism')
+      ->fields([
+        'genus' => 'Lens',
+        'species' => 'culinaris',
+      ])
+      ->execute();
+    $this->assertIsNumeric($organism_id, 'We were not able to cretae an organism.');
+
+    // Build the form using Drupal's form builder.
+    $form = \Drupal::formBuilder()->getForm(
+      'Drupal\tripal\Form\TripalImporterForm',
+      $plugin_id
+    );
+    $this->assertIsArray($form, 'We expect the form builder to return a form but it did not.');
+    $this->assertEquals('tripal_admin_form_tripalimporter', $form['#form_id'], 'We did not get the form id we expected.');
+
+    // Expect a status on the form.
+    $status = \Drupal::messenger()->messagesByType('status');
+    $this->assertCount(1, $status, 'We expect a single status message on the form.');
+
+    // We also expect the full form to be rendered, so check that now.
+    // Now that we have provided a plugin_id, we expect it to have...
+    // title matching our importer label.
+    $this->assertArrayHasKey('#title', $form, "The form should have a title set.");
+    $this->assertEquals($importer_label, $form['#title'], 'The title should match the label annotated for the importer.');
+    // The plugin_id stored in a value from element.
+    $this->assertArrayHasKey('importer_plugin_id', $form, 'The form should have an element to save the plugin_id.');
+    $this->assertEquals($plugin_id, $form['importer_plugin_id']['#value'], 'The importer_plugin_id[#value] should be set to our plugin_id.');
+
+    // Check the file fieldset contents.
+    $this->assertArrayHasKey('file', $form, 'We expect thesre to be a file fieldset on the form but there is not.');
+    $this->assertEquals('fieldset', $form['file']['#type'], 'We expect the file element in the form to be a fieldset.');
+    // We expect there to be an upload description includinf a template link
+    // and numbered column description.
+    $this->assertArrayHasKey('upload_description', $form['file'], 'We expect the upload description to be added by TripalImporte base class.');
+    $this->assertStringContainsString('<a href', $form['file']['upload_description']['#markup'], "We expected the upload description to have a link in it.");
+    $this->assertStringContainsString('<ol id="tcp-header-notes">', $form['file']['upload_description']['#markup'], "We expected the upload description to have an ordered list in it.");
+    // We also expect the file upload HTML5 element provided by Tripal
+    // and not the file local/remote.
+    $this->assertArrayHasKey('file_upload', $form['file'],
+      "We expect the file upload element to be added by the Tripal Importer base class.");
+    $this->assertArrayNotHasKey('file_local', $form['file'],
+      "The local file element should not be available.");
+    $this->assertArrayNotHasKey('file_remote', $form['file'],
+      "The remote file element should not be available.");
+
+    // Check the population entry field element.
+    $this->assertArrayHasKey('fieldset_population_entry', $form,
+      'We expect there to be a population entry form element on the form but there is not.');
+    $this->assertEquals('fieldset', $form['fieldset_population_entry']['#type'],
+      'We expect the population element for the title in the form to be a fieldset.');
+    $this->assertArrayHasKey('fld_text_population_entry', $form['fieldset_population_entry'], 'We expect there to be a textfield for entering the population entry.');
+    $this->assertEquals('textfield', $form['fieldset_population_entry']['fld_text_population_entry']['#type'],
+      'We expect the population entry element in the form to be a textfield.');
+
+    // Check the Relationship type element.
+    $this->assertArrayHasKey('fieldset_relationship_type', $form,
+      'We expect there to be a relationship type form element on the form but there is not.');
+    $this->assertEquals('fieldset', $form['fieldset_relationship_type']['#type'],
+      'We expect the relationship type element in the form to be a fieldset.');
+    $this->assertArrayHasKey('fld_select_relationship_verb', $form['fieldset_relationship_type'], 'We expect there to be an textfield for entering the relationship type.');
+    $this->assertEquals('textfield', $form['fieldset_relationship_type']['fld_select_relationship_verb']['#type'],
+      'We expect the relationship type element in the form to be a textfield.');
+    $this->assertArrayHasKey('fld_radio_stock_position', $form['fieldset_relationship_type'], 'We expect there to be a radio button for selecting the stock position.');
+    $this->assertEquals('radios', $form['fieldset_relationship_type']['fld_radio_stock_position']['#type'], 'We expect the stock position element in the form to be a set of radio buttons.');
+  }
+
+  /**
+   * Tests submitting the importer form with valid input.
+   */
+  public function testCollectionImporterFormSubmitValid() {
+    $plugin_id = 'trpcultivate-germplasm-population-importer';
+
+    // Configure the module.
+    $organism_id = $this->chado_connection->insert('1:organism')
+      ->fields([
+        'genus' => 'Lens',
+        'species' => 'culinaris',
+      ])
+      ->execute();
+    $this->assertIsNumeric($organism_id, 'We were not able to cretae an organism.');
+
+    $type_id = $this->chado_connection->select('1:cvterm', 'c')
+      ->fields('c', ['cvterm_id'])
+      ->condition('c.name', 'cultivar', '=')
+      ->execute()
+      ->fetchField();
+
+    $stock_id = $this->chado_connection->insert('1:stock')
+      ->fields([
+        'name' => 'my_term_1',
+        'organism_id' => $organism_id,
+        'uniquename' => 'UNIQUENAME1',
+        'type_id' => $type_id,
+      ])
+      ->execute();
+    $this->assertIsNumeric($stock_id, 'We were not able to create a cvterm.');
+
+    // Create a file to upload.
+    $file = $this->createTestFile([
+      'filename' => 'collection_importer_example.tsv',
+      'content' => [
+        'file' => 'collection_importer_example.tsv',
+        'fixturepath' => $this->module_path . '/tests/src/Fixtures/',
+      ],
+    ]);
+
+    // Setup the form_state.
+    $form_state = new FormState();
+    $form_state->addBuildInfo('args', [$plugin_id]);
+    $form_state->setValues([
+      'fld_text_population_entry' => 'my_term_1 [cultivar] (1)',
+      'fld_select_relationship_verb' => 'cultivar (CO_010:0000029)',
+      'fld_radio_stock_position' => 'evi',
+      'file_upload' => $file->id(),
+    ]);
+
+    // Now try validation!
+    \Drupal::formBuilder()->submitForm(
+      'Drupal\tripal\Form\TripalImporterForm',
+      $form_state
+    );
+
+    // Check that we got an error about the validation.
+    $this->assertTrue($form_state->isValidationComplete(), 'We expect the form state to be updated to indicate that the validation is complete.');
+    // Looking for form validation errors.
+    $form_validation_messages = $form_state->getErrors();
+    $helpful_output = [];
+    foreach ($form_validation_messages as $element => $markup) {
+      $helpful_output[] = $element . " => " . (string) $markup;
+    }
+    $this->assertCount(0, $form_validation_messages,
+      "We should not have any errors but instead we have: " . implode(" AND ", $helpful_output));
+  }
+
+}
