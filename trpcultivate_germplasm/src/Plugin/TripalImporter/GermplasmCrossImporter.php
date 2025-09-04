@@ -300,10 +300,9 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     // Raw row level
     // - File rows are properly delimited
     $instance = $this->service_validatorPluginManager->createInstance('valid_delimited_file');
-    // Count the number of columns and configure it for this validator. We want
-    // this number to be strict = TRUE, thus no extra columns are allowed.
-    $num_columns = count($this->headers);
-    $instance->setExpectedColumns($num_columns, TRUE);
+    // Configure the number of columns in a single row for this validator. We
+    // want a minimum number of 6 columns, so no need to set strict.
+    $instance->setExpectedColumns(6);
     $this->expected_columns = $instance->getExpectedColumns();
     // Set the MIME type of this input file.
     $instance->setFileMimeType($file_mime_type);
@@ -317,6 +316,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     // input file.
     $instance->setHeaders($this->headers);
     // Configure the expected number of columns and set it to be strict.
+    $num_columns = count($this->headers);
     $instance->setExpectedColumns($num_columns, TRUE);
     $validators['header-row']['valid_header'] = $instance;
 
