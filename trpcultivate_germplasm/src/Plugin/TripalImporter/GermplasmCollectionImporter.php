@@ -8,6 +8,8 @@ use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\tripal_chado\Database\ChadoConnection;
 use Drupal\tripal_chado\TripalImporter\ChadoImporterBase;
 use Drupal\trpcultivate\TripalCultivateValidator\TripalCultivateValidatorManager;
+use Drupal\Core\Render\Renderer;
+use Drupal\trpcultivate\Service\TripalCultivateFileTemplateService;
 use Drupal\trpcultivate\Service\ImportValidationHelper;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
@@ -102,6 +104,20 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
   protected TripalCultivateValidatorManager $service_validatorPluginManager;
 
   /**
+   * The TripalCultivate File Template Service.
+   *
+   * @var \Drupal\trpcultivate\Service\TripalCultivateFileTemplateService
+   */
+  protected TripalCultivateFileTemplateService $service_FileTemplate;
+
+  /**
+   * The Drupal Renderer.
+   *
+   * @var \Drupal\Core\Render\Renderer
+   */
+  protected Renderer $service_Renderer;
+
+  /**
    * A Database query interface for querying Chado using Tripal DBX.
    *
    * @var \Drupal\tripal_chado\Database\ChadoConnection
@@ -165,8 +181,12 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
    *   The connection to the Chado database.
    * @param Drupal\trpcultivate\TripalCultivateValidator\TripalCultivateValidatorManager $service_validatorPluginManager
    *   The TripalCultivate validator plugin manager.
+   * @param Drupal\trpcultivate\Service\TripalCultivateFileTemplateService $service_FileTemplate
+   *   The service used to generate the termplate file.
    * @param Drupal\Core\Entity\EntityTypeManager $service_entityTypeManager
    *   The entity type manager.
+   * @param Drupal\Core\Render\Renderer $renderer
+   *   The Drupal renderer service.
    * @param \Drupal\Core\Messenger\MessengerInterface $messenger
    *   The Drupal messenger service.
    */
@@ -176,13 +196,17 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
     mixed $plugin_definition,
     ChadoConnection $chado_connection,
     TripalCultivateValidatorManager $service_validatorPluginManager,
+    TripalCultivateFileTemplateService $service_FileTemplate,
     EntityTypeManager $service_entityTypeManager,
+    Renderer $renderer,
     MessengerInterface $messenger,
   ) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $chado_connection);
 
     $this->service_validatorPluginManager = $service_validatorPluginManager;
+    $this->service_FileTemplate = $service_FileTemplate;
     $this->service_entityTypeManager = $service_entityTypeManager;
+    $this->service_Renderer = $renderer;
     $this->service_Messenger = $messenger;
     // Chado database.
     $this->chado_connection = $chado_connection;
@@ -198,7 +222,9 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
       $plugin_definition,
       $container->get('tripal_chado.database'),
       $container->get('plugin.manager.trpcultivate_validator'),
+      $container->get('trpcultivate.template_generator'),
       $container->get('entity_type.manager'),
+      $container->get('renderer'),
       $container->get('messenger'),
     );
   }
@@ -223,7 +249,8 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
     // Configure the valid data file validator.
     $instance_data_file = $this->service_validatorPluginManager->createInstance('valid_data_file');
     $instance_data_file->setFileMimeType($file_mime_type);
-    $instance_data_file->setSupportedMimeTypes(['tsv', 'txt']);
+    $supported_file_extensions = $this->plugin_definition['file_types'];
+    $instance_data_file->setSupportedMimeTypes($supported_file_extensions);
     $validators['file']['valid_data_file'] = $instance_data_file;
 
     // Configure the valid delimitted file validator.
@@ -632,8 +659,9 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
     // FIELDSET: Population Entry fieldset.
     $form['fieldset_population_entry'] = [
       '#type' => 'fieldset',
-      '#title' => $this->t('Population Entry*'),
+      '#title' => $this->t('Population Entry'),
       '#weight' => -2000,
+      '#required' => TRUE,
     ];
 
     // Options used to search for germplasm/stock names.
@@ -663,8 +691,9 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
     // FIELDSET: Relationship Verb fieldset.
     $form['fieldset_relationship_type'] = [
       '#type' => 'fieldset',
-      '#title' => $this->t('Relationship Verb*'),
+      '#title' => $this->t('Relationship Verb'),
       '#weight' => -1000,
+      '#required' => TRUE,
     ];
 
     $cv_autocomplete = new ChadoCVTermAutocompleteController();
@@ -1065,5 +1094,66 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
    * {@inheritdoc}
    */
   public function postRun() {}
+
+  /**
+   * Describe the upload format including column descriptions + template file.
+   *
+   * Class TripalImporterBase is the parent class of this method and additional
+   * documentation is available in reference link below.
+   *
+   * NOTE: This method supports full HTML markup output.
+   *
+   * All relevant information relating to expected column headers and usage
+   * notes are laid out using the theme 'importer_header'. This is rendered
+   * using the referenced TWIG file below.
+   *
+   * A template geneartor service is utilized to provide a downloadable file
+   * template, pre-configured to contain all headers required. The link to
+   * this template file is also formatted using the theme 'importer_header'.
+   *
+   * @return string
+   *   The fully rendered HTML string produced by the 'importer_header' theme
+   *   with the pertinent variables supplied by this method.
+   *
+   * @see Drupal\tripal\TripalImporter\TripalImporterBase::describeUploadFileFormat()
+   * @see templates\trpcultivate-phenotypes-template-importer-header.html.twig
+   */
+  public function describeUploadFileFormat() {
+    // A template file has been generated and is ready for download.
+    $importer_id = $this->pluginDefinition['id'];
+
+    // Only the header names are needed for making the template file, so pull
+    // them out into a new array.
+    $column_headers = array_column($this->headers, 'name');
+
+    // File types 'file_types' annotation definition of this importer.
+    // The first item in the definition list will be used as the primary
+    // file extension of the template file.
+    // File MIME type and delimiter are based on mapping information defined
+    // in the validator base and file types validator trait.
+    $file_extensions = $this->plugin_definition['file_types'];
+
+    $file_link = $this->service_FileTemplate
+      ->generateFile($importer_id, $column_headers, $file_extensions);
+
+    // Additional notes to the headers.
+    $notes = $this->t('Each row in the file should describe a specific individual to be created and linked to the Population Entry with the specified relationship.</p><p><strong>NOTE:</strong> This importer will not permit duplicate lines with identical Name + Type + Scientific Name + Uniquename in the file.<br />A warning will be issued when duplicate line, with the exception Uniquename has been detected and the Importer may proceed.</p>');
+
+    // Render the header and notes/lists in a template and use the file link as
+    // the value to href attribute of the link to download a template file.
+    $supported_file_extensions = implode(', ', $file_extensions);
+
+    $build = [
+      '#theme' => 'describe_header_window',
+      '#data' => [
+        'headers' => $this->headers,
+        'file_extensions' => $supported_file_extensions,
+        'notes' => $notes,
+        'template_file' => $file_link,
+      ],
+    ];
+
+    return $this->service_Renderer->renderPlain($build);
+  }
 
 }
