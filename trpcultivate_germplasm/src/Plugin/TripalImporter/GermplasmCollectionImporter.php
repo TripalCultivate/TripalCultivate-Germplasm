@@ -932,10 +932,10 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
 
             // STOCK:
             $stock = [
-              'name'      => $val_name,
-              'uniquename'  => $uniquename,
-              'organism_id'  => $organism_id,
-              'type_id'   => $type_id,
+              'name' => $val_name,
+              'uniquename' => $uniquename,
+              'organism_id' => $organism_id,
+              'type_id' => $type_id,
             ];
 
             // Save the id of the individual being added
