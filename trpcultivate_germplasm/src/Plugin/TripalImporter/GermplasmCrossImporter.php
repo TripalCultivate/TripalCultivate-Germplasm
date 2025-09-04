@@ -284,6 +284,8 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
 
     // -----------------------------------------------------
     // Metadata
+    // - Future organism validator goes here
+
     // -----------------------------------------------------
     // File level
     // - File exists and is the expected type
@@ -368,15 +370,15 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       ];
     }
 
-    // Field Genus:
-    // Prepare select options with only active organism.
+    // Field Organism:
+    // Prepare select options with only active organisms.
     $all_organisms = chado_get_organism_select_options();
-    //$active_genus = array_combine($all_genus, $all_genus);
+    $active_organisms = array_combine($all_organisms, $all_organisms);
 
     // If there is only one organism, it should be the default.
     $default_organism = 0;
-    if ($all_organisms && count($all_organisms) == 1) {
-      $default_organism = reset($all_organisms);
+    if ($active_organisms && count($active_organisms) == 1) {
+      $default_organism = reset($active_organisms);
     }
 
     // Field organism.
@@ -385,7 +387,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       '#title' => 'Organism',
       '#description' => $this->t('The species of the germplasm being imported. If your file contains multiple species, please separate the crosses into one file per species.'),
       '#empty_option' => '- Select -',
-      '#options' => $all_organisms,
+      '#options' => $active_organisms,
       '#default_value' => $default_organism,
       '#weight' => -99,
       '#required' => TRUE,
@@ -444,6 +446,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     // ************************************************************************
     // Metadata Validation
     // ************************************************************************
+    /*
     foreach ($validators['metadata'] as $validator_name => $validator) {
       // Set failures for this validator name to an empty array to signal that
       // this validator has been run.
@@ -457,6 +460,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
         $failures[$validator_name] = $result;
       }
     }
+    */
 
     // Check if any previous validators failed before moving on to the next
     // input-type validation.
