@@ -88,7 +88,53 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    *
    * NOTE: Order MUST reflect the desired order of headers in the input file.
    */
-  private $headers = [];
+  private $headers = [
+    [
+      'name' => 'Year',
+      'description' => 'The year this cross was made in (e.g. 2020).',
+      'type' => 'required',
+    ],
+    [
+      'name' => 'Season',
+      'description' => 'The season this cross was made in (e.g. Spring, Fall, Winter, Summer).',
+      'type' => 'required',
+    ],
+    [
+      'name' => 'Cross Number',
+      'description' => 'A unique identifier for this cross (e.g. 1234S).',
+      'type' => 'required',
+    ],
+    [
+      'name' => 'Maternal Parent',
+      'description' => 'The name of the maternal parent of this cross.',
+      'type' => 'required',
+    ],
+    [
+      'name' => 'Paternal Parent',
+      'description' => 'The name of the paternal parent of this cross.',
+      'type' => 'required',
+    ],
+    [
+      'name' => 'Cross Type',
+      'description' => 'The type of cross (e.g. single, double, triple).',
+      'type' => 'required',
+    ],
+    [
+      'name' => 'Seed Type',
+      'description' => 'Either the market class or the seed coat colour of the seed resulting from this cross.',
+      'type' => 'optional',
+    ],
+    [
+      'name' => 'Cotyledon Colour',
+      'description' => 'The cotyledon colour of the seed resulting from this cross.',
+      'type' => 'optional',
+    ],
+    [
+      'name' => 'Comment',
+      'description' => 'A free-text comment about this cross.',
+      'type' => 'optional',
+    ],
+  ];
 
   /**
    * A Database query interface for querying Chado using Tripal DBX.
@@ -315,24 +361,24 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     }
 
     // Field Genus:
-    // Prepare select options with only active genus.
-    // @todo: Grab all genus in the stock table.
-    $active_genus = array_combine($all_genus, $all_genus);
+    // Prepare select options with only active organism.
+    $all_organisms = chado_get_organism_select_options();
+    //$active_genus = array_combine($all_genus, $all_genus);
 
-    // If there is only one genus, it should be the default.
-    $default_genus = 0;
-    if ($active_genus && count($active_genus) == 1) {
-      $default_genus = reset($active_genus);
+    // If there is only one organism, it should be the default.
+    $default_organism = 0;
+    if ($all_organisms && count($all_organisms) == 1) {
+      $default_organism = reset($all_organisms);
     }
 
-    // Field genus.
-    $form['genus'] = [
+    // Field organism.
+    $form['organism'] = [
       '#type' => 'select',
-      '#title' => 'Genus',
-      '#description' => $this->t('The genus of the germplasm being imported.'),
+      '#title' => 'Organism',
+      '#description' => $this->t('The species of the germplasm being imported. If your file contains multiple species, please separate the crosses into one file per species.'),
       '#empty_option' => '- Select -',
-      '#options' => $active_genus,
-      '#default_value' => $default_genus,
+      '#options' => $all_organisms,
+      '#default_value' => $default_organism,
       '#weight' => -99,
       '#required' => TRUE,
     ];
