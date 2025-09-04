@@ -222,10 +222,10 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
 
     // Create a file to upload.
     $file = $this->createTestFile([
-      'filename' => 'simple_example.txt',
+      'filename' => 'crosses_simple.tsv',
       'content' => [
-        'file' => 'simple_example.txt',
-        'fixturepath' => $this->module_path . '/tests/src/Fixtures/',
+        'file' => 'crosses_simple.tsv',
+        'fixturepath' => $this->module_path . '/tests/src/Fixtures/CrossImporterFiles/',
       ],
     ]);
 
@@ -328,10 +328,10 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
 
     // Create a file to upload.
     $file = $this->createTestFile([
-      'filename' => 'simple_example.txt',
+      'filename' => 'crosses_simple.tsv',
       'content' => [
-        'file' => 'simple_example.txt',
-        'fixturepath' => $this->module_path . '/tests/src/Fixtures/',
+        'file' => 'crosses_simple.tsv',
+        'fixturepath' => $this->module_path . '/tests/src/Fixtures/CrossImporterFiles/',
       ],
     ]);
 
