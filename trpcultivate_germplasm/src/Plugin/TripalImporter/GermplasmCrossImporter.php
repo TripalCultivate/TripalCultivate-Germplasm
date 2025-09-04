@@ -322,16 +322,24 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     // Data Row Level
     // - All data row cells in columns 0,2,4 are not empty
     $instance = $this->service_validatorPluginManager->createInstance('empty_cell');
-    $indices = [];
+    $indices = [
+      $header_index['Year'],
+      $header_index['Season'],
+      $header_index['Cross Number'],
+      $header_index['Maternal Parent'],
+      $header_index['Paternal Parent'],
+      $header_index['Cross Type'],
+    ];
     $instance->setIndices($indices);
     $validators['data-row']['empty_cell'] = $instance;
 
+    /**
     // - The column 'Type' is one of "Qualitative" and "Quantitative"
     $instance = $this->service_validatorPluginManager->createInstance('value_in_list');
     $instance->setIndices([]);
     $instance->setValidValues([]);
     $validators['data-row']['valid_data_type'] = $instance;
-
+    */
     // - @todo Germplasm name exists
     return $validators;
   }
