@@ -302,7 +302,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     $instance = $this->service_validatorPluginManager->createInstance('valid_delimited_file');
     // Configure the number of columns in a single row for this validator. We
     // want a minimum number of 6 columns, so no need to set strict.
-    $instance->setExpectedColumns(6);
+    $instance->setExpectedColumns(6, FALSE);
     $this->expected_columns = $instance->getExpectedColumns();
     // Set the MIME type of this input file.
     $instance->setFileMimeType($file_mime_type);
@@ -322,7 +322,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
 
     // -----------------------------------------------------
     // Data Row Level
-    // - All data row cells in columns 0,2,4 are not empty
+    // - All data row cells in columns 0-5 are not empty
     $instance = $this->service_validatorPluginManager->createInstance('empty_cell');
     $indices = [
       $header_index['Year'],
@@ -335,13 +335,17 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     $instance->setIndices($indices);
     $validators['data-row']['empty_cell'] = $instance;
 
-    /**
-    // - The column 'Type' is one of "Qualitative" and "Quantitative"
+    // - The column 'Season' is one of: Winter, Spring, Summer, Fall
     $instance = $this->service_validatorPluginManager->createInstance('value_in_list');
-    $instance->setIndices([]);
-    $instance->setValidValues([]);
-    $validators['data-row']['valid_data_type'] = $instance;
-    */
+    $instance->setIndices([$header_index['Season']]);
+    $instance->setValidValues([
+      'Winter',
+      'Spring',
+      'Summer',
+      'Fall',
+    ]);
+    $validators['data-row']['valid_season'] = $instance;
+
     // - @todo Germplasm name exists
     return $validators;
   }
@@ -694,8 +698,8 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
         'status' => 'todo',
         'details' => '',
       ],
-      'valid_data_type' => [
-        'title' => 'Values in required cells are valid',
+      'valid_season' => [
+        'title' => 'Values in column "Season" are valid',
         'status' => 'todo',
         'details' => '',
       ],
@@ -720,18 +724,6 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     // 3. Otherwise, process failures for this validator with a dedicated method
     // that will build a render array of the feedback for the user.
     // -------------------------------------------------------------------------
-    // GenusExists.
-    $validator_name = 'genus_exists';
-    if (array_key_exists($validator_name, $failures)) {
-      if (!empty($failures[$validator_name])) {
-        $messages[$validator_name]['status'] = 'fail';
-        $messages[$validator_name]['details'] = $this->processGenusExistsFailures($failures[$validator_name]);
-      }
-      else {
-        $messages[$validator_name]['status'] = 'pass';
-      }
-    }
-
     // ValidDataFile.
     $validator_name = 'valid_data_file';
     if (array_key_exists($validator_name, $failures)) {
@@ -797,31 +789,17 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       // Otherwise, leave status as 'todo' since 1+ raw rows failed.
     }
 
-    // Valid Data Type using the ValueInList validator.
-    $validator_name = 'valid_data_type';
+    // Valid Season using the ValueInList validator.
+    $validator_name = 'valid_season';
     if (array_key_exists($validator_name, $failures)) {
       if (!empty($failures[$validator_name])) {
         $messages[$validator_name]['status'] = 'fail';
 
         $metadata = [
-          'expected_values' => ['Quantitative', 'Qualitative'],
+          'expected_values' => ['Winter', 'Spring', 'Summer', 'Fall'],
           'column_headers' => $header_names,
         ];
         $messages[$validator_name]['details'] = ValueInList::processListWithDescribedTable($failures[$validator_name], $metadata);
-      }
-      // Only pass if raw row validation didn't fail.
-      elseif (!$raw_row_failed) {
-        $messages[$validator_name]['status'] = 'pass';
-      }
-      // Otherwise, leave status as 'todo' since 1+ raw rows failed.
-    }
-
-    // DuplicateTraits.
-    $validator_name = 'duplicate_traits';
-    if (array_key_exists($validator_name, $failures)) {
-      if (!empty($failures[$validator_name])) {
-        $messages[$validator_name]['status'] = 'fail';
-        $messages[$validator_name]['details'] = $this->processDuplicateTraitsFailures($failures[$validator_name]);
       }
       // Only pass if raw row validation didn't fail.
       elseif (!$raw_row_failed) {

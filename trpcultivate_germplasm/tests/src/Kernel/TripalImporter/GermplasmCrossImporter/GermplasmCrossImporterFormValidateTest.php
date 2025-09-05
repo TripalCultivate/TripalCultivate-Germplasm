@@ -170,31 +170,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
 
     $scenarios = [];
 
-    // #0: @todo: File is valid but genus is not
-    /*
-    $scenarios[] = [
-      $invalid_organism,
-      'crosses_simple.tsv',
-      [
-        'genus_exists' => [
-          'title' => 'The genus is valid',
-          'status' => 'fail',
-          'details' => 'The selected genus does not exist in this site. Please contact your administrator to have this added.',
-        ],
-        'valid_data_file' => ['status' => 'todo'],
-        'valid_delimited_file' => ['status' => 'todo'],
-        'valid_header' => ['status' => 'todo'],
-        'empty_cell' => ['status' => 'todo'],
-        'valid_data_type' => ['status' => 'todo'],
-        'duplicate_traits' => ['status' => 'todo'],
-      ],
-      // Selecting an invalid genus should be impossible, so 1 form validation
-      // error is expected.
-      1,
-    ];
-    */
-
-    // #1: File is empty.
+    // #0: File is empty.
     $scenarios[] = [
       $valid_organism,
       'empty_file.tsv',
@@ -207,11 +183,12 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
         'valid_delimited_file' => ['status' => 'todo'],
         'valid_header' => ['status' => 'todo'],
         'empty_cell' => ['status' => 'todo'],
+        'valid_season' => ['status' => 'todo'],
       ],
       $num_form_validation_messages,
     ];
 
-    // #2: Header is improperly delimited, with proper data rows.
+    // #1: Header is improperly delimited, with proper data rows.
     $scenarios[] = [
       $valid_organism,
       'improperly_delimited_header_with_data.tsv',
@@ -224,11 +201,12 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
           'details' => 'I dunno',
         ],
         'empty_cell' => ['status' => 'todo'],
+        'valid_season' => ['status' => 'todo'],
       ],
       $num_form_validation_messages,
     ];
 
-    // #3: 2nd row of file is improperly delimited.
+    // #2: 2nd row of file is improperly delimited.
     $scenarios[] = [
       $valid_organism,
       'correct_header_improperly_delimited_data_row.tsv',
@@ -243,11 +221,12 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
         // for valid_header is expected to pass.
         'valid_header' => ['status' => 'pass'],
         'empty_cell' => ['status' => 'todo'],
+        'valid_season' => ['status' => 'todo'],
       ],
       $num_form_validation_messages,
     ];
 
-    // #4: Contains correct header but no data.
+    // #3: Contains correct header but no data.
     // Never reaches the validators for data-row since file content is empty.
     $scenarios[] = [
       $valid_organism,
@@ -257,11 +236,12 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
         'valid_delimited_file' => ['status' => 'pass'],
         'valid_header' => ['status' => 'pass'],
         'empty_cell' => ['status' => 'todo'],
+        'valid_season' => ['status' => 'todo'],
       ],
       $num_form_validation_messages,
     ];
 
-    // #5: Contains incorrect header and one line of correct data.
+    // #4: Contains incorrect header and one line of correct data.
     $scenarios[] = [
       $valid_organism,
       'incorrect_header_with_data.tsv',
@@ -274,11 +254,12 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
           'details' => 'One or more of the column headers in the input file does not match what was expected. Please check if your column header is in the correct order and matches the template exactly.',
         ],
         'empty_cell' => ['status' => 'todo'],
+        'valid_season' => ['status' => 'todo'],
       ],
       $num_form_validation_messages,
     ];
 
-    // #6: Contains correct header and one line with empty Cross Number.
+    // #5: Contains correct header and one line with empty Cross Number.
     $scenarios[] = [
       $valid_organism,
       'correct_header_emptycell_crossnumber.tsv',
@@ -291,30 +272,28 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
           'status' => 'fail',
           'details' => 'The following line number and column header combinations were empty, but a value is required.',
         ],
+        'valid_season' => ['status' => 'pass'],
       ],
       $num_form_validation_messages,
     ];
 
-    // #7: Contains correct header and two lines of data.
-    // @todo: Invalid value in list
-    /*
+    // #6: Contains correct header and one line containing an invalid season.
     $scenarios[] = [
       $valid_organism,
-      'correct_header_invalid_datatype.tsv',
+      'correct_header_invalid_season.tsv',
       [
         'valid_data_file' => ['status' => 'pass'],
         'valid_delimited_file' => ['status' => 'pass'],
         'valid_header' => ['status' => 'pass'],
         'empty_cell' => ['status' => 'pass'],
-        'valid_data_type' => [
-          'title' => 'Values in required cells are valid',
+        'valid_season' => [
+          'title' => 'Values in column "Season" are valid',
           'status' => 'fail',
-          'details' => 'The following line number and column combinations did not contain one of the following allowed values: "Quantitative", "Qualitative". Note that values should be case sensitive. <strong>If any cell in the table below is empty, then the value given in the file for that cell was one of the allowed values.</strong>',
+          'details' => 'The following line number and column combinations did not contain one of the following allowed values: "Winter", "Spring", "Summer", "Fall". Note that values should be case sensitive. <strong>If any cell in the table below is empty, then the value given in the file for that cell was one of the allowed values.</strong>',
         ],
       ],
       $num_form_validation_messages,
     ];
-    */
 
     return $scenarios;
   }
