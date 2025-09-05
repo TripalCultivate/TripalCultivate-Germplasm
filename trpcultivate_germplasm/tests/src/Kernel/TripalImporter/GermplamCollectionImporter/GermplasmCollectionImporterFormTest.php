@@ -47,7 +47,7 @@ class GermplasmCollectionImporterFormTest extends ChadoTestKernelBase {
   /**
    * Phenotypes Share Importer plugin instance.
    *
-   * @var \Drupal\trpcultivate_gemplasm\src\Plugin\TripalImporter\GermplasmCollectionImporter
+   * @var \Drupal\trpcultivate_germplasm\Plugin\TripalImporter\GermplasmCollectionImporter
    */
   protected $germplasm_collection_importer;
 
@@ -82,6 +82,13 @@ class GermplasmCollectionImporterFormTest extends ChadoTestKernelBase {
   ];
 
   /**
+   * The path to tripalcultivate_phenotypes module.
+   *
+   * @var string
+   */
+  private $module_path;
+
+  /**
    * {@inheritdoc}
    */
   protected function setUp(): void {
@@ -114,9 +121,6 @@ class GermplasmCollectionImporterFormTest extends ChadoTestKernelBase {
       ->getMock();
     $mock_logger->method('error')
       ->willReturnCallback(function ($message, $context, $options) {
-        // @todo Revisit print out of log messages, but perhaps setting an option
-        // for log messages to not print to the UI?
-        // print str_replace(array_keys($context), $context, $message);
         return NULL;
       });
     $container->set('tripal.logger', $mock_logger);
