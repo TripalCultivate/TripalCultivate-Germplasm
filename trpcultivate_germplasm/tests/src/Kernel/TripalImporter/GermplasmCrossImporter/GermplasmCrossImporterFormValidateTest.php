@@ -133,6 +133,45 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
     $this->module_path = $this->container->get('module_handler')
       ->getModule('trpcultivate_germplasm')
       ->getPath();
+
+    // Insert our valid organism.
+    $organism_id = $this->chado_connection->insert('1:organism')
+      ->fields([
+        'genus' => 'Tripalus',
+        'species' => 'databasica',
+      ])
+      ->execute();
+    $this->assertIsNumeric($organism_id,
+      "We were not able to create an organism for testing.");
+
+    // Insert test germplasm for maternal and paternal parent.
+    // Stock-1 appears as value of Gerplasm Name column-row combination in
+    // valid_header_valid_row.tsv file fixture.
+    // Maternal Parent.
+    $this->chado_connection->insert('1:stock')
+      ->fields([
+        'organism_id' => $organism_id,
+        'name' => '121S',
+        'dbxref_id' => 1,
+        'uniquename' => 'STOCK:121S',
+        'description' => 'A test germplasm used by valid_header_valid_row.tsv test file fixture',
+        'type_id' => 1,
+        'is_obsolete' => 'f',
+      ])
+      ->execute();
+
+    // Paternal Parent.
+    $this->chado_connection->insert('1:stock')
+      ->fields([
+        'organism_id' => $organism_id,
+        'name' => '122S',
+        'dbxref_id' => 1,
+        'uniquename' => 'STOCK:122S',
+        'description' => 'A test germplasm used by valid_header_valid_row.tsv test file fixture',
+        'type_id' => 1,
+        'is_obsolete' => 'f',
+      ])
+      ->execute();
   }
 
   /**
@@ -184,6 +223,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
         'valid_header' => ['status' => 'todo'],
         'empty_cell' => ['status' => 'todo'],
         'valid_season' => ['status' => 'todo'],
+        'germplasm_name_exists' => ['status' => 'todo'],
       ],
       $num_form_validation_messages,
     ];
@@ -202,6 +242,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
         ],
         'empty_cell' => ['status' => 'todo'],
         'valid_season' => ['status' => 'todo'],
+        'germplasm_name_exists' => ['status' => 'todo'],
       ],
       $num_form_validation_messages,
     ];
@@ -222,6 +263,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
         'valid_header' => ['status' => 'pass'],
         'empty_cell' => ['status' => 'todo'],
         'valid_season' => ['status' => 'todo'],
+        'germplasm_name_exists' => ['status' => 'todo'],
       ],
       $num_form_validation_messages,
     ];
@@ -237,6 +279,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
         'valid_header' => ['status' => 'pass'],
         'empty_cell' => ['status' => 'todo'],
         'valid_season' => ['status' => 'todo'],
+        'germplasm_name_exists' => ['status' => 'todo'],
       ],
       $num_form_validation_messages,
     ];
@@ -255,6 +298,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
         ],
         'empty_cell' => ['status' => 'todo'],
         'valid_season' => ['status' => 'todo'],
+        'germplasm_name_exists' => ['status' => 'todo'],
       ],
       $num_form_validation_messages,
     ];
@@ -273,6 +317,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
           'details' => 'The following line number and column header combinations were empty, but a value is required.',
         ],
         'valid_season' => ['status' => 'pass'],
+        'germplasm_name_exists' => ['status' => 'pass'],
       ],
       $num_form_validation_messages,
     ];
@@ -291,10 +336,29 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
           'status' => 'fail',
           'details' => 'The following line number and column combinations did not contain one of the following allowed values: "Winter", "Spring", "Summer", "Fall". Note that values should be case sensitive. <strong>If any cell in the table below is empty, then the value given in the file for that cell was one of the allowed values.</strong>',
         ],
+        'germplasm_name_exists' => ['status' => 'pass'],
       ],
       $num_form_validation_messages,
     ];
 
+    // #7: Contains a non-existant maternal parent on row 3
+    $scenarios[] = [
+      $valid_organism,
+      'correct_header_invalid_season.tsv',
+      [
+        'valid_data_file' => ['status' => 'pass'],
+        'valid_delimited_file' => ['status' => 'pass'],
+        'valid_header' => ['status' => 'pass'],
+        'empty_cell' => ['status' => 'pass'],
+        'valid_season' => ['status' => 'pass'],
+        'germplasm_name_exists' => [
+          'title' => 'Germplasm exist(s) in the database',
+          'status' => 'fail',
+          'details' => 'The following germplasm names do not match any existing in this site. Please make sure you have entered the names exactly as they appear on the germplasm pages or contact your administrator to have them added if they do not yet exist.',
+        ],
+      ],
+      $num_form_validation_messages,
+    ];
     return $scenarios;
   }
 
@@ -331,16 +395,6 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
     $formBuilder = \Drupal::formBuilder();
     $form_id = 'Drupal\tripal\Form\TripalImporterForm';
     $plugin_id = 'trpcultivate-germplasm-cross-importer';
-
-    // Insert our valid organism.
-    $organism_id = $this->chado_connection->insert('1:organism')
-      ->fields([
-        'genus' => 'Tripalus',
-        'species' => 'databasica',
-      ])
-      ->execute();
-    $this->assertIsNumeric($organism_id,
-      "We were not able to create an organism for testing.");
 
     // Create a file to upload.
     $file = $this->createTestFile([

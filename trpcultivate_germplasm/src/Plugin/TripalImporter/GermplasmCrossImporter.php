@@ -11,6 +11,7 @@ use Drupal\tripal_chado\Database\ChadoConnection;
 use Drupal\tripal_chado\TripalImporter\ChadoImporterBase;
 use Drupal\trpcultivate\Plugin\Validators\ValidDataFile;
 use Drupal\trpcultivate\Plugin\Validators\EmptyCell;
+use Drupal\trpcultivate\Plugin\Validators\GermplasmNameExists;
 use Drupal\trpcultivate\Plugin\Validators\ValidDelimitedFile;
 use Drupal\trpcultivate\Plugin\Validators\ValidHeaders;
 use Drupal\trpcultivate\Plugin\Validators\ValueInList;
@@ -346,7 +347,15 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     ]);
     $validators['data-row']['valid_season'] = $instance;
 
-    // - @todo Germplasm name exists
+    // - Maternal Parent and Paternal Parent cells exist in the database.
+    $instance = $this->service_validatorPluginManager->createInstance('germplasm_name_exists');
+    $indices = [
+      $header_index['Maternal Parent'],
+      $header_index['Paternal Parent'],
+    ];
+    $instance->setIndices($indices);
+    //$instance->setOrganismID($form_values['organism']);
+    $validators['data-row']['germplasm_name_exists'] = $instance;
     return $validators;
   }
 
@@ -703,6 +712,11 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
         'status' => 'todo',
         'details' => '',
       ],
+      'germplasm_name_exists' => [
+        'title' => 'Germplasm exist(s) in the database',
+        'status' => 'todo',
+        'details' => '',
+      ],
     ];
 
     $header_names = array_column($this->headers, 'name');
@@ -724,7 +738,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     // 3. Otherwise, process failures for this validator with a dedicated method
     // that will build a render array of the feedback for the user.
     // -------------------------------------------------------------------------
-    // ValidDataFile.
+    // Valid Data File.
     $validator_name = 'valid_data_file';
     if (array_key_exists($validator_name, $failures)) {
       if (!empty($failures[$validator_name])) {
@@ -736,7 +750,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       }
     }
 
-    // ValidDelimitedFile.
+    // Valid Delimited File.
     $validator_name = 'valid_delimited_file';
     if (array_key_exists($validator_name, $failures)) {
       if (!empty($failures[$validator_name])) {
@@ -755,7 +769,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       }
     }
 
-    // ValidHeaders.
+    // Valid Headers.
     $validator_name = 'valid_header';
     if (array_key_exists($validator_name, $failures)) {
       if (!empty($failures[$validator_name])) {
@@ -771,7 +785,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       }
     }
 
-    // EmptyCell.
+    // Empty Cell.
     $validator_name = 'empty_cell';
     if (array_key_exists($validator_name, $failures)) {
       if (!empty($failures[$validator_name])) {
@@ -800,6 +814,26 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
           'column_headers' => $header_names,
         ];
         $messages[$validator_name]['details'] = ValueInList::processListWithDescribedTable($failures[$validator_name], $metadata);
+      }
+      // Only pass if raw row validation didn't fail.
+      elseif (!$raw_row_failed) {
+        $messages[$validator_name]['status'] = 'pass';
+      }
+      // Otherwise, leave status as 'todo' since 1+ raw rows failed.
+    }
+
+    // Germplasm Name Exists.
+    $validator_name = 'germplasm_name_exists';
+    if (array_key_exists($validator_name, $failures)) {
+      if (!empty($failures[$validator_name])) {
+        $messages[$validator_name]['status'] = 'fail';
+        $metadata = [
+          'column_headers' => [
+            2 => $header_names[2],
+            3 => $header_names[3],
+          ],
+        ];
+        $messages[$validator_name]['details'] = GermplasmNameExists::processListWithDescribedTable($failures[$validator_name], $metadata);
       }
       // Only pass if raw row validation didn't fail.
       elseif (!$raw_row_failed) {
