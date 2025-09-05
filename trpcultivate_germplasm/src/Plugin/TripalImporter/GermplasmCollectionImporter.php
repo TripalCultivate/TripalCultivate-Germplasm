@@ -296,17 +296,43 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
    * {@inheritDoc}
    */
   public function processValidationMessages($failures) {
-    $messages = [];
+    $messages = [
+      'valid_data_file' => [
+        'title' => 'File is valid and not empty',
+        'status' => 'todo',
+        'details' => '',
+      ],
+      'valid_delimited_file' => [
+        'title' => 'Lines are properly delimited',
+        'status' => 'todo',
+        'details' => '',
+      ],
+      'valid_headers' => [
+        'title' => 'File has all of the column headers expected',
+        'status' => 'todo',
+        'details' => '',
+      ],
+      'empty_cell' => [
+        'title' => 'Required cells contain a value',
+        'status' => 'todo',
+        'details' => '',
+      ],
+      'germplasm_name_exists' => [
+        'title' => 'Germplasm exist(s) in the database',
+        'status' => 'todo',
+        'details' => '',
+      ],
+    ];
 
     // Get the header names from the headers array.
     $header_names = array_column($this->headers, 'name');
 
-    // Create a $messages entry for valid data file.
-    $messages['valid_data_file'] = [
-      'title' => 'File is valid and not empty',
-      'status' => 'todo',
-      'details' => '',
-    ];
+    // A flag to indicate whether any data row level validation can be set to
+    // pass or remains as 'todo' if there are no failures at that stage. This is
+    // because we don't want to mislead the user to think all data rows pass
+    // validation if there are raw rows that failed, since they haven't been
+    // looked at yet by data row validators.
+    $raw_row_failed = FALSE;
 
     // Call the processItemWithSimpleList() method in ValidDataFile
     // class to check if there are any failures for the valid data
@@ -320,13 +346,6 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
         $messages['valid_data_file']['status'] = 'pass';
       }
     }
-
-    // Create a $messages entry for valid delimited file.
-    $messages['valid_delimited_file'] = [
-      'title' => 'Lines are properly delimited',
-      'status' => 'todo',
-      'details' => '',
-    ];
 
     // Filter the headers with type = 'required' then Count the result.
     $required_column_count = count(array_filter($this->headers, function ($h) {
@@ -344,6 +363,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
     // file validator.
     if (array_key_exists('valid_delimited_file', $failures)) {
       if (!empty($failures['valid_delimited_file'])) {
+        $raw_row_failed = TRUE;
         $messages['valid_delimited_file']['status'] = 'fail';
         $messages['valid_delimited_file']['details'] = ValidDelimitedFile::processListWithDescribedTable($failures['valid_delimited_file'], $valid_delimited_file_metadata);
       }
@@ -351,13 +371,6 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
         $messages['valid_delimited_file']['status'] = 'pass';
       }
     }
-
-    // Create a $messages entry for valid headers.
-    $messages['valid_headers'] = [
-      'title' => 'File has all of the column headers expected',
-      'status' => 'todo',
-      'details' => '',
-    ];
 
     // Call the processListWithDescribedTable() method in ValidHeaders class
     // to check if there are any failures for the valid headers validator.
@@ -376,13 +389,6 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
       }
     }
 
-    // Create a $messages entry for empty cells.
-    $messages['empty_cell'] = [
-      'title' => 'Required cells contain a value',
-      'status' => 'todo',
-      'details' => '',
-    ];
-
     // Call the processListWithDescribedTable() method in EmptyCell class to
     // check if there are any failures for the empty cell validator.
     if (array_key_exists('empty_cell', $failures)) {
@@ -398,17 +404,10 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
         ];
         $messages['empty_cell']['details'] = EmptyCell::processListWithDescribedTable($failures['empty_cell'], $metadata);
       }
-      else {
+      elseif (!$raw_row_failed) {
         $messages['empty_cell']['status'] = 'pass';
       }
     }
-
-    // Create a $messages entry for germplasm name exists.
-    $messages['germplasm_name_exists'] = [
-      'title' => 'Germplasm exist(s) in the database',
-      'status' => 'todo',
-      'details' => '',
-    ];
 
     // Call the processListWithDescribedTable() method in GermplasmNameExists
     // class to check if there are any failures for the germplasm name exists
@@ -424,7 +423,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
         ];
         $messages['germplasm_name_exists']['details'] = GermplasmNameExists::processListWithDescribedTable($failures['germplasm_name_exists'], $metadata);
       }
-      else {
+      elseif (!$raw_row_failed) {
         $messages['germplasm_name_exists']['status'] = 'pass';
       }
     }
@@ -790,7 +789,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
         // to the prefix (when provided) that will make up the uniquename of
         // the stock.
         // Skip this when file has provided a custom uniquename.
-        $id = $this->chado_connection->select('stock', 's')
+        $id = $this->chado_connection->select('1:stock', 's')
           ->fields('s', ['stock_id'])
           ->orderBy('stock_id', 'DESC')
           ->execute()
