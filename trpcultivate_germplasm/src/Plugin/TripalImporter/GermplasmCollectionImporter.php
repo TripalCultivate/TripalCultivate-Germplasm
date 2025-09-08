@@ -778,7 +778,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
     $temp_uname = [];
     $duplicate  = [];
 
-    if ($file && $file->filesize > 0) {
+    if ($file) {
       $file_uri = $file->getFileUri();
       $handle = fopen($file_uri, 'r');
       if ($handle) {
