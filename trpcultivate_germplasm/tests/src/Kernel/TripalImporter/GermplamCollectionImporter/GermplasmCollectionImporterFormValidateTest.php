@@ -83,7 +83,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
   ];
 
   /**
-   * The path to tripalcultivate_phenotypes module.
+   * The path to tripalcultivate_germplasm module.
    *
    * @var string
    */
@@ -147,8 +147,8 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
    *       configureValidators() method in the Germplasm Collection Importer.
    *       - 'status': [REQUIRED] One of 'pass', 'todo', or 'fail'
    *       - 'title': [REQUIRED if 'status' = 'fail'] A string that matches the
-   *         title set in processValidationMessages() method in the Traits
-   *         Importer class for this validator instance.
+   *         title set in processValidationMessages() method in the Germplasm
+   *         Collection Importer class for this validator instance.
    *       - 'details': [REQUIRED if 'status' = 'fail'] A string that is ideally
    *         unique to the scenario that is expected to be in the render array.
    *   - an integer indicating the number of form validation messages we expect
@@ -332,7 +332,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
   }
 
   /**
-   * Tests the validation aspect of the trait importer form.
+   * Tests the validation aspect of the collection importer form.
    *
    * @param string $population_entry
    *   The population entry that is submitted with the form.
@@ -340,17 +340,16 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
    *   The relationship verb that is submitted with the form.
    * @param string $filename
    *   The name of the file being tested. (Test files are located in
-   *   tests/src/Fixtures/TraitImporterFiles/)
+   *   tests/src/Fixtures/GermplasmCollectionImporterFiles/)
    * @param array $expected_validator_results
    *   An array that is keyed by the unique name of each validator instance
    *   (these names are declared in the configureValidators() method in the
-   *   Traits Importer class). Each validator instance in the array is further
-   *   keyed by the following. Some are required but others are optional,
-   *   dependent upon the expected validation results.
+   *   Germplasm Collection Importer class).
+   *   Each validator instance in the array is further keyed by the following.
    *   - 'status': [REQUIRED] One of 'pass', 'todo', or 'fail'.
    *   - 'title': [REQUIRED if 'status' = 'fail'] A string that matches the
-   *     title set in processValidationMessages() method in the Trait Importer
-   *     class for this validator instance.
+   *     title set in processValidationMessages() method in the Germplasm
+   *     Collection Importer class for this validator instance.
    *   - 'details': [REQUIRED if 'status' = 'fail'] A string that is ideally
    *     unique to the scenario that is expected to be in the render array.
    * @param int $expected_num_form_validation_errors

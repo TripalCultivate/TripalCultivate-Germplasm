@@ -82,7 +82,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
   ];
 
   /**
-   * The path to tripalcultivate_phenotypes module.
+   * The path to tripalcultivate_germplasm module.
    *
    * @var string
    */
@@ -208,16 +208,8 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
    *   - The filename of the test file used for this scenario (test files are
    *     located in: tests/src/Fixtures/GermplasmCollectionImporterFiles/)
    *   - An array indicating the expected validation results:
-   *     - Each key is the unique name of a feedback line provided to the UI
-   *       through processValidationMessages(). Currently, there is a feedback
-   *       line for each unique validator instance that was instantiated by the
-   *       configureValidators() method in the Germplasm Collection Importer.
-   *       - 'status': [REQUIRED] One of 'pass', 'todo', or 'fail'
-   *       - 'title': [REQUIRED if 'status' = 'fail'] A string that matches the
-   *         title set in processValidationMessages() method in the Traits
-   *         Importer class for this validator instance.
-   *       - 'details': [REQUIRED if 'status' = 'fail'] A string that is ideally
-   *         unique to the scenario that is expected to be in the render array.
+   *        - expected_message: the exception message that's expcted in that
+   *          specific scenario.
    */
   public static function provideFilesForRunExceptions() {
     $valid_population_entry = 'my_term_1 [cultivar] (1)';
@@ -313,7 +305,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
   }
 
   /**
-   * Tests the validation aspect of the trait importer form.
+   * Tests the validation aspect of the collection importer form.
    *
    * @param string $scenario
    *   The test case scenario.
@@ -323,7 +315,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
    *   The relationship verb that is submitted with the form.
    * @param string $filename
    *   The name of the file being tested. (Test files are located in
-   *   tests/src/Fixtures/TraitImporterFiles/)
+   *   tests/src/Fixtures/GermplasmCollectionImporterFiles/)
    * @param array $case
    *   An array containing the expected exception message.
    *

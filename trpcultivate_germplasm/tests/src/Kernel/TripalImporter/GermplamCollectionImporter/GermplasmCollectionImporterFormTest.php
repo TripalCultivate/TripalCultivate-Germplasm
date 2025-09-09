@@ -82,7 +82,7 @@ class GermplasmCollectionImporterFormTest extends ChadoTestKernelBase {
   ];
 
   /**
-   * The path to tripalcultivate_phenotypes module.
+   * The path to tripalcultivate_germplasm module.
    *
    * @var string
    */
