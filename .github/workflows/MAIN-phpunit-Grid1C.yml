@@ -3,19 +3,19 @@ on:
   push:
     branches:
       - 4.x
-      - laceysanderson-patch-1
+      - g0.31-support11.2
 
 ## UPDATES
 ## Update the version numbers in the job name and the action parameters
-## |  Drupal     |  10.3.x         |  10.4.x         |  10.5.x         | 11.0.x          | 11.1.x          |
+## |  Drupal     |  10.4.x         |  10.5.x         |  11.0.x         | 11.1.x          | 11.2.x          |
 ## |-------------|-----------------|-----------------|-----------------|-----------------|-----------------|
-## | **PHP 8.1** | ![Grid1A-Badge] | ![Grid2A-Badge] | ![Grid3A-Badge] |                 |                 |
-## | **PHP 8.2** | ![Grid1B-Badge] | ![Grid2B-Badge] | ![Grid3B-Badge] |                 |                 |
+## | **PHP 8.1** | ![Grid1A-Badge] | ![Grid2A-Badge] |                 |                 |                 |
+## | **PHP 8.2** | ![Grid1B-Badge] | ![Grid2B-Badge] |                 |                 |                 |
 ## | **PHP 8.3** | ![Grid1C-Badge] | ![Grid2C-Badge] | ![Grid3C-Badge] | ![Grid4C-Badge] | ![Grid5C-Badge] |
 
 jobs:
   grid-1C:
-    name: "Drupal 10.3.x-dev - PHP 8.3 - PostgreSQL 16"
+    name: "Drupal 10.4.x-dev - PHP 8.3 - PostgreSQL 16"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -29,4 +29,4 @@ jobs:
           dockerfile: 'Dockerfile'
           php-version: 8.3
           pgsql-version: 16
-          drupal-version: 10.3.x-dev
+          drupal-version: 10.4.x-dev
