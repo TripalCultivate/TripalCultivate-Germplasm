@@ -168,7 +168,7 @@ class GermplasmCollectionImporterFormTest extends ChadoTestKernelBase {
     $this->assertEquals($plugin_id, $form['importer_plugin_id']['#value'], 'The importer_plugin_id[#value] should be set to our plugin_id.');
 
     // Check the file fieldset contents.
-    $this->assertArrayHasKey('file', $form, 'We expect thesre to be a file fieldset on the form but there is not.');
+    $this->assertArrayHasKey('file', $form, 'We expect there to be a file fieldset on the form but there is not.');
     $this->assertEquals('fieldset', $form['file']['#type'], 'We expect the file element in the form to be a fieldset.');
     // We expect there to be an upload description includinf a template link
     // and numbered column description.

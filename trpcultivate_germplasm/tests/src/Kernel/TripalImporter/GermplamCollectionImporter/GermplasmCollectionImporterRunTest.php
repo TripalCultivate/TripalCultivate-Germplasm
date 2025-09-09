@@ -199,7 +199,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
   }
 
   /**
-   * Data Provider: provides files with expected validation result.
+   * Data Provider: provides files and the expected results for run exceptions.
    *
    * @return array
    *   Each scenario is an array with the following:
@@ -305,7 +305,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
   }
 
   /**
-   * Tests the validation aspect of the collection importer form.
+   * Test the exceptions caused at run method of the collection importer form.
    *
    * @param string $scenario
    *   The test case scenario.
