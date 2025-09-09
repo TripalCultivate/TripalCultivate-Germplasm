@@ -280,14 +280,17 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
     $instance_empty_cell->setIndices($indices);
     $validators['data-row']['empty_cell'] = $instance_empty_cell;
 
-    // Configure the Germplasm Name Exists validator.
-    $instance_name_exists = $this->service_validatorPluginManager->createInstance('germplasm_name_exists');
+    // Configure the Germplasm Name Exists validator only if the
+    // create relationship only toggle is on.
+    if ($form_values['relationship_toggle'] == 1) {
+      $instance_name_exists = $this->service_validatorPluginManager->createInstance('germplasm_name_exists');
 
-    $indices = [
-      $header_index['Name'],
-    ];
-    $instance_name_exists->setIndices($indices);
-    $validators['data-row']['germplasm_name_exists'] = $instance_name_exists;
+      $indices = [
+        $header_index['Name'],
+      ];
+      $instance_name_exists->setIndices($indices);
+      $validators['data-row']['germplasm_name_exists'] = $instance_name_exists;
+    }
 
     return $validators;
   }
@@ -608,7 +611,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
     $submit_form = TRUE;
 
     foreach ($validation_feedback as $feedback_item) {
-      if ($feedback_item['status'] == 'todo' || $feedback_item['status'] == 'fail') {
+      if (($feedback_item['status'] == 'todo' && $form_values['relationship_toggle'] != 0) || $feedback_item['status'] == 'fail') {
         $submit_form = FALSE;
         break;
       }
@@ -722,6 +725,13 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
       ],
     ];
 
+    $form['relationship_toggle'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Population individuals must already exist'),
+      '#default_value' => 0,
+      '#weight' => -100,
+    ];
+
     return $form;
   }
 
@@ -732,7 +742,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
 
     // Display successful message to user if file import was without any error.
     $this->service_Messenger
-      ->addStatus('<b>Your file import was successful and a Job Process Request has been created to securely save your data.</b>');
+      ->addStatus('Your file import was successful and a Job Process Request has been created to securely save your data.');
   }
 
   /**
@@ -751,6 +761,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
       'entry' => $population_entry_stock_id,
       'verb' => $arguments['run_args']['fld_select_relationship_verb'],
       'position' => $arguments['run_args']['fld_radio_stock_position'],
+      'relationship_only' => $arguments['run_args']['relationship_toggle'],
       'individuals' => $this->arguments['files'][0]['fid'],
     ];
 
@@ -827,7 +838,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
             // If it does not exist, throw an exception.
             $stock_id = $this->parseStock($val_name);
 
-            if ($stock_id == NULL) {
+            if ($stock_id == NULL && $population['relationship_only'] == 1) {
               throw new \Exception('Germplasm Name: ' . $val_name . ' does not exists. Please provide a valid Germplasm Name.');
             }
 

@@ -423,6 +423,9 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
     // Submit the relationship verb.
     $form_state->setValue('fld_select_relationship_verb', $relationship_verb);
 
+    // Submit the toggle value.
+    $form_state->setValue('relationship_toggle', 1);
+
     // Submit our file.
     $form_state->setValue('file_upload', $file->id());
 

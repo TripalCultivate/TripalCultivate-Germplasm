@@ -252,6 +252,7 @@ class GermplasmCollectionImporterFormTest extends ChadoTestKernelBase {
       'fld_text_population_entry' => 'my_term_1 [cultivar] (1)',
       'fld_select_relationship_verb' => 'cultivar (CO_010:0000029)',
       'fld_radio_stock_position' => 'evi',
+      'relationship_toggle' => 1,
       'file_upload' => $file->id(),
     ]);
 
