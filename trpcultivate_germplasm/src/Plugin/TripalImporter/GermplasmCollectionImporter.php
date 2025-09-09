@@ -156,7 +156,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
     ],
     [
       'name' => 'Uniquename',
-      'description' => '(optional) A unique identifier for the germplasm individual.',
+      'description' => 'A unique identifier for the germplasm individual.',
       'type' => 'optional',
     ],
   ];
