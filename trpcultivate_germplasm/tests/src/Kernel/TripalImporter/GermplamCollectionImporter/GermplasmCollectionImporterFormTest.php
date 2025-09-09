@@ -45,7 +45,7 @@ class GermplasmCollectionImporterFormTest extends ChadoTestKernelBase {
   protected ChadoConnection $chado_connection;
 
   /**
-   * Phenotypes Share Importer plugin instance.
+   * Germplasm Collection Importer plugin instance.
    *
    * @var \Drupal\trpcultivate_germplasm\Plugin\TripalImporter\GermplasmCollectionImporter
    */
