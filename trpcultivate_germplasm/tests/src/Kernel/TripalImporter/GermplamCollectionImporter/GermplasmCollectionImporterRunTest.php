@@ -13,7 +13,7 @@ use Drupal\trpcultivate_germplasm\Plugin\TripalImporter\GermplasmCollectionImpor
 /**
  * Tests the functionality of the run() method of Germplasm Collection Importer.
  *
- * @group collectioImporter
+ * @group collectionImporter
  */
 #[Group('collectionImporter')]
 class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
@@ -45,7 +45,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
   protected ChadoConnection $chado_connection;
 
   /**
-   * Phenotypes Share Importer plugin instance.
+   * Germplasm Collection Importer plugin instance.
    *
    * @var \Drupal\trpcultivate_germplasm\Plugin\TripalImporter\GermplasmCollectionImporter
    */
@@ -196,6 +196,185 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
     $this->importer->prepareFiles();
     $this->importer->run();
     $this->importer->postRun();
+  }
+
+  /**
+   * Data Provider: provides files with expected validation result.
+   *
+   * @return array
+   *   Each scenario is an array with the following:
+   *   - The population entry that gets entred in the textfield of the form
+   *   - The relationship verb that gets entred in the textfield of the form
+   *   - The filename of the test file used for this scenario (test files are
+   *     located in: tests/src/Fixtures/GermplasmCollectionImporterFiles/)
+   *   - An array indicating the expected validation results:
+   *     - Each key is the unique name of a feedback line provided to the UI
+   *       through processValidationMessages(). Currently, there is a feedback
+   *       line for each unique validator instance that was instantiated by the
+   *       configureValidators() method in the Germplasm Collection Importer.
+   *       - 'status': [REQUIRED] One of 'pass', 'todo', or 'fail'
+   *       - 'title': [REQUIRED if 'status' = 'fail'] A string that matches the
+   *         title set in processValidationMessages() method in the Traits
+   *         Importer class for this validator instance.
+   *       - 'details': [REQUIRED if 'status' = 'fail'] A string that is ideally
+   *         unique to the scenario that is expected to be in the render array.
+   */
+  public static function provideFilesForRunExceptions() {
+    $valid_population_entry = 'my_term_1 [cultivar] (1)';
+    $valid_relationship_verb = 'cultivar (CO_010:0000029)';
+
+    $scenarios = [];
+
+    // #0: Type does not exist.
+    $scenarios[] = [
+      'Type does not exist.',
+      $valid_population_entry,
+      $valid_relationship_verb,
+      'collection_importer_type_dne.tsv',
+      [
+        'expected_message' => 'Type: type_dne (CO_010:00010) is not valid. Please provide a valid Type.',
+
+      ],
+    ];
+
+    // #1: Organism not exist.
+    $scenarios[] = [
+      'Organism does not exist.',
+      $valid_population_entry,
+      $valid_relationship_verb,
+      'collection_importer_organism_dne.tsv',
+      [
+        'expected_message' => 'Scientific Name: Lens databasica is not valid. Please provide a valid Scientific Name.',
+
+      ],
+    ];
+
+    // #2: Uniquename already exists.
+    $scenarios[] = [
+      'Uniquename already exist.',
+      $valid_population_entry,
+      $valid_relationship_verb,
+      'collection_importer_uniquename_exists.tsv',
+      [
+        'expected_message' => 'Uniquename is already used by another germplasm.',
+
+      ],
+    ];
+
+    // #3: Duplicate Term in file with same uniquename.
+    $scenarios[] = [
+      'Duplicate Term in file with same uniquename.',
+      $valid_population_entry,
+      $valid_relationship_verb,
+      'collection_importer_duplicate_term.tsv',
+      [
+        'expected_message' => 'Duplicate in lines: #2 and #3',
+
+      ],
+    ];
+
+    // #4: Duplicate Term in file without a uniquename.
+    $scenarios[] = [
+      'Duplicate Term in file without a uniquename.',
+      $valid_population_entry,
+      $valid_relationship_verb,
+      'collection_importer_duplicate_term_no_uname.tsv',
+      [
+        'expected_message' => 'Duplicate in lines: #2 and #3',
+
+      ],
+    ];
+
+    // #5: Term already exists.
+    $scenarios[] = [
+      'Term already exists.',
+      $valid_population_entry,
+      $valid_relationship_verb,
+      'collection_importer_term_exists.tsv',
+      [
+        'expected_message' => 'Term already exists in the database.',
+
+      ],
+    ];
+
+    // #6: Germplasm does not exist.
+    $scenarios[] = [
+      'Germplasm does not exist.',
+      $valid_population_entry,
+      $valid_relationship_verb,
+      'collection_importer_germplasm_dne.tsv',
+      [
+        'expected_message' => 'Germplasm Name: my_term_3 does not exists. Please provide a valid Germplasm Name.',
+
+      ],
+    ];
+
+    return $scenarios;
+  }
+
+  /**
+   * Tests the validation aspect of the trait importer form.
+   *
+   * @param string $scenario
+   *   The test case scenario.
+   * @param string $population_entry
+   *   The population entry that is submitted with the form.
+   * @param string $relationship_verb
+   *   The relationship verb that is submitted with the form.
+   * @param string $filename
+   *   The name of the file being tested. (Test files are located in
+   *   tests/src/Fixtures/TraitImporterFiles/)
+   * @param array $case
+   *   An array containing the expected exception message.
+   *
+   * @dataProvider provideFilesForRunExceptions
+   */
+  #[DataProvider('provideFilesForRunExceptions')]
+  public function testRunExceptions(
+    string $scenario,
+    string $population_entry,
+    string $relationship_verb,
+    string $filename,
+    array $case,
+  ) {
+
+    $file = $this->createTestFile([
+      'filename' => $filename,
+      'content' => [
+        'file' => $filename,
+        'fixturepath' => $this->module_path . '/tests/src/Fixtures/GermplasmCollectionImporterFiles/',
+      ],
+    ]);
+
+    $run_args = [
+      'fld_text_population_entry' => $population_entry,
+      'fld_select_relationship_verb' => $relationship_verb,
+      'fld_radio_stock_position' => 'evi',
+    ];
+
+    $file_details = ['fid' => $file->id()];
+
+    // Test with a passed validation case string.
+    $exception_caught = FALSE;
+    $exception_message = 'NONE';
+    try {
+      $this->importer->createImportJob($run_args, $file_details);
+      $this->importer->prepareFiles();
+      $this->importer->run();
+    }
+    catch (\Exception $e) {
+      $exception_caught = TRUE;
+      $exception_message = $e->getMessage();
+    }
+    $this->assertTrue(
+      $exception_caught,
+      "We expected an exception to be caught for " . $scenario . " scenario, but one wasn't thrown.",
+    );
+    $this->assertEquals(
+      $case['expected_message'],
+      $exception_message,
+      "We expected the exception message to indicate that a passed validation string was provided to " . $scenario . "  scenario, but it does not match what was expected.",
+    );
   }
 
 }
