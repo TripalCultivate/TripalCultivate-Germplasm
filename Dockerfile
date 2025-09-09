@@ -1,4 +1,4 @@
-ARG drupalversion=11.1.x-dev
+ARG drupalversion=11.2.x-dev
 ARG phpversion=8.3
 ARG pgsqlversion=16
 FROM knowpulse/tripalcultivate-base:drupal${drupalversion}-php${phpversion}-pgsql${pgsqlversion}
