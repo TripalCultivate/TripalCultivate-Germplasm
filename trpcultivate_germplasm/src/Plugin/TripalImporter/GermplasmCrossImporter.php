@@ -354,7 +354,23 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       $header_index['Paternal Parent'],
     ];
     $instance->setIndices($indices);
-    //$instance->setOrganismID($form_values['organism']);
+
+    $organism_name = $form_values['organism'];
+    //print($organism_name);
+    $organism_array = chado_get_organism_id_from_scientific_name($organism_name);
+    //print_r($organism_array);
+    if (!$organism_array) {
+      throw new \Exception("Could not find an organism_id for $organism_name.");
+    }
+    // We also want to check if we were given only one value back, as there is
+    // potential to retrieve multiple organism IDs.
+    elseif (is_array($organism_array) && (count($organism_array) > 1)) {
+      throw new \Exception("Found more than one organism ID for $organism_name when only 1 was expected.");
+    }
+    else {
+      $organism_id = $organism_array[0];
+    }
+    $instance->setOrganismID($organism_id);
     $validators['data-row']['germplasm_name_exists'] = $instance;
     return $validators;
   }
@@ -386,12 +402,11 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     // Field Organism:
     // Prepare select options with only active organisms.
     $all_organisms = chado_get_organism_select_options();
-    $active_organisms = array_combine($all_organisms, $all_organisms);
 
     // If there is only one organism, it should be the default.
     $default_organism = 0;
-    if ($active_organisms && count($active_organisms) == 1) {
-      $default_organism = reset($active_organisms);
+    if ($all_organisms && count($all_organisms) == 1) {
+      $default_organism = reset($all_organisms);
     }
 
     // Field organism.
@@ -400,7 +415,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       '#title' => 'Organism',
       '#description' => $this->t('The species of the germplasm being imported. If your file contains multiple species, please separate the crosses into one file per species.'),
       '#empty_option' => '- Select -',
-      '#options' => $active_organisms,
+      '#options' => $all_organisms,
       '#default_value' => $default_organism,
       '#weight' => -99,
       '#required' => TRUE,
