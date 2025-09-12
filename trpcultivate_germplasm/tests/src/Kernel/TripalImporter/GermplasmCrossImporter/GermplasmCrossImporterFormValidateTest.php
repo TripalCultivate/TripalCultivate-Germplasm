@@ -179,7 +179,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
    *
    * @return array
    *   Each scenario is an array with the following:
-   *   - The organism name that gets selected in the dropdown of the form
+   *   - The organism ID that gets selected in the dropdown of the form
    *   - The filename of the test file used for this scenario (test files are
    *     located in: tests/src/Fixtures/CrossImporterFiles/)
    *   - An array indicating the expected validation results:
@@ -201,8 +201,10 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
   public static function provideFilesForValidation() {
 
     // Set our default variables for organism.
-    $valid_organism = 'Tripalus databasica';
-    $invalid_organism = 'INVALID';
+    // Since we created one organism in our setup, we know that in this testing
+    // environment that the organism ID is 1.
+    $valid_organism = 1;
+    //$invalid_organism = 'INVALID';
     // Set our number of expected validation messages to 0, since only the
     // 'genus_exists' validator should cause this number to change.
     $num_form_validation_messages = 0;
@@ -365,8 +367,8 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
   /**
    * Tests the validation aspect of the trait importer form.
    *
-   * @param string $submitted_org
-   *   The name of the organism that is submitted with the form.
+   * @param int $submitted_org_id
+   *   The ID of the organism that is submitted with the form.
    * @param string $filename
    *   The name of the file being tested. (Test files are located in
    *   tests/src/Fixtures/CrossImporterFiles/)
@@ -390,7 +392,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
    * @dataProvider provideFilesForValidation
    */
   #[DataProvider('provideFilesForValidation')]
-  public function testCrossFormValidation(string $submitted_org, string $filename, array $expected_validator_results, int $expected_num_form_validation_errors) {
+  public function testCrossFormValidation(int $submitted_org_id, string $filename, array $expected_validator_results, int $expected_num_form_validation_errors) {
 
     $formBuilder = \Drupal::formBuilder();
     $form_id = 'Drupal\tripal\Form\TripalImporterForm';
@@ -410,7 +412,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
     $form_state->addBuildInfo('args', [$plugin_id]);
 
     // Submit our organism.
-    $form_state->setValue('organism', $submitted_org);
+    $form_state->setValue('organism', $submitted_org_id);
 
     // Submit our file.
     $form_state->setValue('file_upload', $file->id());
@@ -493,7 +495,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
     // not submitted and reloaded with the organism value as default.
     $this->assertEquals(
       $form_state->getValue('organism'),
-      $submitted_org,
+      $submitted_org_id,
       'The import form should set the default value of organism to the organism entered if the form was not submitted due to validation error.'
     );
 

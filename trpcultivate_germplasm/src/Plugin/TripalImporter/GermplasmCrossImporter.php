@@ -354,22 +354,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       $header_index['Paternal Parent'],
     ];
     $instance->setIndices($indices);
-
-    $organism_name = $form_values['organism'];
-    //print($organism_name);
-    $organism_array = chado_get_organism_id_from_scientific_name($organism_name);
-    //print_r($organism_array);
-    if (!$organism_array) {
-      throw new \Exception("Could not find an organism_id for $organism_name.");
-    }
-    // We also want to check if we were given only one value back, as there is
-    // potential to retrieve multiple organism IDs.
-    elseif (is_array($organism_array) && (count($organism_array) > 1)) {
-      throw new \Exception("Found more than one organism ID for $organism_name when only 1 was expected.");
-    }
-    else {
-      $organism_id = $organism_array[0];
-    }
+    $organism_id = $form_values['organism'];
     $instance->setOrganismID($organism_id);
     $validators['data-row']['germplasm_name_exists'] = $instance;
     return $validators;
