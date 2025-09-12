@@ -349,6 +349,9 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
 
     // - Maternal Parent and Paternal Parent cells exist in the database.
     $instance = $this->service_validatorPluginManager->createInstance('germplasm_name_exists');
+    // Set the logger since this validator uses a setter (setOrganismID)
+    // which may log messages.
+    $instance->setLogger($this->logger);
     $indices = [
       $header_index['Maternal Parent'],
       $header_index['Paternal Parent'],
@@ -456,6 +459,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     // validators) is the validation results array returned by the validator.
     $failures = [];
 
+    // @todo Add this back once we have validation for organism
     // ************************************************************************
     // Metadata Validation
     // ************************************************************************
