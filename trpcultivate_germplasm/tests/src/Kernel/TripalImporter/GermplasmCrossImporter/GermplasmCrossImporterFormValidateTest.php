@@ -123,8 +123,8 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
       ->getMock();
     $mock_logger->method('error')
       ->willReturnCallback(function ($message, $context, $options) {
-        // @todo Revisit print out of log messages, but perhaps setting an option
-        // for log messages to not print to the UI?
+        // @todo Revisit print out of log messages, but perhaps setting an
+        // option for log messages to not print to the UI?
         // print str_replace(array_keys($context), $context, $message);
         return NULL;
       });
@@ -144,30 +144,29 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
     $this->assertIsNumeric($organism_id,
       "We were not able to create an organism for testing.");
 
-    // Insert test germplasm for maternal and paternal parent.
-    // Stock-1 appears as value of Gerplasm Name column-row combination in
-    // valid_header_valid_row.tsv file fixture.
-    // Maternal Parent.
+    // Insert test germplasm for Maternal Parent and Paternal Parent columns.
+    // 121S and 122S appear as the value of both Maternal Germplasm and Paternal
+    // Germplasm column-row combinations in the file:
+    // correct_header_invalid_season.tsv.
     $this->chado_connection->insert('1:stock')
       ->fields([
         'organism_id' => $organism_id,
         'name' => '121S',
         'dbxref_id' => 1,
         'uniquename' => 'STOCK:121S',
-        'description' => 'A test germplasm used by valid_header_valid_row.tsv test file fixture',
+        'description' => '',
         'type_id' => 1,
         'is_obsolete' => 'f',
       ])
       ->execute();
 
-    // Paternal Parent.
     $this->chado_connection->insert('1:stock')
       ->fields([
         'organism_id' => $organism_id,
         'name' => '122S',
         'dbxref_id' => 1,
         'uniquename' => 'STOCK:122S',
-        'description' => 'A test germplasm used by valid_header_valid_row.tsv test file fixture',
+        'description' => '',
         'type_id' => 1,
         'is_obsolete' => 'f',
       ])
@@ -204,7 +203,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
     // Since we created one organism in our setup, we know that in this testing
     // environment that the organism ID is 1.
     $valid_organism = 1;
-    //$invalid_organism = 'INVALID';
+    // $invalid_organism = 'INVALID';
     // Set our number of expected validation messages to 0, since only the
     // 'genus_exists' validator should cause this number to change.
     $num_form_validation_messages = 0;
@@ -346,7 +345,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
     // #7: Contains a non-existant maternal parent on row 3
     $scenarios[] = [
       $valid_organism,
-      'correct_header_invalid_season.tsv',
+      'correct_header_nonexistent_maternal_parent.tsv',
       [
         'valid_data_file' => ['status' => 'pass'],
         'valid_delimited_file' => ['status' => 'pass'],
