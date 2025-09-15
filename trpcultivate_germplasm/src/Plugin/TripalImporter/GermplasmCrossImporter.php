@@ -833,8 +833,8 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
         $messages[$validator_name]['status'] = 'fail';
         $metadata = [
           'column_headers' => [
-            2 => $header_names[2],
             3 => $header_names[3],
+            4 => $header_names[4],
           ],
         ];
         $messages[$validator_name]['details'] = GermplasmNameExists::processListWithDescribedTable($failures[$validator_name], $metadata);
