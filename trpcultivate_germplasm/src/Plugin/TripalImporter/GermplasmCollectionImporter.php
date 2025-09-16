@@ -320,11 +320,6 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
         'status' => 'todo',
         'details' => '',
       ],
-      'germplasm_name_exists' => [
-        'title' => 'Germplasm exist(s) in the database',
-        'status' => 'todo',
-        'details' => '',
-      ],
     ];
 
     // Get the header names from the headers array.
@@ -416,6 +411,13 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
     // class to check if there are any failures for the germplasm name exists
     // validator.
     if (array_key_exists('germplasm_name_exists', $failures)) {
+
+      $messages['germplasm_name_exists'] = [
+        'title' => 'Germplasm exist(s) in the database',
+        'status' => 'todo',
+        'details' => '',
+      ];
+
       if (!empty($failures['germplasm_name_exists'])) {
         $messages['germplasm_name_exists']['status'] = 'fail';
         // Configure the metadata.
@@ -449,7 +451,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
 
     // Failed to locate the poplation stock field element.
     if ($parsed_stock_id == 0) {
-      throw new \Exception('Germplasm does not exist. Please enter a valid germplasm in Population Entry.');
+      $form_state->setErrorByName($fld_name_population_entry, 'Germplasm does not exist. Please enter a valid germplasm in Population Entry.');
     }
 
     $fld_name_relationship_verb = 'fld_select_relationship_verb';
@@ -458,7 +460,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
     $relationship_verb = ChadoCVTermAutocompleteController::getCVtermId($fld_value_relationship_verb);
 
     if ($relationship_verb == 0) {
-      throw new \Exception('Please select a value in Relationship Type.');
+      $form_state->setErrorByName($fld_name_relationship_verb, 'Please select a value in Relationship Type.');
     }
 
     $file_id = $form_values['file_upload'];
@@ -1084,15 +1086,12 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
 
         // Fetch organism using the genus+species and get
         // the organism_id number.
-        $query = $this->chado_connection->select('1:organism', 'o')
-          ->fields('o', ['organism_id'])
-          ->condition('o.genus', $values['genus'], '=')
-          ->condition('o.species', $values['species'], '=')
-          ->execute();
+        $scientific_name = $values['genus'] . ' ' . $values['species'];
 
         $organism_id = NULL;
-        if ($result = $query->fetchField()) {
-          $organism_id = $result;
+        $organism_id_array = chado_get_organism_id_from_scientific_name($scientific_name);
+        if (array_key_exists(0, $organism_id_array)) {
+          $organism_id = $organism_id_array[0];
         }
       }
       $this->organism_ids[$organism] = $organism_id;

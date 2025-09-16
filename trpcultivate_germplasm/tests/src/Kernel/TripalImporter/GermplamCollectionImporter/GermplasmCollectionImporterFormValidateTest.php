@@ -178,6 +178,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
     $scenarios[] = [
       $valid_population_entry,
       $valid_relationship_verb,
+      0,
       'empty_file.tsv',
       [
         'valid_data_file' => [
@@ -188,7 +189,6 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
         'valid_delimited_file' => ['status' => 'todo'],
         'valid_headers' => ['status' => 'todo'],
         'empty_cell' => ['status' => 'todo'],
-        'germplasm_name_exists' => ['status' => 'todo'],
       ],
       $num_form_validation_messages,
     ];
@@ -197,6 +197,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
     $scenarios[] = [
       $valid_population_entry,
       $valid_relationship_verb,
+      1,
       'collection_importer_header_incorrectly_delimited.tsv',
       [
         'valid_data_file' => ['status' => 'pass'],
@@ -216,6 +217,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
     $scenarios[] = [
       $valid_population_entry,
       $valid_relationship_verb,
+      0,
       'collection_importer_incorrectly_delimited.tsv',
       [
         'valid_data_file' => ['status' => 'pass'],
@@ -228,7 +230,6 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
         // for valid_header is expected to pass.
         'valid_headers' => ['status' => 'pass'],
         'empty_cell' => ['status' => 'todo'],
-        'germplasm_name_exists' => ['status' => 'todo'],
       ],
       $num_form_validation_messages,
     ];
@@ -238,13 +239,13 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
     $scenarios[] = [
       $valid_population_entry,
       $valid_relationship_verb,
+      1,
       'collection_importer_correct_header_no_data.tsv',
       [
         'valid_data_file' => ['status' => 'pass'],
         'valid_delimited_file' => ['status' => 'pass'],
         'valid_headers' => ['status' => 'pass'],
         'empty_cell' => ['status' => 'todo'],
-        'germplasm_name_exists' => ['status' => 'todo'],
       ],
       $num_form_validation_messages,
     ];
@@ -253,6 +254,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
     $scenarios[] = [
       $valid_population_entry,
       $valid_relationship_verb,
+      0,
       'collection_importer_invalid_header.tsv',
       [
         'valid_data_file' => ['status' => 'pass'],
@@ -263,7 +265,6 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
           'details' => 'One or more of the column headers in the input file does not match what was expected. Please check if your column header is in the correct order and matches the template exactly.',
         ],
         'empty_cell' => ['status' => 'todo'],
-        'germplasm_name_exists' => ['status' => 'todo'],
       ],
       $num_form_validation_messages,
     ];
@@ -272,6 +273,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
     $scenarios[] = [
       $valid_population_entry,
       $valid_relationship_verb,
+      1,
       'collection_importer_empty_cell.tsv',
       [
         'valid_data_file' => ['status' => 'pass'],
@@ -292,6 +294,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
     $scenarios[] = [
       $valid_population_entry,
       $valid_relationship_verb,
+      1,
       'collection_importer_unmatched_organism.tsv',
       [
         'valid_data_file' => ['status' => 'pass'],
@@ -312,6 +315,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
     $scenarios[] = [
       $valid_population_entry,
       $valid_relationship_verb,
+      1,
       'collection_importer_germplasm_dne.tsv',
       [
         'valid_data_file' => ['status' => 'pass'],
@@ -338,6 +342,9 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
    *   The population entry that is submitted with the form.
    * @param string $relationship_verb
    *   The relationship verb that is submitted with the form.
+   * @param int $toggle_value
+   *   The toggle value to indicate whether the population must
+   *   exist in the database or not.
    * @param string $filename
    *   The name of the file being tested. (Test files are located in
    *   tests/src/Fixtures/GermplasmCollectionImporterFiles/)
@@ -363,6 +370,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
   public function testGermplasmCollectionImporterFormValidation(
     string $population_entry,
     string $relationship_verb,
+    int $toggle_value,
     string $filename,
     array $expected_validator_results,
     int $expected_num_form_validation_errors,
@@ -424,7 +432,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
     $form_state->setValue('fld_select_relationship_verb', $relationship_verb);
 
     // Submit the toggle value.
-    $form_state->setValue('relationship_toggle', 1);
+    $form_state->setValue('relationship_toggle', $toggle_value);
 
     // Submit our file.
     $form_state->setValue('file_upload', $file->id());

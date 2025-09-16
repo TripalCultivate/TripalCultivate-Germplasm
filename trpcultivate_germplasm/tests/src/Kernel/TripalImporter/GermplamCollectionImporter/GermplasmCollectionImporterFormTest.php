@@ -203,6 +203,11 @@ class GermplasmCollectionImporterFormTest extends ChadoTestKernelBase {
       'We expect the relationship type element in the form to be a textfield.');
     $this->assertArrayHasKey('fld_radio_stock_position', $form['fieldset_relationship_type'], 'We expect there to be a radio button for selecting the stock position.');
     $this->assertEquals('radios', $form['fieldset_relationship_type']['fld_radio_stock_position']['#type'], 'We expect the stock position element in the form to be a set of radio buttons.');
+
+    // Check the Relationship toggle element.
+    $this->assertArrayHasKey('relationship_toggle', $form, 'We expect there to be an checkbox for relationship toggle field.');
+    $this->assertEquals('checkbox', $form['relationship_toggle']['#type'], 'We expect the relationship toggle element in the form to be a checkbox.');
+    $this->assertEquals(0, $form['relationship_toggle']['#default_value'], 'We expect the relationship toggle element in the form to be set to false by default.');
   }
 
   /**
