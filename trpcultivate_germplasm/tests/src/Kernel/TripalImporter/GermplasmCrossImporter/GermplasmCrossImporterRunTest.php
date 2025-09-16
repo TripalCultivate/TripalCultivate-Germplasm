@@ -139,7 +139,7 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
       });
     $container->set('tripal.logger', $mock_logger);
 
-    // Create our organism and configure it.
+    // Create our organism.
     $this->organism_id = $this->chado_connection->insert('1:organism')
       ->fields([
         'genus' => 'Tripalus',
@@ -148,6 +148,49 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
       ->execute();
     $this->assertIsNumeric($this->organism_id,
       "We were not able to create an organism for testing.");
+
+    // Grab the type ID for 'accession'.
+    // @todo Should this be 'Breeding Cross Progeny'?
+    $type_id = $this->chado_connection->select('1:cvterm', 'c')
+      ->fields('c', ['cvterm_id'])
+      ->condition('c.name', 'accession', '=')
+      ->execute()
+      ->fetchField();
+    $this->assertIsNumeric($type_id, 'We were not able to grab the type_id for accession.');
+
+    // Enter our stocks that will be the parents in our test file.
+    $stock_1 = '121S';
+    $stock_id_1 = $this->chado_connection->insert('1:stock')
+      ->fields([
+        'name' => $stock_1,
+        'organism_id' => $organism_id,
+        'uniquename' => $stock_1,
+        'type_id' => $type_id,
+      ])
+      ->execute();
+    $this->assertIsNumeric($stock_id_1, "We were not able to create a stock for $stock_1.");
+
+    $stock_2 = '122S';
+    $stock_id_2 = $this->chado_connection->insert('1:stock')
+      ->fields([
+        'name' => $stock_2,
+        'organism_id' => $organism_id,
+        'uniquename' => $stock_2,
+        'type_id' => $type_id,
+      ])
+      ->execute();
+    $this->assertIsNumeric($stock_id_2, "We were not able to create a stock for $stock_2.");
+
+    $stock_3 = '124S';
+    $stock_id_3 = $this->chado_connection->insert('1:stock')
+      ->fields([
+        'name' => $stock_3,
+        'organism_id' => $organism_id,
+        'uniquename' => $stock_3,
+        'type_id' => $type_id,
+      ])
+      ->execute();
+    $this->assertIsNumeric($stock_id_3, "We were not able to create a stock for $stock_3.");
 
     $this->importer = new GermplasmCrossImporter(
       [],
