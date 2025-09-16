@@ -858,7 +858,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     // Lookup the organism ID to make sure its valid.
     $organism_obj = chado_get_organism(['organism_id' => $organism_id]);
     if ($organism_obj == NULL) {
-      throw new Exception("The organism ID $organism_id is not valid. Please check that the organism you selected is still in the database.");
+      throw new Exception("The organism ID $organism_id is not valid. Please check that the organism you selected in the form is still in the database.");
     }
 
     // Traits data file id.

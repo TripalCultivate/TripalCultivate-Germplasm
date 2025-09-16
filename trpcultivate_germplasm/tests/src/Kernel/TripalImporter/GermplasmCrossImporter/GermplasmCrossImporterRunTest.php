@@ -249,4 +249,86 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
     $this->importer->postRun();
   }
 
+  /**
+   * Data Provider: provides files and the expected results for run exceptions.
+   *
+   * @return array
+   *   Each scenario is an array with the following:
+   *   - The organism ID that gets selected in the form.
+   *   - The filename of the test file used for this scenario (test files are
+   *     located in: tests/src/Fixtures/CrossImporterFiles/)
+   *   - An array indicating the expected validation results:
+   *        - expected_message: the exception message that's expected in that
+   *          specific scenario.
+   */
+  public static function provideFilesForRunExceptions() {
+
+    $scenarios = [];
+
+    //$valid_organism_id = $this->organism_id;
+    $invalid_organism_id = 12345;
+
+    // #0: Organism ID does not exist
+    $scenarios[] = [
+      $invalid_organism_id,
+      'crosses_simple.tsv',
+      [
+        'expected_message' => 'The organism ID 12345 is not valid. Please check that the organism you selected in the form is still in the database.',
+      ],
+    ];
+
+    return $scenarios;
+  }
+
+  /**
+  * Test the exceptions caused by the run method of the cross importer.
+  *
+  * @param int $organism_id
+  *   The ID of the organism selected in the form field of the importer.
+  * @param string $filename
+  *   The name of the file being tested. (Test files are located in
+  *   tests/src/Fixtures/CrossImporterFiles/)
+  * @param array $case
+  *   An array containing the expected exception message.
+  *
+  * @dataProvider provideFilesForRunExceptions
+  */
+  #[DataProvider('provideFilesForRunExceptions')]
+  public function testRunExceptions(int $organism_id, string $filename, array $case) {
+
+    $file = $this->createTestFile([
+      'filename' => $filename,
+      'content' => [
+        'file' => $filename,
+        'fixturepath' => $this->module_path . '/tests/src/Fixtures/CrossImporterFiles/',
+      ],
+    ]);
+
+    $run_args = ['organism' => $this->organism_id];
+
+    $file_details = ['fid' => $file->id()];
+
+    // Test with a passed validation case string.
+    $exception_caught = FALSE;
+    $exception_message = 'NONE';
+    try {
+      $this->importer->createImportJob($run_args, $file_details);
+      $this->importer->prepareFiles();
+      $this->importer->run();
+    }
+    catch (\Exception $e) {
+      $exception_caught = TRUE;
+      $exception_message = $e->getMessage();
+    }
+    $this->assertTrue(
+      $exception_caught,
+      "We expected an exception to be caught for " . $scenario . " scenario, but one wasn't thrown.",
+    );
+    $this->assertEquals(
+      $case['expected_message'],
+      $exception_message,
+      "We expected the exception message to indicate that a passed validation string was provided to " . $scenario . "  scenario, but it does not match what was expected.",
+    );
+  }
+
 }
