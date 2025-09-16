@@ -163,7 +163,7 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
     $stock_id_1 = $this->chado_connection->insert('1:stock')
       ->fields([
         'name' => $stock_1,
-        'organism_id' => $organism_id,
+        'organism_id' => $this->organism_id,
         'uniquename' => $stock_1,
         'type_id' => $type_id,
       ])
@@ -174,7 +174,7 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
     $stock_id_2 = $this->chado_connection->insert('1:stock')
       ->fields([
         'name' => $stock_2,
-        'organism_id' => $organism_id,
+        'organism_id' => $this->organism_id,
         'uniquename' => $stock_2,
         'type_id' => $type_id,
       ])
@@ -185,7 +185,7 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
     $stock_id_3 = $this->chado_connection->insert('1:stock')
       ->fields([
         'name' => $stock_3,
-        'organism_id' => $organism_id,
+        'organism_id' => $this->organism_id,
         'uniquename' => $stock_3,
         'type_id' => $type_id,
       ])
