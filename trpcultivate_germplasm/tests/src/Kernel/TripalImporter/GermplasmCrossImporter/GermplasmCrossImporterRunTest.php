@@ -139,6 +139,26 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
       });
     $container->set('tripal.logger', $mock_logger);
 
+    // Insert the necessary germplasm cvterms.
+    // @todo Remove these once Tripal issue#2287 has been addressed.
+    $this->chado_connection->query("INSERT INTO {1:cv} VALUES(33, 'PBO', 'Plant Breeding Ontology')");
+    $this->chado_connection->query("INSERT INTO {1:db} VALUES(41, 'PBO', 'Plant Breeding Ontology (PBO): an ontology for the plant breeding community which captures more than 2200 entries where 80 represent the core terms.', 'http://purl.obolibrary.org/obo/PBO/PBO_{accession}', 'http://purl.obolibrary.org/obo/PBO')");
+    $this->chado_connection->query("INSERT INTO {1:dbxref} VALUES(3490, 8, '0007059', '', NULL)");
+    $this->chado_connection->query("INSERT INTO {1:dbxref} VALUES(3491, 8, '0005136', '', NULL)");
+    $this->chado_connection->query("INSERT INTO {1:dbxref} VALUES(3492, 12, '0002076', '', NULL)");
+    $this->chado_connection->query("INSERT INTO {1:dbxref} VALUES(3493, 41, '0000065', '', NULL)");
+    $this->chado_connection->query("INSERT INTO {1:cvterm} VALUES(3183, 8, 'germplasm', 'Germplasm is the living genetic resources such as seeds or tissue that is maintained for the purpose of animal and plant breeding, preservation, and other research uses. These resources may take the form of seed collections stored in seed banks, trees growing in nurseries, animal breeding lines maintained in animal breeding programs or gene banks, etc. Germplasm collections can range from collections of wild species to elite, domesticated breeding lines that have undergone extensive human selection.', 3490, 0, 0)");
+    $this->chado_connection->query("INSERT INTO {1:cvterm} VALUES(3184, 8, 'cultivar', 'A cultivated plant variety selected and given a name because it has desirable characteristics that distinguish it from otherwise similar plants of the same species.', 3491, 0, 0)");
+    $this->chado_connection->query("INSERT INTO {1:cvterm} VALUES(3185, 12, 'collection of specimens', 'A material entity that has two or more specimens as its parts.', 3492, 0, 0)");
+    $this->chado_connection->query("INSERT INTO {1:cvterm} VALUES(3186, 33, 'progeny', '', 3493, 0, 0)");
+
+    // Grab the name of our chado schema.
+    $schema_name = $this->chado_connection->getSchemaName();
+    $this->chado_connection->query("SELECT pg_catalog.setval('$schema_name.cv_cv_id_seq', 33, TRUE)");
+    $this->chado_connection->query("SELECT pg_catalog.setval('$schema_name.cvterm_cvterm_id_seq', 3186, TRUE)");
+    $this->chado_connection->query("SELECT pg_catalog.setval('$schema_name.db_db_id_seq', 41, TRUE)");
+    $this->chado_connection->query("SELECT pg_catalog.setval('$schema_name.dbxref_dbxref_id_seq', 3493, TRUE)");
+
     // Create our organism.
     $this->organism_id = $this->chado_connection->insert('1:organism')
       ->fields([
@@ -149,14 +169,9 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
     $this->assertIsNumeric($this->organism_id,
       "We were not able to create an organism for testing.");
 
-    // Grab the type ID for 'accession'.
-    // @todo Should this be 'Breeding Cross Progeny'?
-    $type_id = $this->chado_connection->select('1:cvterm', 'c')
-      ->fields('c', ['cvterm_id'])
-      ->condition('c.name', 'accession', '=')
-      ->execute()
-      ->fetchField();
-    $this->assertIsNumeric($type_id, 'We were not able to grab the type_id for accession.');
+    // Grab the type ID for 'progeny'.
+    $type_id = $this->getCvtermID('PBO', '0000065');
+    $this->assertIsNumeric($type_id, 'We were not able to grab the type_id for progeny.');
 
     // Enter our stocks that will be the parents in our test file.
     $stock_1 = '121S';
