@@ -273,7 +273,7 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
       $invalid_organism_id,
       'crosses_simple.tsv',
       [
-        'expected_message' => 'The organism ID 12345 is not valid. Please check that the organism you selected in the form is still in the database.',
+        'expected_message' => 'The organism ID 12345 is not valid. Please check that the organism you selected in the form is in the database.',
       ],
     ];
 
@@ -304,7 +304,7 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
       ],
     ]);
 
-    $run_args = ['organism' => $this->organism_id];
+    $run_args = ['organism' => $organism_id];
 
     $file_details = ['fid' => $file->id()];
 
@@ -322,12 +322,12 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
     }
     $this->assertTrue(
       $exception_caught,
-      "We expected an exception to be caught for " . $scenario . " scenario, but one wasn't thrown.",
+      "We expected an exception to be caught for this scenario, but one wasn't thrown.",
     );
     $this->assertEquals(
       $case['expected_message'],
       $exception_message,
-      "We expected the exception message to indicate that a passed validation string was provided to " . $scenario . "  scenario, but it does not match what was expected.",
+      "We expected the exception message to indicate that a passed validation string was provided to this scenario, but it does not match what was expected.",
     );
   }
 
