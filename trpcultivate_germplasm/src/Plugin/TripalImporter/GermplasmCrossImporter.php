@@ -286,7 +286,6 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     // -----------------------------------------------------
     // Metadata
     // - Future organism validator goes here
-
     // -----------------------------------------------------
     // File level
     // - File exists and is the expected type
@@ -865,6 +864,8 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     $file_id = $this->arguments['files'][0]['fid'];
     // Load file object.
     $file = $this->service_entityTypeManager->getStorage('file')->load($file_id);
+    // Get the mime type which is used to split the rows.
+    $file_mime_type = $file->getMimeType();
     // Open and read file in this uri.
     $file_uri = $file->getFileUri();
     $handle = fopen($file_uri, 'r');
@@ -876,20 +877,30 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     $headers = array_column($this->headers, 'name');
     $headers_count = count($headers);
 
-    while (!feof($handle)) {
-      // Current row.
-      $line = fgets($handle);
+    while ($cur_line = fgets($handle)) {
+      if ($line_no > 0 && $cur_line) {
+        // Current row.
+        $data_row = ImportValidationHelper::splitRowIntoColumns($cur_line, $file_mime_type);
+        // Required columns.
+        $val_year = $data_row[0];
+        $val_season = $data_row[1];
+        $progeny = [
+          'crossnum' => $data_row[2],
+          'maternal' => $data_row[3],
+          'paternal' => $data_row[4],
+          'crosstype' => $data_row[5],
+          'organism_id' => $organism_id,
+        ];
+        // Optional columns.
+        $val_seedtype = $data_row[6] ?? NULL;
+        $val_cotyledon = $data_row[7] ?? NULL;
+        $val_comment = $data_row[8] ?? NULL;
 
-      if ($line_no > 0 && !empty(trim($line))) {
-        // Line split into individual data point.
-        $data_columns = str_getcsv($line, "\t");
-        // Sanitize every data in rows and columns.
-        $data = array_map(function ($col) {
-          return isset($col) ? trim(str_replace(['"', '\''], '', $col)) : '';
-        }, $data_columns);
+        // Insert our breeding cross.
+        $progeny_stock_id = $this->importCross($progeny);
 
-        // @todo Process data into chado tables.
-        unset($data);
+        // Create our stock properties for this progeny.
+        //createStockProp()
       }
 
       // Next line.
@@ -898,6 +909,32 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
 
     // Close the file.
     fclose($handle);
+  }
+
+  /**
+   * Inserts a stock and creates relationships with existing parental stocks.
+   *
+   * @param array $progeny
+   *   An array containing information about a progeny for import. It has the
+   *   following keys:
+   *   - 'crossnum': The cross number, aka name of the progeny.
+   *   - 'crosstype': The type of cross that resulted in the progeny.
+   *   - 'maternal': The name of the maternal parent of a progeny.
+   *   - 'paternal': The name of the paternal parent of a progeny.
+   *   - 'organism_id': The organism ID of the progeny.
+   *
+   * @return int|null
+   *   The stock ID of the inserted stock, otherwise null.
+   */
+  public function importCross(array $progeny) {
+
+    // 1. Use GermplasmNameExists validator to check the parents
+    // 2. Then lookup the crossnum + crosstype + organism_id
+    // 3. Insert if it doesn't exist
+    // 4. Create relationships with parents
+    // 5. Return stock_id
+
+    return NULL;
   }
 
   /**

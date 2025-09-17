@@ -265,7 +265,7 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
 
     $scenarios = [];
 
-    //$valid_organism_id = $this->organism_id;
+    $valid_organism_id = 1;
     $invalid_organism_id = 12345;
 
     // #0: Organism ID does not exist
