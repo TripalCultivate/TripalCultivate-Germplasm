@@ -163,7 +163,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
     // test those
     // $invalid_population_entry = '';
     // $invalid_relationship_verb = '';
-    $valid_population_entry = 'my_term_1 [cultivar] (1)';
+    $valid_population_entry = 'my_stock_1 [cultivar] (1)';
     $valid_relationship_verb = 'cultivar (CO_010:0000029)';
 
     // Set our number of expected validation messages to 0, since none of
@@ -405,7 +405,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
 
     $stock_id = $this->chado_connection->insert('1:stock')
       ->fields([
-        'name' => 'my_term_1',
+        'name' => 'my_stock_1',
         'organism_id' => $organism_id,
         'uniquename' => 'UNIQUENAME1',
         'type_id' => $type_id,

@@ -233,7 +233,7 @@ class GermplasmCollectionImporterFormTest extends ChadoTestKernelBase {
 
     $stock_id = $this->chado_connection->insert('1:stock')
       ->fields([
-        'name' => 'my_term_1',
+        'name' => 'my_stock_1',
         'organism_id' => $organism_id,
         'uniquename' => 'UNIQUENAME1',
         'type_id' => $type_id,
@@ -246,7 +246,7 @@ class GermplasmCollectionImporterFormTest extends ChadoTestKernelBase {
       'filename' => 'collection_importer_example.tsv',
       'content' => [
         'file' => 'collection_importer_example.tsv',
-        'fixturepath' => $this->module_path . '/tests/src/Fixtures/',
+        'fixturepath' => $this->module_path . '/tests/src/Fixtures/GermplasmCollectionImporterFiles/',
       ],
     ]);
 
@@ -254,7 +254,7 @@ class GermplasmCollectionImporterFormTest extends ChadoTestKernelBase {
     $form_state = new FormState();
     $form_state->addBuildInfo('args', [$plugin_id]);
     $form_state->setValues([
-      'fld_text_population_entry' => 'my_term_1 [cultivar] (1)',
+      'fld_text_population_entry' => 'my_stock_1 [cultivar] (1)',
       'fld_select_relationship_verb' => 'cultivar (CO_010:0000029)',
       'fld_radio_stock_position' => 'evi',
       'relationship_toggle' => 1,
