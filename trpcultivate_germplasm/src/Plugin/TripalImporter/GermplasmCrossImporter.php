@@ -884,23 +884,42 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
         // Required columns.
         $val_year = $data_row[0];
         $val_season = $data_row[1];
-        $progeny = [
-          'crossnum' => $data_row[2],
-          'maternal' => $data_row[3],
-          'paternal' => $data_row[4],
-          'crosstype' => $data_row[5],
-          'organism_id' => $organism_id,
-        ];
+        $val_crossnum = $data_row[2];
+        $val_maternal = $data_row[3];
+        $val_paternal = $data_row[4];
+        $val_crosstype = $data_row[5];
         // Optional columns.
         $val_seedtype = $data_row[6] ?? NULL;
         $val_cotyledon = $data_row[7] ?? NULL;
         $val_comment = $data_row[8] ?? NULL;
 
+        // Validate that the maternal and paternal parents are still in the db.
+        $instance = $this->service_validatorPluginManager->createInstance('germplasm_name_exists');
+        // Set the logger since this validator uses a setter (setOrganismID)
+        // which may log messages.
+        $instance->setLogger($this->logger);
+        $instance->setIndices([3, 4]);
+        $instance->setOrganismID($organism_id);
+        $result = $instance->validateRow($data_row);
+        // Check if validation failed.
+        if (array_key_exists('valid', $result) && $result['valid'] === FALSE) {
+          // Log the error and throw an exception to stop data import.
+          $error_message = "One or both of maternal parent ($val_maternal) and paternal parent ($val_paternal) is not in the database, but should be.";
+          $this->logger->error($error_message);
+          throw new \Exception($error_message);
+        }
         // Insert our breeding cross.
+        $progeny = [
+          'crossnum' => $val_crossnum,
+          'maternal' => $val_maternal,
+          'paternal' => $val_paternal,
+          'crosstype' => $val_crosstype,
+          'organism_id' => $organism_id,
+        ];
         $progeny_stock_id = $this->importCross($progeny);
 
         // Create our stock properties for this progeny.
-        //createStockProp()
+        // createStockProp()
       }
 
       // Next line.
@@ -913,6 +932,10 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
 
   /**
    * Inserts a stock and creates relationships with existing parental stocks.
+   *
+   * NOTE: This method assumes that the maternal and paternal parent already
+   * exist in the database. Make sure these are validated prior to calling this
+   * method.
    *
    * @param array $progeny
    *   An array containing information about a progeny for import. It has the
@@ -927,13 +950,11 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    *   The stock ID of the inserted stock, otherwise null.
    */
   public function importCross(array $progeny) {
+    // 1. Lookup the crossnum + crosstype + organism_id
 
-    // 1. Use GermplasmNameExists validator to check the parents
-    // 2. Then lookup the crossnum + crosstype + organism_id
-    // 3. Insert if it doesn't exist
-    // 4. Create relationships with parents
-    // 5. Return stock_id
-
+    // 2. Insert if it doesn't exist, throw exception if it does?
+    // 3. Create relationships with parents
+    // 4. Return stock_id
     return NULL;
   }
 

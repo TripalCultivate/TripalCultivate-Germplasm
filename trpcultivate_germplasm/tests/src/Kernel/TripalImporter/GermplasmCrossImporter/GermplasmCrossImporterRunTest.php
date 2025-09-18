@@ -277,6 +277,15 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
       ],
     ];
 
+    // #1: Maternal parent does not exist in the database.
+    $scenarios[] = [
+      $valid_organism_id,
+      'correct_header_nonexistent_maternal_parent.tsv',
+      [
+        'expected_message' => 'One or both of maternal parent (DNE-Mom) and paternal parent (122S) is not in the database, but should be.',
+      ],
+    ];
+
     return $scenarios;
   }
 
@@ -327,7 +336,7 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
     $this->assertEquals(
       $case['expected_message'],
       $exception_message,
-      "We expected the exception message to indicate that a passed validation string was provided to this scenario, but it does not match what was expected.",
+      "We expected the exception message to indicate that something went wrong for this scenario, but it does not match what was expected.",
     );
   }
 
