@@ -7,7 +7,10 @@ use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Render\Renderer;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\tripal_chado\ChadoBuddy\PluginManagers\ChadoBuddyPluginManager;
 use Drupal\tripal_chado\Database\ChadoConnection;
+use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoCvtermBuddy;
+use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoDbxrefBuddy;
 use Drupal\tripal_chado\TripalImporter\ChadoImporterBase;
 use Drupal\trpcultivate\Plugin\Validators\ValidDataFile;
 use Drupal\trpcultivate\Plugin\Validators\EmptyCell;
@@ -145,6 +148,27 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
   protected ChadoConnection $chado_connection;
 
   /**
+   * The Chado Buddy service manager.
+   *
+   * @var Drupal\tripal_chado\ChadoBuddy\PluginManagers\ChadoBuddyPluginManager
+   */
+  protected ChadoBuddyPluginManager $buddy_manager;
+
+  /**
+   * The Chado Buddy cvterm.
+   *
+   * @var \Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoCvtermBuddy
+   */
+  protected ChadoCvtermBuddy $cvterm_buddy;
+
+  /**
+   * The Chado Buddy Dbxref.
+   *
+   * @var \Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoDbxrefBuddy
+   */
+  protected ChadoDbxrefBuddy $dbxref_buddy;
+
+  /**
    * The TripalCultivate validator plugin manager.
    *
    * @var \Drupal\trpcultivate\TripalCultivateValidator\TripalCultivateValidatorManager
@@ -204,6 +228,8 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    *   The plugin implementation definition.
    * @param Drupal\tripal_chado\Database\ChadoConnection $chado_connection
    *   The connection to the Chado database.
+   * @param Drupal\tripal_chado\ChadoBuddy\PluginManagers\ChadoBuddyPluginManager $buddy_manager
+   *   The ChadoBuddy plugin manager.
    * @param Drupal\trpcultivate\TripalCultivateValidator\TripalCultivateValidatorManager $service_validatorPluginManager
    *   The TripalCultivate validator plugin manager.
    * @param Drupal\trpcultivate\Service\TripalCultivateFileTemplateService $service_FileTemplate
@@ -220,6 +246,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     string $plugin_id,
     mixed $plugin_definition,
     ChadoConnection $chado_connection,
+    ChadoBuddyPluginManager $buddy_manager,
     TripalCultivateValidatorManager $service_validatorPluginManager,
     TripalCultivateFileTemplateService $service_FileTemplate,
     EntityTypeManager $service_entityTypeManager,
@@ -227,7 +254,9 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     MessengerInterface $messenger,
   ) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $chado_connection);
-
+    $this->dbxref_instance = $this->buddy_manager->createInstance('chado_dbxref_buddy', []);
+    $this->cvterm_instance = $this->buddy_manager->createInstance('chado_cvterm_buddy', []);
+    $this->property_instance = $this->buddy_manager->createInstance('chado_property_buddy', []);
     $this->service_validatorPluginManager = $service_validatorPluginManager;
     $this->service_entityTypeManager = $service_entityTypeManager;
     $this->service_FileTemplate = $service_FileTemplate;
@@ -245,6 +274,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       $plugin_id,
       $plugin_definition,
       $container->get('tripal_chado.database'),
+      $container->get('tripal_chado.chado_buddy'),
       $container->get('plugin.manager.trpcultivate_validator'),
       $container->get('trpcultivate.template_generator'),
       $container->get('entity_type.manager'),
@@ -857,7 +887,9 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     // Lookup the organism ID to make sure its valid.
     $organism_obj = chado_get_organism(['organism_id' => $organism_id]);
     if ($organism_obj == NULL) {
-      throw new \Exception("The organism ID $organism_id is not valid. Please check that the organism you selected in the form is in the database.");
+      $error_message = "The organism ID $organism_id is not valid. Please check that the organism you selected in the form is in the database.";
+      $this->logger->error($error_message);
+      throw new \Exception($error_message);
     }
 
     // Traits data file id.
@@ -950,8 +982,18 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    *   The stock ID of the inserted stock, otherwise null.
    */
   public function importCross(array $progeny) {
-    // 1. Lookup the crossnum + crosstype + organism_id
-
+    // 1. Lookup the crossnum + stocktype + organism_id
+    $chado_buddy_records = $this->cvterm_buddy->getCvterm(['cvterm.name' => 'progeny', 'cv.name' => 'PBO']);
+    if ($chado_buddy_records) {
+      $stocktype_id = $chado_buddy_records[0]->getValue('cvterm.cvterm_id');
+      print "$stocktype_id";
+    }
+    $query = $this->chado_connection->select('1:stock', 's')
+      ->fields('s', ['stock_id'])
+      ->condition('s.name', $progeny['crossnum'], '=')
+      ->condition('s.type_id', $stocktype_id, '=')
+      ->condition('s.organism_id', $progeny['organism_id'], '=')
+      ->execute();
     // 2. Insert if it doesn't exist, throw exception if it does?
     // 3. Create relationships with parents
     // 4. Return stock_id
