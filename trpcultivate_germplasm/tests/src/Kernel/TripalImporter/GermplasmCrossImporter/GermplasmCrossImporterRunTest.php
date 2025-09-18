@@ -129,12 +129,16 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
       ->getMock();
     $mock_logger->method('notice')
       ->willReturnCallback(function ($message, $context, $options) {
-         print str_replace(array_keys($context), $context, $message);
-         return NULL;
+        // @todo Revisit print out of log messages, perhaps setting an option
+        // for log messages to not print to the UI?
+        // print str_replace(array_keys($context), $context, $message);
+        return NULL;
       });
     $mock_logger->method('error')
       ->willReturnCallback(function ($message, $context, $options) {
-        print str_replace(array_keys($context), $context, $message);
+        // @todo Revisit print out of log messages, perhaps setting an option
+        // for log messages to not print to the UI?
+        // print str_replace(array_keys($context), $context, $message);
         return NULL;
       });
     $container->set('tripal.logger', $mock_logger);
