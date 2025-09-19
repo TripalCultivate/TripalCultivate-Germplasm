@@ -6,6 +6,7 @@ use Drupal\Tests\tripal_chado\Kernel\ChadoTestKernelBase;
 use Drupal\Tests\trpcultivate\Traits\TripalCultivateImporterTestTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tripal\Services\TripalLogger;
+use Drupal\tripal_chado\ChadoBuddy\PluginManagers\ChadoBuddyPluginManager;
 use Drupal\tripal_chado\Database\ChadoConnection;
 use Drupal\trpcultivate_germplasm\Plugin\TripalImporter\GermplasmCrossImporter;
 use PHPUnit\Framework\Attributes\Group;
@@ -50,6 +51,13 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
    * @var \Drupal\tripal_chado\Database\ChadoConnection
    */
   protected ChadoConnection $chado_connection;
+
+  /**
+   * The Chado Buddy service manager.
+   *
+   * @var Drupal\tripal_chado\ChadoBuddy\PluginManagers\ChadoBuddyPluginManager
+   */
+  protected ChadoBuddyPluginManager $buddy_manager;
 
   /**
    * Our instance of the Cross Importer for testing.
@@ -211,16 +219,12 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
       ->execute();
     $this->assertIsNumeric($stock_id_3, "We were not able to create a stock for $stock_3.");
 
-    $this->importer = new GermplasmCrossImporter(
+    $this->importer = GermplasmCrossImporter::create(
+      $this->container,
       [],
       'trpcultivate-germplasm-cross-importer',
       $this->definitions,
       $this->chado_connection,
-      $this->container->get('plugin.manager.trpcultivate_validator'),
-      $this->container->get('trpcultivate.template_generator'),
-      $this->container->get('entity_type.manager'),
-      $this->container->get('renderer'),
-      $this->container->get('messenger'),
     );
 
     $this->module_path = $this->container->get('module_handler')

@@ -10,7 +10,7 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\tripal_chado\ChadoBuddy\PluginManagers\ChadoBuddyPluginManager;
 use Drupal\tripal_chado\Database\ChadoConnection;
 use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoCvtermBuddy;
-use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoDbxrefBuddy;
+use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoPropertyBuddy;
 use Drupal\tripal_chado\TripalImporter\ChadoImporterBase;
 use Drupal\trpcultivate\Plugin\Validators\ValidDataFile;
 use Drupal\trpcultivate\Plugin\Validators\EmptyCell;
@@ -162,11 +162,11 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
   protected ChadoCvtermBuddy $cvterm_buddy;
 
   /**
-   * The Chado Buddy Dbxref.
+   * An instance of the property Chado Buddy.
    *
-   * @var \Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoDbxrefBuddy
+   * @var Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoPropertyBuddy
    */
-  protected ChadoDbxrefBuddy $dbxref_buddy;
+  protected ChadoPropertyBuddy $property_buddy;
 
   /**
    * The TripalCultivate validator plugin manager.
@@ -254,9 +254,10 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     MessengerInterface $messenger,
   ) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $chado_connection);
-    $this->dbxref_instance = $this->buddy_manager->createInstance('chado_dbxref_buddy', []);
-    $this->cvterm_instance = $this->buddy_manager->createInstance('chado_cvterm_buddy', []);
-    $this->property_instance = $this->buddy_manager->createInstance('chado_property_buddy', []);
+    $this->chado_connection = $chado_connection;
+    $this->buddy_manager = $buddy_manager;
+    $this->cvterm_buddy = $this->buddy_manager->createInstance('chado_cvterm_buddy', []);
+    $this->property_buddy = $this->buddy_manager->createInstance('chado_property_buddy', []);
     $this->service_validatorPluginManager = $service_validatorPluginManager;
     $this->service_entityTypeManager = $service_entityTypeManager;
     $this->service_FileTemplate = $service_FileTemplate;
@@ -983,10 +984,15 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    */
   public function importCross(array $progeny) {
     // 1. Lookup the crossnum + stocktype + organism_id
-    $chado_buddy_records = $this->cvterm_buddy->getCvterm(['cvterm.name' => 'progeny', 'cv.name' => 'PBO']);
+    $chado_buddy_records = $this->cvterm_buddy->getCvterm(
+      [
+        'cvterm.name' => 'progeny',
+        'db.name' => 'PBO',
+        'dbxref.accession' => '0000065',
+      ],
+    );
     if ($chado_buddy_records) {
       $stocktype_id = $chado_buddy_records[0]->getValue('cvterm.cvterm_id');
-      print "$stocktype_id";
     }
     $query = $this->chado_connection->select('1:stock', 's')
       ->fields('s', ['stock_id'])
