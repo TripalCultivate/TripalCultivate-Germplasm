@@ -994,6 +994,11 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     if ($chado_buddy_records) {
       $stocktype_id = $chado_buddy_records[0]->getValue('cvterm.cvterm_id');
     }
+    else {
+      $error_message = "Unable to get the cvterm ID needed for the stock type of the cross being inserted.";
+      $this->logger->error($error_message);
+      throw new \Exception($error_message);
+    }
     $query = $this->chado_connection->select('1:stock', 's')
       ->fields('s', ['stock_id'])
       ->condition('s.name', $progeny['crossnum'], '=')

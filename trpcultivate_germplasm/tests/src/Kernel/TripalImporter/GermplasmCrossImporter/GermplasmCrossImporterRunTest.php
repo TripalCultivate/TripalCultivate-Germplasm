@@ -263,6 +263,7 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
    * @return array
    *   Each scenario is an array with the following:
    *   - The organism ID that gets selected in the form.
+   *   - The name of the cvterm to use for stocktype.
    *   - The filename of the test file used for this scenario (test files are
    *     located in: tests/src/Fixtures/CrossImporterFiles/)
    *   - An array indicating the expected validation results:
@@ -276,9 +277,13 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
     $valid_organism_id = 1;
     $invalid_organism_id = 12345;
 
+    $valid_stocktype = 'progeny';
+    $invalid_stocktype = 'INVALID';
+
     // #0: Organism ID does not exist
     $scenarios[] = [
       $invalid_organism_id,
+      $valid_stocktype,
       'crosses_simple.tsv',
       [
         'expected_message' => 'The organism ID 12345 is not valid. Please check that the organism you selected in the form is in the database.',
@@ -288,9 +293,20 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
     // #1: Maternal parent does not exist in the database.
     $scenarios[] = [
       $valid_organism_id,
+      $valid_stocktype,
       'correct_header_nonexistent_maternal_parent.tsv',
       [
         'expected_message' => 'One or both of maternal parent (DNE-Mom) and paternal parent (122S) is not in the database, but should be.',
+      ],
+    ];
+
+    // #2: Unable to retrieve the right cvterm for stock type.
+    $scenarios[] = [
+      $valid_organism_id,
+      $invalid_stocktype,
+      'crosses_simple.tsv',
+      [
+        'expected_message' => 'Unable to get the cvterm ID needed for the stock type of the cross being inserted.',
       ],
     ];
 
@@ -302,6 +318,8 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
   *
   * @param int $organism_id
   *   The ID of the organism selected in the form field of the importer.
+  * @param string $stocktype
+  *   The name of the cvterm to use for stocktype.
   * @param string $filename
   *   The name of the file being tested. (Test files are located in
   *   tests/src/Fixtures/CrossImporterFiles/)
@@ -311,7 +329,7 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
   * @dataProvider provideFilesForRunExceptions
   */
   #[DataProvider('provideFilesForRunExceptions')]
-  public function testRunExceptions(int $organism_id, string $filename, array $case) {
+  public function testRunExceptions(int $organism_id, string $stocktype, string $filename, array $case) {
 
     $file = $this->createTestFile([
       'filename' => $filename,
@@ -324,6 +342,9 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
     $run_args = ['organism' => $organism_id];
 
     $file_details = ['fid' => $file->id()];
+
+    // Update the cvterm of the stock type if necessary.
+    $this->chado_connection->query("UPDATE {1:cvterm} SET name = '$stocktype' WHERE cvterm_id = '3186'");
 
     // Test with a passed validation case string.
     $exception_caught = FALSE;
