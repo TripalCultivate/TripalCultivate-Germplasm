@@ -983,7 +983,8 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    *   The stock ID of the inserted stock, otherwise null.
    */
   public function importCross(array $progeny) {
-    // 1. Lookup the crossnum + stocktype + organism_id
+    // Perform our CVterm lookups prior to inserting anything.
+    // The type_id of our progeny.
     $chado_buddy_records = $this->cvterm_buddy->getCvterm(
       [
         'cvterm.name' => 'progeny',
@@ -999,14 +1000,39 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       $this->logger->error($error_message);
       throw new \Exception($error_message);
     }
+    // Maternal and paternal relationship types
+
+    // Lookup our crossnum + stocktype + organism combo and throw an error if it
+    // already exists.
     $query = $this->chado_connection->select('1:stock', 's')
       ->fields('s', ['stock_id'])
       ->condition('s.name', $progeny['crossnum'], '=')
       ->condition('s.type_id', $stocktype_id, '=')
       ->condition('s.organism_id', $progeny['organism_id'], '=')
       ->execute();
-    // 2. Insert if it doesn't exist, throw exception if it does?
+    $stock_id = $query->fetchField();
+    if ($stock_id) {
+      $crossnum = $progeny['crossnum'];
+      $error_message = "There is already a stock_id for cross $crossnum in the database.";
+      $this->logger->error($error_message);
+      throw new \Exception($error_message);
+    }
+    // Confirmed the stock doesn't already exist, now insert.
+    // @todo How to determine the uniquename?
+    $stock = [
+      'name' => $progeny['crossnum'],
+      'uniquename' => $uniquename,
+      'organism_id' => $progeny['organism_id'],
+      'type_id' => $stocktype_id,
+    ];
+    /*
+    $stock_query = $this->chado_connection->insert('1:stock')
+      ->fields($stock)
+      ->execute();
+    */
+
     // 3. Create relationships with parents
+
     // 4. Return stock_id
     return NULL;
   }

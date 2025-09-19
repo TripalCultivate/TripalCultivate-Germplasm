@@ -310,6 +310,16 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
       ],
     ];
 
+    // #3: Cross Number already exists as a stock in the database.
+    $scenarios[] = [
+      $valid_organism_id,
+      $valid_stocktype,
+      'correct_header_preexisting_crossnum.tsv',
+      [
+        'expected_message' => 'There is already a stock_id for cross 122S in the database.',
+      ],
+    ];
+
     return $scenarios;
   }
 
