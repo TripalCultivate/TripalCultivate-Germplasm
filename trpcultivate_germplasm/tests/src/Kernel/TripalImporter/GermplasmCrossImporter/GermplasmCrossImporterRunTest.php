@@ -290,23 +290,23 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
       ],
     ];
 
-    // #1: Maternal parent does not exist in the database.
-    $scenarios[] = [
-      $valid_organism_id,
-      $valid_stocktype,
-      'correct_header_nonexistent_maternal_parent.tsv',
-      [
-        'expected_message' => 'One or both of maternal parent (DNE-Mom) and paternal parent (122S) is not in the database, but should be.',
-      ],
-    ];
-
-    // #2: Unable to retrieve the right cvterm for stock type.
+    // #1: Unable to retrieve the right cvterm for stock type.
     $scenarios[] = [
       $valid_organism_id,
       $invalid_stocktype,
       'crosses_simple.tsv',
       [
         'expected_message' => 'Unable to get the cvterm ID needed for the stock type of the cross being inserted.',
+      ],
+    ];
+
+    // #2: Maternal parent does not exist in the database.
+    $scenarios[] = [
+      $valid_organism_id,
+      $valid_stocktype,
+      'correct_header_nonexistent_maternal_parent.tsv',
+      [
+        'expected_message' => 'One or both of maternal parent (DNE-Mom) and paternal parent (122S) is not in the database, but should be.',
       ],
     ];
 

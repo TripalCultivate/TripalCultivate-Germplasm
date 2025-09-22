@@ -893,6 +893,27 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       throw new \Exception($error_message);
     }
 
+    // Lookup necessary CVterms prior to inserting anything.
+    // @todo move this to its own method?
+    // The type_id of each progeny.
+    $chado_buddy_records = $this->cvterm_buddy->getCvterm(
+      [
+        'cvterm.name' => 'progeny',
+        'db.name' => 'PBO',
+        'dbxref.accession' => '0000065',
+      ],
+    );
+    if ($chado_buddy_records) {
+      $stocktype_id = $chado_buddy_records[0]->getValue('cvterm.cvterm_id');
+    }
+    else {
+      $error_message = "Unable to get the cvterm ID needed for the stock type of the cross being inserted.";
+      $this->logger->error($error_message);
+      throw new \Exception($error_message);
+    }
+    // Maternal and paternal relationship types.
+    // Stockprop cvterms.
+
     // Traits data file id.
     $file_id = $this->arguments['files'][0]['fid'];
     // Load file object.
@@ -948,11 +969,12 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
           'paternal' => $val_paternal,
           'crosstype' => $val_crosstype,
           'organism_id' => $organism_id,
+          'stocktype_id' => $stocktype_id,
         ];
         $progeny_stock_id = $this->importCross($progeny);
 
         // Create our stock properties for this progeny.
-        // createStockProp()
+        // $this->createStockProp()
       }
 
       // Next line.
@@ -978,36 +1000,18 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    *   - 'maternal': The name of the maternal parent of a progeny.
    *   - 'paternal': The name of the paternal parent of a progeny.
    *   - 'organism_id': The organism ID of the progeny.
+   *   - 'stocktype_id': The type_id of the progeny.
    *
    * @return int|null
    *   The stock ID of the inserted stock, otherwise null.
    */
   public function importCross(array $progeny) {
-    // Perform our CVterm lookups prior to inserting anything.
-    // The type_id of our progeny.
-    $chado_buddy_records = $this->cvterm_buddy->getCvterm(
-      [
-        'cvterm.name' => 'progeny',
-        'db.name' => 'PBO',
-        'dbxref.accession' => '0000065',
-      ],
-    );
-    if ($chado_buddy_records) {
-      $stocktype_id = $chado_buddy_records[0]->getValue('cvterm.cvterm_id');
-    }
-    else {
-      $error_message = "Unable to get the cvterm ID needed for the stock type of the cross being inserted.";
-      $this->logger->error($error_message);
-      throw new \Exception($error_message);
-    }
-    // Maternal and paternal relationship types
-
     // Lookup our crossnum + stocktype + organism combo and throw an error if it
     // already exists.
     $query = $this->chado_connection->select('1:stock', 's')
       ->fields('s', ['stock_id'])
       ->condition('s.name', $progeny['crossnum'], '=')
-      ->condition('s.type_id', $stocktype_id, '=')
+      ->condition('s.type_id', $progeny['stocktype_id'], '=')
       ->condition('s.organism_id', $progeny['organism_id'], '=')
       ->execute();
     $stock_id = $query->fetchField();
@@ -1019,21 +1023,27 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     }
     // Confirmed the stock doesn't already exist, now insert.
     // @todo How to determine the uniquename?
+    /*
     $stock = [
       'name' => $progeny['crossnum'],
       'uniquename' => $uniquename,
       'organism_id' => $progeny['organism_id'],
       'type_id' => $stocktype_id,
     ];
-    /*
     $stock_query = $this->chado_connection->insert('1:stock')
       ->fields($stock)
       ->execute();
     */
 
     // 3. Create relationships with parents
-
     // 4. Return stock_id
+    return NULL;
+  }
+
+  /**
+   * Creates a property for a stock by storing it in the stockprop table.
+   */
+  public function createStockProp(int $stock_id, int $stockprop_type_id, string $stockprop_value) {
     return NULL;
   }
 
