@@ -913,7 +913,6 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     }
     // Maternal and paternal relationship types.
     // Stockprop cvterms.
-
     // Traits data file id.
     $file_id = $this->arguments['files'][0]['fid'];
     // Load file object.
@@ -983,6 +982,95 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
 
     // Close the file.
     fclose($handle);
+  }
+
+  /**
+   * Check that all of the cvterms needed by this importer are available.
+   *
+   * In the future, this method will grab all of our terms from the config.
+   *
+   * @return array
+   *   An array of cvterms. The key is the name of the term (as will be
+   *   supplied in trpcultivate_germplasm.settings) and each key is further
+   *   nested with the following key-value pairs:
+   *   - 'cvterm.name': The name of the cvterm
+   *   - 'db.name': The name of the DB
+   *   - 'dbxref.accession': The DBxref code
+   *   - 'cvterm_id': The cvterm ID
+   */
+  public function setUpCvTerms() {
+
+    // Setup our CV terms array with information we know so that we can
+    // perform a database lookup for the cvterm ID.
+    $cvterms = [
+      'progeny' => [
+        'cvterm.name' => 'progeny',
+        'db.name' => 'PBO',
+        'dbxref.accession' => '0000065',
+      ],
+      'maternal_parent' => [
+        'cvterm.name' => 'maternal parent',
+        'db.name' => 'TRPC',
+        'dbxref.accession' => '0022',
+      ],
+      'paternal_parent' => [
+        'cvterm.name' => 'paternal parent',
+        'db.name' => 'TRPC',
+        'dbxref.accession' => '0023',
+      ],
+      'crossing_block_year' => [
+        'cvterm.name' => 'Crossing Block Year',
+        'db.name' => 'TRPC',
+        'dbxref.accession' => '0047',
+      ],
+      'crossing_block_season' => [
+        'cvterm.name' => 'Crossing Block Season',
+        'db.name' => 'TRPC',
+        'dbxref.accession' => '0046',
+      ],
+      'seed_type' => [
+        'cvterm.name' => 'Seed Type',
+        'db.name' => 'TRPC',
+        'dbxref.accession' => '0050',
+      ],
+      'cotyledon_colour' => [
+        'cvterm.name' => 'Cotyledon Colour',
+        'db.name' => 'TRPC',
+        'dbxref.accession' => '0048',
+      ],
+      'comment' => [
+        'cvterm.name' => '',
+        'db.name' => '',
+        'dbxref.accession' => '',
+      ],
+    ];
+    // @todo Add terms to our config.
+    /*
+    $germplasm_config = $this->config_factory->get('trpcultivate_germplasm.settings');
+    // Iterate through our cvterms
+    // If it hasn't been set before, set it now
+    foreach ($this->cvterms as $term) {
+      if (!isset($this->cvterms[$term])) {
+        $terms_string = 'terms.' . $term;
+        $this->setCVterm($term, $germplasm_config->get($terms_string));
+      }
+    }
+     */
+    foreach ($cvterms as $term) {
+      $chado_buddy_records = $this->cvterm_buddy->getCvterm($term);
+      if ($chado_buddy_records) {
+        $cvterm_id = $chado_buddy_records[0]->getValue('cvterm.cvterm_id');
+        // Store the CVterm ID in our array.
+        $terms['cvterm_id'] = $cvterm_id;
+      }
+      else {
+        $error_message = "Unable to get the cvterm ID needed.";
+        $this->logger->error($error_message);
+        throw new \Exception($error_message);
+      }
+    }
+
+    return $cvterms;
   }
 
   /**
