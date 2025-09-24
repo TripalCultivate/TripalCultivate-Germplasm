@@ -276,7 +276,7 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
       $invalid_stocktype,
       'crosses_simple.tsv',
       [
-        'expected_message' => 'Unable to get the cvterm ID needed for the stock type of the cross being inserted.',
+        'expected_message' => "Unable to get the cvterm ID for 'progeny'.",
       ],
     ];
 

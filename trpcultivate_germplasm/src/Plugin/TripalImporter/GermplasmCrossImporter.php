@@ -894,25 +894,8 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     }
 
     // Lookup necessary CVterms prior to inserting anything.
-    // @todo move this to its own method?
-    // The type_id of each progeny.
-    $chado_buddy_records = $this->cvterm_buddy->getCvterm(
-      [
-        'cvterm.name' => 'progeny',
-        'db.name' => 'PBO',
-        'dbxref.accession' => '0000065',
-      ],
-    );
-    if ($chado_buddy_records) {
-      $stocktype_id = $chado_buddy_records[0]->getValue('cvterm.cvterm_id');
-    }
-    else {
-      $error_message = "Unable to get the cvterm ID needed for the stock type of the cross being inserted.";
-      $this->logger->error($error_message);
-      throw new \Exception($error_message);
-    }
-    // Maternal and paternal relationship types.
-    // Stockprop cvterms.
+    $cvterms = $this->setUpCvTerms();
+
     // Traits data file id.
     $file_id = $this->arguments['files'][0]['fid'];
     // Load file object.
@@ -968,7 +951,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
           'paternal' => $val_paternal,
           'crosstype' => $val_crosstype,
           'organism_id' => $organism_id,
-          'stocktype_id' => $stocktype_id,
+          'stocktype_id' => $cvterms['progeny']['cvterm_id'],
         ];
         $progeny_stock_id = $this->importCross($progeny);
 
@@ -1008,6 +991,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
         'db.name' => 'PBO',
         'dbxref.accession' => '0000065',
       ],
+      /*
       'maternal_parent' => [
         'cvterm.name' => 'maternal parent',
         'db.name' => 'TRPC',
@@ -1038,10 +1022,11 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
         'db.name' => 'TRPC',
         'dbxref.accession' => '0048',
       ],
+      */
       'comment' => [
-        'cvterm.name' => '',
-        'db.name' => '',
-        'dbxref.accession' => '',
+        'cvterm.name' => 'comment',
+        'db.name' => 'schema',
+        'dbxref.accession' => 'comment',
       ],
     ];
     // @todo Add terms to our config.
@@ -1056,15 +1041,16 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       }
     }
      */
-    foreach ($cvterms as $term) {
-      $chado_buddy_records = $this->cvterm_buddy->getCvterm($term);
+    foreach ($cvterms as $term => $info) {
+      $chado_buddy_records = $this->cvterm_buddy->getCvterm($info);
       if ($chado_buddy_records) {
+        //print_r($chado_buddy_records);
         $cvterm_id = $chado_buddy_records[0]->getValue('cvterm.cvterm_id');
         // Store the CVterm ID in our array.
-        $terms['cvterm_id'] = $cvterm_id;
+        $cvterms[$term]['cvterm_id'] = $cvterm_id;
       }
       else {
-        $error_message = "Unable to get the cvterm ID needed.";
+        $error_message = "Unable to get the cvterm ID for '$term'.";
         $this->logger->error($error_message);
         throw new \Exception($error_message);
       }
