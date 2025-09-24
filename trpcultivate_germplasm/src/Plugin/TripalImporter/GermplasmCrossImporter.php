@@ -991,7 +991,6 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
         'db.name' => 'PBO',
         'dbxref.accession' => '0000065',
       ],
-      /*
       'maternal_parent' => [
         'cvterm.name' => 'maternal parent',
         'db.name' => 'TRPC',
@@ -1022,7 +1021,6 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
         'db.name' => 'TRPC',
         'dbxref.accession' => '0048',
       ],
-      */
       'comment' => [
         'cvterm.name' => 'comment',
         'db.name' => 'schema',
@@ -1044,7 +1042,6 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     foreach ($cvterms as $term => $info) {
       $chado_buddy_records = $this->cvterm_buddy->getCvterm($info);
       if ($chado_buddy_records) {
-        //print_r($chado_buddy_records);
         $cvterm_id = $chado_buddy_records[0]->getValue('cvterm.cvterm_id');
         // Store the CVterm ID in our array.
         $cvterms[$term]['cvterm_id'] = $cvterm_id;

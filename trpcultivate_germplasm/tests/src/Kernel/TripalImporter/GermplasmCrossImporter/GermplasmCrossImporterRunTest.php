@@ -117,18 +117,14 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
     $this->chado_connection = $this->getTestSchema(ChadoTestKernelBase::PREPARE_TEST_CHADO);
 
     // Ensure we can access file_managed related functionality from Drupal.
-    // ... users need access to system.action config?
     $this->installConfig(['system', 'trpcultivate_germplasm', 'trpcultivate']);
-    // ... managed files are associated with a user.
-    $this->installEntitySchema('user');
-    // ... Finally the file module + tables itself.
-    $this->installEntitySchema('file');
-    $this->installSchema('file', ['file_usage']);
-    $this->installSchema('tripal_chado', ['tripal_custom_tables']);
-    // Ensure we have our tripal import tables.
-    $this->installSchema('tripal', ['tripal_import', 'tripal_jobs']);
+    $this->installSchema('tripal_chado', ['tripal_custom_tables', 'tripal_cv_obo', 'tripal_mviews']);
     // Create and log-in a user.
     $this->setUpCurrentUser();
+    $this->prepareEnvironment(['TripalTerm', 'TripalImporter']);
+    $this->populateMviewSql();
+    // Install ontologies and terms used by this module.
+    trpcultivate_germplasm_install_terms();
 
     // We need to mock the logger to test the progress reporting.
     $container = \Drupal::getContainer();
@@ -357,6 +353,50 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
       $exception_message,
       "We expected the exception message to indicate that something went wrong for this scenario, but it does not match what was expected.",
     );
+  }
+
+  /**
+   * Sets up the two materialized views needed for the importer.
+   *
+   * The mviews are populated when the importer postRun() is called.
+   */
+  protected function populateMviewSql() {
+    $records = [
+      0 => [
+        'mview_id' => 1,
+        'table_id' => 1,
+        'name' => 'cv_root_mview',
+        'query' => 'SELECT DISTINCT CVT.name, CVT.cvterm_id, CV.cv_id, CV.name FROM cvterm CVT
+  LEFT JOIN cvterm_relationship CVTR ON CVT.cvterm_id = CVTR.subject_id
+  INNER JOIN cvterm_relationship CVTR2 ON CVT.cvterm_id = CVTR2.object_id
+  INNER JOIN cv CV on CV.cv_id = CVT.cv_id
+  WHERE CVTR.subject_id is NULL and CVT.is_relationshiptype = 0 and CVT.is_obsolete = 0',
+        'last_update' => 1234567890,
+        'status' => 'test',
+        'comment' => 'test',
+      ],
+      1 => [
+        'mview_id' => 2,
+        'table_id' => 2,
+        'name' => 'db2cv_mview',
+        'query' => 'SELECT DISTINCT CV.cv_id, CV.name as cvname, DB.db_id, DB.name as dbname, COUNT(CVT.cvterm_id) as num_terms FROM cv CV
+  INNER JOIN cvterm CVT on CVT.cv_id = CV.cv_id
+  INNER JOIN dbxref DBX on DBX.dbxref_id = CVT.dbxref_id
+  INNER JOIN db DB on DB.db_id = DBX.db_id
+  WHERE CVT.is_relationshiptype = 0 and CVT.is_obsolete = 0
+  GROUP BY CV.cv_id, CV.name, DB.db_id, DB.name ORDER BY DB.name',
+        'last_update' => 1234567890,
+        'status' => 'test',
+        'comment' => 'test',
+      ],
+    ];
+
+    foreach ($records as $record) {
+      $query = $this->container->get('database')->insert('tripal_mviews');
+      $query->fields($record);
+      $mview_id = $query->execute();
+      $this->assertEquals($record['mview_id'], $mview_id, 'Prepared MView record not added.');
+    }
   }
 
 }
