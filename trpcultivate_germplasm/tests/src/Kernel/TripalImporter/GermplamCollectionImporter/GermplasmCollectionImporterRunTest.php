@@ -268,12 +268,12 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
    *   The test case scenario.
    * @param string $population_entry
    *   The population entry that is submitted with the form.
+   * @param string $relationship_verb
+   *   The relationship verb that is submitted with the form.
    * @param string $stock_position
    *   The stock position that goes as the value of radio button.
    * @param int $toggle_value
    *   The toggle value.
-   * @param string $relationship_verb
-   *   The relationship verb that is submitted with the form.
    * @param string $filename
    *   The name of the file being tested. (Test files are located in
    *   tests/src/Fixtures/GermplasmCollectionImporterFiles/)
