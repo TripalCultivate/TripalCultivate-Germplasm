@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\trpcultivate_germplasm\Plugin\TripalImporter;
+namespace Drupal\trpcultivate_germcollection\Plugin\TripalImporter;
 
 use Drupal\Core\Entity\EntityTypeManager;
 use Drupal\Core\Messenger\MessengerInterface;

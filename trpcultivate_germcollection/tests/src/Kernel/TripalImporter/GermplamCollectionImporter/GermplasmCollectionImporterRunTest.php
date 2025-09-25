@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\Tests\trpcultivate_germplasm\Kernel\TripalImporter;
+namespace Drupal\Tests\trpcultivate_germcollection\Kernel\TripalImporter;
 
 use Drupal\Tests\tripal_chado\Kernel\ChadoTestKernelBase;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -8,7 +8,7 @@ use Drupal\Tests\trpcultivate\Traits\TripalCultivateImporterTestTrait;
 use PHPUnit\Framework\Attributes\Group;
 use Drupal\tripal_chado\Database\ChadoConnection;
 use Drupal\tripal\Services\TripalLogger;
-use Drupal\trpcultivate_germplasm\Plugin\TripalImporter\GermplasmCollectionImporter;
+use Drupal\trpcultivate_germcollection\Plugin\TripalImporter\GermplasmCollectionImporter;
 use Drupal\tripal_chado\Controller\ChadoGenericAutocompleteController;
 use Drupal\tripal_chado\Controller\ChadoCVTermAutocompleteController;
 
@@ -36,7 +36,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
     'tripal_chado',
     'tripal_layout',
     'trpcultivate',
-    'trpcultivate_germplasm',
+    'trpcultivate_germcollection',
   ];
 
   /**
@@ -49,7 +49,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
   /**
    * Germplasm Collection Importer plugin instance.
    *
-   * @var \Drupal\trpcultivate_germplasm\Plugin\TripalImporter\GermplasmCollectionImporter
+   * @var \Drupal\trpcultivate_germcollection\Plugin\TripalImporter\GermplasmCollectionImporter
    */
   protected GermplasmCollectionImporter $importer;
 
@@ -104,7 +104,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
 
     // Ensure we can access file_managed related functionality from Drupal.
     // ... users need access to system.action config?
-    $this->installConfig(['system', 'trpcultivate_germplasm', 'trpcultivate']);
+    $this->installConfig(['system', 'trpcultivate_germcollection', 'trpcultivate']);
     // ... managed files are associated with a user.
     $this->installEntitySchema('user');
     // ... Finally the file module + tables itself.
@@ -173,7 +173,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
     );
 
     $this->module_path = $this->container->get('module_handler')
-      ->getModule('trpcultivate_germplasm')
+      ->getModule('trpcultivate_germcollection')
       ->getPath();
   }
 
@@ -443,12 +443,12 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       $this->assertEquals(
       $expected_stock['subject_id'],
       $relationship_query[$index]->subject_id,
-      'We expected the inserted stock relationship to have a subject id of ' . $case['expected_subject_id'] . ', but it was ' . $relationship_query[$index]->subject_id . '.',
+      'We expected the inserted stock relationship to have a subject id of ' . $expected_stock['subject_id'] . ', but it was ' . $relationship_query[$index]->subject_id . '.',
       );
       $this->assertEquals(
       $expected_stock['object_id'],
       $relationship_query[$index]->object_id,
-      'We expected the inserted stock relationship to have a object id of' . $case['expected_object_id'] . ', but it was ' . $relationship_query[$index]->object_id . '.',
+      'We expected the inserted stock relationship to have a object id of' . $expected_stock['object_id'] . ', but it was ' . $relationship_query[$index]->object_id . '.',
       );
 
       $this->assertEquals(

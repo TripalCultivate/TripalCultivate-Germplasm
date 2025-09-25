@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\Tests\trpcultivate_germplasm\Kernel\TripalImporter;
+namespace Drupal\Tests\trpcultivate_germcollection\Kernel\TripalImporter;
 
 use Drupal\Core\Form\FormState;
 use Drupal\Tests\tripal_chado\Kernel\ChadoTestKernelBase;
@@ -34,7 +34,7 @@ class GermplasmCollectionImporterFormTest extends ChadoTestKernelBase {
     'tripal_chado',
     'tripal_layout',
     'trpcultivate',
-    'trpcultivate_germplasm',
+    'trpcultivate_germcollection',
   ];
 
   /**
@@ -47,7 +47,7 @@ class GermplasmCollectionImporterFormTest extends ChadoTestKernelBase {
   /**
    * Germplasm Collection Importer plugin instance.
    *
-   * @var \Drupal\trpcultivate_germplasm\Plugin\TripalImporter\GermplasmCollectionImporter
+   * @var \Drupal\trpcultivate_germcollection\Plugin\TripalImporter\GermplasmCollectionImporter
    */
   protected $germplasm_collection_importer;
 
@@ -102,7 +102,7 @@ class GermplasmCollectionImporterFormTest extends ChadoTestKernelBase {
 
     // Ensure we can access file_managed related functionality from Drupal.
     // ... users need access to system.action config?
-    $this->installConfig(['system', 'trpcultivate_germplasm', 'trpcultivate']);
+    $this->installConfig(['system', 'trpcultivate_germcollection', 'trpcultivate']);
     // ... managed files are associated with a user.
     $this->installEntitySchema('user');
     // ... Finally the file module + tables itself.
@@ -126,7 +126,7 @@ class GermplasmCollectionImporterFormTest extends ChadoTestKernelBase {
     $container->set('tripal.logger', $mock_logger);
 
     $this->module_path = $this->container->get('module_handler')
-      ->getModule('trpcultivate_germplasm')
+      ->getModule('trpcultivate_germcollection')
       ->getPath();
   }
 
