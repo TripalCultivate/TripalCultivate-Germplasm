@@ -9,6 +9,8 @@ use PHPUnit\Framework\Attributes\Group;
 use Drupal\tripal_chado\Database\ChadoConnection;
 use Drupal\tripal\Services\TripalLogger;
 use Drupal\trpcultivate_germplasm\Plugin\TripalImporter\GermplasmCollectionImporter;
+use Drupal\tripal_chado\Controller\ChadoGenericAutocompleteController;
+use Drupal\tripal_chado\Controller\ChadoCVTermAutocompleteController;
 
 /**
  * Tests the functionality of the run() method of Germplasm Collection Importer.
@@ -312,7 +314,6 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
     $this->importer->createImportJob($run_args, $file_details);
     $this->importer->prepareFiles();
     $this->importer->run();
-    $this->importer->postRun();
 
     // Check if the stock is inserted into the database correctly.
     $stock_query = $this->chado_connection->query(
@@ -327,7 +328,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
 
     // Check if the relationship is created and inserted correctly.
     $relationship_query_evi = $this->chado_connection->query(
-      'SELECT subject_id, object_id FROM {1:stock_relationship} ORDER BY stock_relationship_id DESC LIMIT 1'
+      'SELECT subject_id, object_id, type_id FROM {1:stock_relationship} ORDER BY stock_relationship_id DESC LIMIT 1'
     )
       ->fetchAll();
     $this->assertEquals(
@@ -340,6 +341,31 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       $relationship_query_evi[0]->object_id,
       'We expected the inserted stock relationship to have a object id of' . $case['expected_object_id'] . ', but it was ' . $relationship_query_evi[0]->object_id . '.',
     );
+
+    // Get the population entry stock id and the relationship verb cvterm id.
+    $population_entry_stock_id = ChadoGenericAutocompleteController::getPkeyId($population_entry);
+    $relationship_verb_type_id = ChadoCVTermAutocompleteController::getCVtermId($relationship_verb);
+
+    $this->assertEquals(
+      $relationship_verb_type_id,
+      $relationship_query_evi[0]->type_id,
+      'We expected the inserted stock relationship to have a type id that is the same as the cvterm id of the relationship verb, but it was not.',
+    );
+
+    if ($stock_position == 'evi') {
+      $this->assertEquals(
+        $population_entry_stock_id,
+        $relationship_query_evi[0]->subject_id,
+        'We expected the inserted stock relationship to have a subject id that is the same as the population entry id when the relationship is set to evi, but it was not.',
+      );
+    }
+    elseif ($stock_position == 'ive') {
+      $this->assertEquals(
+        $population_entry_stock_id,
+        $relationship_query_evi[0]->object_id,
+        'We expected the inserted stock relationship to have a object id that is the same as the population entry id when the relationship is set to ive, but it was not.',
+      );
+    }
   }
 
   /**
