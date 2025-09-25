@@ -211,9 +211,14 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       1,
       'collection_importer_example.tsv',
       [
-        'expected_stock_id' => 2,
-        'expected_subject_id' => 1,
-        'expected_object_id' => 2,
+        'expected_stocks' =>
+          [
+            [
+              'stock_id' => 2,
+              'subject_id' => 1,
+              'object_id' => 2,
+            ],
+          ],
       ],
     ];
 
@@ -226,9 +231,14 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       1,
       'collection_importer_example.tsv',
       [
-        'expected_stock_id' => 2,
-        'expected_subject_id' => 2,
-        'expected_object_id' => 1,
+        'expected_stocks' =>
+          [
+            [
+              'stock_id' => 2,
+              'subject_id' => 2,
+              'object_id' => 1,
+            ],
+          ],
       ],
     ];
     // #3: Individual-verb-entry relatoinship with toggle off.
@@ -240,9 +250,29 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       0,
       'collection_importer_insert_example.tsv',
       [
-        'expected_stock_id' => 2,
-        'expected_subject_id' => 2,
-        'expected_object_id' => 1,
+        'expected_stocks' =>
+          [
+            [
+              'stock_id' => 2,
+              'name' => 'my_stock_5',
+              'type' => 'generated germplasm (CO_010:0000255)',
+              'organism' => 'Lens ervoides',
+              'has_uniquename' => FALSE,
+              'uniquename' => 'UNIQUENAME12',
+              'subject_id' => 2,
+              'object_id' => 1,
+            ],
+            [
+              'stock_id' => 3,
+              'name' => 'my_stock_6',
+              'type' => 'accession (CO_010:0000044)',
+              'organism' => 'Lens culinaris',
+              'has_uniquename' => TRUE,
+              'uniquename' => 'UNIQUENAME6',
+              'subject_id' => 3,
+              'object_id' => 1,
+            ],
+          ],
       ],
     ];
     // #4: Individual-verb-entry relatoinship with toggle off.
@@ -254,9 +284,29 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       0,
       'collection_importer_insert_example.tsv',
       [
-        'expected_stock_id' => 2,
-        'expected_subject_id' => 2,
-        'expected_object_id' => 1,
+        'expected_stocks' =>
+          [
+            [
+              'stock_id' => 2,
+              'name' => 'my_stock_5',
+              'type' => 'generated germplasm (CO_010:0000255)',
+              'organism' => 'Lens ervoides',
+              'has_uniquename' => FALSE,
+              'uniquename' => 'UNIQUENAME12',
+              'subject_id' => 2,
+              'object_id' => 1,
+            ],
+            [
+              'stock_id' => 3,
+              'name' => 'my_stock_6',
+              'type' => 'accession (CO_010:0000044)',
+              'organism' => 'Lens culinaris',
+              'has_uniquename' => TRUE,
+              'uniquename' => 'UNIQUENAME6',
+              'subject_id' => 3,
+              'object_id' => 1,
+            ],
+          ],
       ],
     ];
 
@@ -315,56 +365,112 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
     $this->importer->prepareFiles();
     $this->importer->run();
 
-    // Check if the stock is inserted into the database correctly.
-    $stock_query = $this->chado_connection->query(
-      'SELECT stock_id FROM {1:stock} ORDER BY stock_id DESC LIMIT 1'
-    )
-      ->fetchField();
-    $this->assertEquals(
-      $case['expected_stock_id'],
-      $stock_query,
-      'We expected the stock to be inserted but it was not.'
-    );
-
-    // Check if the relationship is created and inserted correctly.
-    $relationship_query_evi = $this->chado_connection->query(
-      'SELECT subject_id, object_id, type_id FROM {1:stock_relationship} ORDER BY stock_relationship_id DESC LIMIT 1'
-    )
-      ->fetchAll();
-    $this->assertEquals(
-      $case['expected_subject_id'],
-      $relationship_query_evi[0]->subject_id,
-      'We expected the inserted stock relationship to have a subject id of' . $case['expected_subject_id'] . ', but it was ' . $relationship_query_evi[0]->subject_id . '.',
-    );
-    $this->assertEquals(
-      $case['expected_object_id'],
-      $relationship_query_evi[0]->object_id,
-      'We expected the inserted stock relationship to have a object id of' . $case['expected_object_id'] . ', but it was ' . $relationship_query_evi[0]->object_id . '.',
-    );
-
     // Get the population entry stock id and the relationship verb cvterm id.
     $population_entry_stock_id = ChadoGenericAutocompleteController::getPkeyId($population_entry);
     $relationship_verb_type_id = ChadoCVTermAutocompleteController::getCVtermId($relationship_verb);
 
-    $this->assertEquals(
-      $relationship_verb_type_id,
-      $relationship_query_evi[0]->type_id,
-      'We expected the inserted stock relationship to have a type id that is the same as the cvterm id of the relationship verb, but it was not.',
-    );
+    // Get the number of stocks we expect to be created.
+    $number_of_stocks = count($case['expected_stocks']);
 
-    if ($stock_position == 'evi') {
+    // Query the stocks created.
+    $stock_query = $this->chado_connection->query('WITH last_stocks AS (
+      SELECT stock_id, organism_id, name, uniquename, type_id FROM {1:stock} ORDER BY stock_id DESC LIMIT :limit)
+      SELECT * FROM last_stocks ORDER BY stock_id ASC', [':limit' => $number_of_stocks])
+      ->fetchAll();
+
+    // Query the relationships created.
+    $relationship_query = $this->chado_connection->query('WITH last_stocks AS (
+      SELECT stock_relationship_id, subject_id, object_id, type_id FROM {1:stock_relationship} ORDER BY stock_relationship_id DESC LIMIT :limit)
+      SELECT * FROM last_stocks ORDER BY stock_relationship_id ASC', [':limit' => $number_of_stocks])
+      ->fetchAll();
+
+    // Check the stock creation.
+    foreach ($case['expected_stocks'] as $index => $expected_stock) {
+      // Check if the stock is inserted into the database correctly.
       $this->assertEquals(
-        $population_entry_stock_id,
-        $relationship_query_evi[0]->subject_id,
-        'We expected the inserted stock relationship to have a subject id that is the same as the population entry id when the relationship is set to evi, but it was not.',
+      $expected_stock['stock_id'],
+      $stock_query[$index]->stock_id,
+      'We expected the stock id of the inserted stock to be ' . $expected_stock['stock_id'] . ', but it was ' . $stock_query[$index]->stock_id . '.',
       );
-    }
-    elseif ($stock_position == 'ive') {
+
+      if ($toggle_value == 0) {
+        // Check if the name is inserted correctly.
+        $this->assertEquals(
+          $expected_stock['name'],
+          $stock_query[$index]->name,
+          'We expected the inserted stock to have a name of ' . $expected_stock['name'] . ', but it was ' . $stock_query[$index]->name . '.',
+        );
+        // Check if the type is inserted correctly.
+        $this->assertEquals(
+          ChadoCVTermAutocompleteController::getCVtermId($expected_stock['type']),
+          $stock_query[$index]->type_id,
+          'We expected the inserted stock to have a type id of ' . ChadoCVTermAutocompleteController::getCVtermId($expected_stock['type']) . ', but it was ' . $stock_query[$index]->type_id . '.',
+        );
+        // Check if the organism is inserted correctly.
+        $this->assertEquals(
+          chado_get_organism_id_from_scientific_name($expected_stock['organism'])[0],
+          $stock_query[$index]->organism_id,
+          'We expected the inserted stock to have an organism id of ' . chado_get_organism_id_from_scientific_name($expected_stock['organism'])[0] . ', but it was ' . $stock_query[$index]->organism_id . '.',
+        );
+        // Check if the uniquename is inserted correctly.
+        if ($expected_stock['has_uniquename']) {
+          $this->assertNotEmpty(
+            $stock_query[$index]->uniquename,
+            'We expected the inserted stock to have a uniquename, but it does not.',
+          );
+          $this->assertEquals(
+            $expected_stock['uniquename'],
+            $stock_query[$index]->uniquename,
+            'We expected the inserted stock to have a uniquename of ' . $expected_stock['uniquename'] . ', but it was ' . $stock_query[$index]->uniquename . '.',
+          );
+        }
+        else {
+          // If the user did not provide a uniquename, check if a uniquename
+          // is generated correctly.
+          $this->assertNotEmpty(
+            $stock_query[$index]->uniquename,
+            'We expected the inserted stock to have a uniquename, but it does not.',
+          );
+          $this->assertEquals(
+            $expected_stock['uniquename'],
+            $stock_query[$index]->uniquename,
+            'We expected the inserted stock to have a uniquename of ' . $expected_stock['uniquename'] . ', but it was ' . $stock_query[$index]->uniquename . '.',
+          );
+        }
+      }
+
+      // Check if the stock relationship is inserted into database correctly.
       $this->assertEquals(
-        $population_entry_stock_id,
-        $relationship_query_evi[0]->object_id,
-        'We expected the inserted stock relationship to have a object id that is the same as the population entry id when the relationship is set to ive, but it was not.',
+      $expected_stock['subject_id'],
+      $relationship_query[$index]->subject_id,
+      'We expected the inserted stock relationship to have a subject id of ' . $case['expected_subject_id'] . ', but it was ' . $relationship_query[$index]->subject_id . '.',
       );
+      $this->assertEquals(
+      $expected_stock['object_id'],
+      $relationship_query[$index]->object_id,
+      'We expected the inserted stock relationship to have a object id of' . $case['expected_object_id'] . ', but it was ' . $relationship_query[$index]->object_id . '.',
+      );
+
+      $this->assertEquals(
+      $relationship_verb_type_id,
+      $relationship_query[$index]->type_id,
+      'We expected the inserted stock relationship to have a type id that is the same as the cvterm id of the relationship verb, but it was not.',
+      );
+
+      if ($stock_position == 'evi') {
+        $this->assertEquals(
+          $population_entry_stock_id,
+          $relationship_query[$index]->subject_id,
+          'We expected the inserted stock relationship to have a subject id that is the same as the population entry id when the relationship is set to evi, but it was not.',
+        );
+      }
+      elseif ($stock_position == 'ive') {
+        $this->assertEquals(
+          $population_entry_stock_id,
+          $relationship_query[$index]->object_id,
+          'We expected the inserted stock relationship to have a object id that is the same as the population entry id when the relationship is set to ive, but it was not.',
+        );
+      }
     }
   }
 
