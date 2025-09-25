@@ -136,11 +136,11 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
     $this->assertIsNumeric($organism_id,
       "We were not able to create an organism for testing.");
     $this->chado_connection->insert('1:organism')
-    ->fields([
-      'genus' => 'Lens',
-      'species' => 'ervoides',
-    ])
-    ->execute();
+      ->fields([
+        'genus' => 'Lens',
+        'species' => 'ervoides',
+      ])
+      ->execute();
 
     $type_id = $this->chado_connection->select('1:cvterm', 'c')
       ->fields('c', ['cvterm_id'])
