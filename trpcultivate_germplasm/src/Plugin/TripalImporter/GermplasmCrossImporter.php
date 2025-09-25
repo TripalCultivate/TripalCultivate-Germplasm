@@ -105,7 +105,12 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     ],
     [
       'name' => 'Cross Number',
-      'description' => 'A unique identifier for this cross (e.g. 1234S).',
+      'description' => 'The generic name for this cross (e.g. 1234S).',
+      'type' => 'required',
+    ],
+    [
+      'name' => 'Uniquename',
+      'description' => 'A unique identifier for this cross. This can be the same as Cross Number, if desired.',
       'type' => 'required',
     ],
     [
@@ -359,6 +364,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       $header_index['Year'],
       $header_index['Season'],
       $header_index['Cross Number'],
+      $header_index['Uniquename'],
       $header_index['Maternal Parent'],
       $header_index['Paternal Parent'],
       $header_index['Cross Type'],
@@ -863,8 +869,8 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
         $messages[$validator_name]['status'] = 'fail';
         $metadata = [
           'column_headers' => [
-            3 => $header_names[3],
             4 => $header_names[4],
+            5 => $header_names[5],
           ],
         ];
         $messages[$validator_name]['details'] = GermplasmNameExists::processListWithDescribedTable($failures[$validator_name], $metadata);
@@ -921,20 +927,21 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
         $val_year = $data_row[0];
         $val_season = $data_row[1];
         $val_crossnum = $data_row[2];
-        $val_maternal = $data_row[3];
-        $val_paternal = $data_row[4];
-        $val_crosstype = $data_row[5];
+        $val_uniquename = $data_row[3];
+        $val_maternal = $data_row[4];
+        $val_paternal = $data_row[5];
+        $val_crosstype = $data_row[6];
         // Optional columns.
-        $val_seedtype = $data_row[6] ?? NULL;
-        $val_cotyledon = $data_row[7] ?? NULL;
-        $val_comment = $data_row[8] ?? NULL;
+        $val_seedtype = $data_row[7] ?? NULL;
+        $val_cotyledon = $data_row[8] ?? NULL;
+        $val_comment = $data_row[9] ?? NULL;
 
         // Validate that the maternal and paternal parents are still in the db.
         $instance = $this->service_validatorPluginManager->createInstance('germplasm_name_exists');
         // Set the logger since this validator uses a setter (setOrganismID)
         // which may log messages.
         $instance->setLogger($this->logger);
-        $instance->setIndices([3, 4]);
+        $instance->setIndices([4, 5]);
         $instance->setOrganismID($organism_id);
         $result = $instance->validateRow($data_row);
         // Check if validation failed.
@@ -947,6 +954,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
         // Insert our breeding cross.
         $progeny = [
           'crossnum' => $val_crossnum,
+          'uniquename' => $val_uniquename,
           'maternal' => $val_maternal,
           'paternal' => $val_paternal,
           'crosstype' => $val_crosstype,
@@ -1067,6 +1075,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    *   An array containing information about a progeny for import. It has the
    *   following keys:
    *   - 'crossnum': The cross number, aka name of the progeny.
+   *   - 'uniquename': The uniquename of the progeny.
    *   - 'crosstype': The type of cross that resulted in the progeny.
    *   - 'maternal': The name of the maternal parent of a progeny.
    *   - 'paternal': The name of the paternal parent of a progeny.
@@ -1077,11 +1086,12 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    *   The stock ID of the inserted stock, otherwise null.
    */
   public function importCross(array $progeny) {
-    // Lookup our crossnum + stocktype + organism combo and throw an error if it
-    // already exists.
+    // Lookup our crossnum + uniquename + stocktype + organism combo and throw
+    // an error if it already exists.
     $query = $this->chado_connection->select('1:stock', 's')
       ->fields('s', ['stock_id'])
       ->condition('s.name', $progeny['crossnum'], '=')
+      ->condition('s.uniquename', $progeny['uniquename'], '=')
       ->condition('s.type_id', $progeny['stocktype_id'], '=')
       ->condition('s.organism_id', $progeny['organism_id'], '=')
       ->execute();
@@ -1093,14 +1103,13 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       throw new \Exception($error_message);
     }
     // Confirmed the stock doesn't already exist, now insert.
-    // @todo How to determine the uniquename?
-    /*
     $stock = [
       'name' => $progeny['crossnum'],
-      'uniquename' => $uniquename,
+      'uniquename' => $progeny['uniquename'],
       'organism_id' => $progeny['organism_id'],
-      'type_id' => $stocktype_id,
+      'type_id' => $progeny['stocktype_id'],
     ];
+    /*
     $stock_query = $this->chado_connection->insert('1:stock')
       ->fields($stock)
       ->execute();
