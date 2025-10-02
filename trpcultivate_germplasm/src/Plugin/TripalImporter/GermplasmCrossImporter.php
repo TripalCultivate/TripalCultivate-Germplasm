@@ -1102,6 +1102,11 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       $this->logger->error($error_message);
       throw new \Exception($error_message);
     }
+    // Next, grab the genus of the organism id, and check if there is a stock
+    // with the same name under a different species.
+    // Can I re-run the previous query but without uniquename?
+    // Log a warning message if this is the case?
+
     // Confirmed the stock doesn't already exist, now insert.
     $stock = [
       'name' => $progeny['crossnum'],
@@ -1109,13 +1114,13 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       'organism_id' => $progeny['organism_id'],
       'type_id' => $progeny['stocktype_id'],
     ];
-    /*
-    $stock_query = $this->chado_connection->insert('1:stock')
+    $stock_id = $this->chado_connection->insert('1:stock')
       ->fields($stock)
       ->execute();
-    */
 
     // 3. Create relationships with parents
+    // Lookup the parents by name and genus since we can't assume they are the
+    // same species. (Eg. if this is an interspecific cross.)
     // 4. Return stock_id
     return NULL;
   }
