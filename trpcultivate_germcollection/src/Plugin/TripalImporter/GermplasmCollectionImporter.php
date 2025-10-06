@@ -834,16 +834,6 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
             // Always encode in uppercase form.
             $uniquename = strtoupper($uniquename);
 
-            // Germplasm Name:
-            // Use the germplasm name to determine if the germplasm
-            // exists in the database.
-            // If it does not exist, throw an exception.
-            $stock_id = $this->parseStock($val_name);
-
-            if ($stock_id == NULL && $population['relationship_only'] == 1) {
-              throw new \Exception('Germplasm Name: ' . $val_name . ' does not exists. Please provide a valid Germplasm Name.');
-            }
-
             // Organism:
             // If Scientific Name is present, lookup the organism ID.
             if ($val_sciname) {
@@ -870,6 +860,16 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
             // Throw exception if type is not valid.
             if ($type_id == NULL) {
               throw new \Exception('Type: ' . $val_type . ' is not valid. Please provide a valid Type.');
+            }
+
+            // Germplasm Name:
+            // Use the germplasm name to determine if the germplasm
+            // exists in the database.
+            // If it does not exist, throw an exception.
+            $stock_id = $this->parseStock($val_name, $type_id, $organism_id);
+
+            if ($stock_id == NULL && $population['relationship_only'] == 1) {
+              throw new \Exception('Germplasm Name: ' . $val_name . ' does not exists. Please provide a valid Germplasm Name.');
             }
 
             // DUPLICATE LINE:
@@ -1034,22 +1034,28 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
    *
    * Fetch the matching row in chado.stock table.
    *
-   * @param string $value
+   * @param string $stock_name
    *   String, containing the stock name and  in
    *   the following notation: Stock Name.
+   * @param int $type_id
+   *   Integer, containing the cvterm type id.
+   * @param int $organism_id
+   *   Integer, containing organism_id of the scientific name.
    *
    * @return int
    *   Stock id number that matched the resolved stock id
    *   from the input string.
    */
-  public function parseStock($value) {
+  public function parseStock($stock_name, $type_id, $organism_id) {
     $result = '';
 
     // Fetch the germplasm name and return
     // the stock_id number.
     $query = $this->chado_connection->select('1:stock', 's')
       ->fields('s', ['stock_id'])
-      ->condition('s.name', $value, '=')
+      ->condition('s.name', $stock_name, '=')
+      ->condition('s.type_id', $type_id, '=')
+      ->condition('s.organism_id', $organism_id, '=')
       ->execute();
 
     $result = NULL;
