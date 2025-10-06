@@ -352,7 +352,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
 
     // Configure the valid_delimited_file metadata.
     $valid_delimited_file_metadata = [
-      'strict_flag' => TRUE,
+      'strict_flag' => FALSE,
       'number_of_columns' => $required_column_count,
     ];
 
