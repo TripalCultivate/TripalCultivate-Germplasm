@@ -1086,16 +1086,52 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    *   The stock ID of the inserted stock, otherwise null.
    */
   public function importCross(array $progeny) {
+
+    $crossnum = $progeny['crossnum'];
+    $uniquename = $progeny['uniquename'];
+    $organism_id = $progeny['organism_id'];
+    $stocktype_id = $progeny['stocktype_id'];
+    // First, query the stock table to see if our cross for import already
+    // exists.
+    // There are 3 scenarios to look for:
+    // 1. Germplasm name + stock type + organism
+    // 2. Uniquename + stock type + organism
+    // 3. Scenario 1 or 2 with the same genus, but different species.
+    $stock_query = $this->connection->select('1:stock', 's')
+      ->fields('s', ['stock_id', 'name', 'uniquename', 'type_id'])
+    // Add the organism_id and stocktype_id as regular conditions.
+      ->condition('s.organism_id', $organism_id, '=')
+      ->condition('s.type_id', $stocktype_id, '=');
+    // Create an OR condition group for germplasm name OR uniquename.
+    $orGroup = $stock_query->orConditionGroup()
+      ->condition('s.name', $crossnum, '=')
+      ->condition('s.uniquename', $uniquename, '=');
+    // Now add the OR condition group to the query and execute it.
+    $stock_query->condition($orGroup);
+    $stock_record = $stock_query->execute()->fetchAll();
+
+    // If we retrieved more than one stock, throw an error.
+    if (count($stock_record) >= 2) {
+      $stocks_retrieved = [];
+      foreach ($stock_record as $stock_hit) {
+        $stock_string = $stock_hit->name . " (uniquename=" . $stock_hit->uniquename . "; stock_id=" . $stock_hit->stock_id . ")";
+        array_push($stocks_retrieved, $stock_string);
+      }
+      $error_message = "Found more than one stock ID for \"$crossnum\" and/or \"$uniquename\" with type ID \"$stocktype_id\" and organism ID \"$organism_id\". The existing stocks are: " . implode(", ", $stocks_retrieved) . ".";
+      $this->logger->error($error_message);
+      throw new \Exception($error_message);
+    }
+
     // Lookup our crossnum + uniquename + stocktype + organism combo and throw
     // an error if it already exists.
-    $query = $this->chado_connection->select('1:stock', 's')
+    $stock_query = $this->chado_connection->select('1:stock', 's')
       ->fields('s', ['stock_id'])
       ->condition('s.name', $progeny['crossnum'], '=')
       ->condition('s.uniquename', $progeny['uniquename'], '=')
       ->condition('s.type_id', $progeny['stocktype_id'], '=')
       ->condition('s.organism_id', $progeny['organism_id'], '=')
       ->execute();
-    $stock_id = $query->fetchField();
+    $stock_id = $stock_query->fetchField();
     if ($stock_id) {
       $crossnum = $progeny['crossnum'];
       $error_message = "There is already a stock_id for cross $crossnum in the database.";
@@ -1106,7 +1142,6 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     // with the same name under a different species.
     // Can I re-run the previous query but without uniquename?
     // Log a warning message if this is the case?
-
     // Confirmed the stock doesn't already exist, now insert.
     $stock = [
       'name' => $progeny['crossnum'],
