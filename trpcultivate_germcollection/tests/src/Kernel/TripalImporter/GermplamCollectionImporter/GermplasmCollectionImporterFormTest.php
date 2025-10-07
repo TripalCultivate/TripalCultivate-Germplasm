@@ -9,6 +9,7 @@ use Drupal\tripal_chado\Database\ChadoConnection;
 use Drupal\tripal\Services\TripalLogger;
 use Drupal\Tests\trpcultivate\Traits\TripalCultivateImporterTestTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
+use Drupal\tripal_chado\Controller\ChadoCVTermAutocompleteController;
 
 /**
  * Tests form + form-related functionality of the Germplasm Collection Importer.
@@ -144,7 +145,7 @@ class GermplasmCollectionImporterFormTest extends ChadoTestKernelBase {
         'species' => 'culinaris',
       ])
       ->execute();
-    $this->assertIsNumeric($organism_id, 'We were not able to cretae an organism.');
+    $this->assertIsNumeric($organism_id, 'We were not able to create an organism.');
 
     // Build the form using Drupal's form builder.
     $form = \Drupal::formBuilder()->getForm(
@@ -170,9 +171,9 @@ class GermplasmCollectionImporterFormTest extends ChadoTestKernelBase {
     // Check the file fieldset contents.
     $this->assertArrayHasKey('file', $form, 'We expect there to be a file fieldset on the form but there is not.');
     $this->assertEquals('fieldset', $form['file']['#type'], 'We expect the file element in the form to be a fieldset.');
-    // We expect there to be an upload description includinf a template link
+    // We expect there to be an upload description including a template link
     // and numbered column description.
-    $this->assertArrayHasKey('upload_description', $form['file'], 'We expect the upload description to be added by TripalImporte base class.');
+    $this->assertArrayHasKey('upload_description', $form['file'], 'We expect the upload description to be added by TripalImport base class.');
     $this->assertStringContainsString('<a href', $form['file']['upload_description']['#markup'], "We expected the upload description to have a link in it.");
     $this->assertStringContainsString('<ol id="tcp-header-notes">', $form['file']['upload_description']['#markup'], "We expected the upload description to have an ordered list in it.");
     // We also expect the file upload HTML5 element provided by Tripal
@@ -225,11 +226,7 @@ class GermplasmCollectionImporterFormTest extends ChadoTestKernelBase {
       ->execute();
     $this->assertIsNumeric($organism_id, 'We were not able to cretae an organism.');
 
-    $type_id = $this->chado_connection->select('1:cvterm', 'c')
-      ->fields('c', ['cvterm_id'])
-      ->condition('c.name', 'cultivar', '=')
-      ->execute()
-      ->fetchField();
+    $type_id = ChadoCVTermAutocompleteController::getCVtermId('cultivar (EFO:0005136)');
 
     $stock_id = $this->chado_connection->insert('1:stock')
       ->fields([
@@ -253,13 +250,11 @@ class GermplasmCollectionImporterFormTest extends ChadoTestKernelBase {
     // Setup the form_state.
     $form_state = new FormState();
     $form_state->addBuildInfo('args', [$plugin_id]);
-    $form_state->setValues([
-      'fld_text_population_entry' => 'my_stock_1 [cultivar] (1)',
-      'fld_select_relationship_verb' => 'cultivar (CO_010:0000029)',
-      'fld_radio_stock_position' => 'evi',
-      'relationship_toggle' => 1,
-      'file_upload' => $file->id(),
-    ]);
+    $form_state->setValue('fld_text_population_entry', 'my_stock_1 [cultivar] (1)');
+    $form_state->setValue('fld_select_relationship_verb', 'cultivar (EFO:0005136)');
+    $form_state->setValue('fld_radio_stock_position', 'evi');
+    $form_state->setValue('relationship_toggle', 1);
+    $form_state->setValue('file_upload', $file->id());
 
     // Now try validation!
     \Drupal::formBuilder()->submitForm(

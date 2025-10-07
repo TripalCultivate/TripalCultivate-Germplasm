@@ -10,6 +10,7 @@ use Drupal\tripal_chado\Database\ChadoConnection;
 use Drupal\tripal\Services\TripalLogger;
 use Drupal\Core\Form\FormState;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Drupal\tripal_chado\Controller\ChadoCVTermAutocompleteController;
 
 /**
  * Tests the formValidate() functionality of the Germplasm Collection Importer.
@@ -138,6 +139,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
    *   Each scenario is an array with the following:
    *   - The population entry that gets entred in the textfield of the form
    *   - The relationship verb that gets entred in the textfield of the form
+   *   - The toggle value to indicate whether the population must exists.
    *   - The filename of the test file used for this scenario (test files are
    *     located in: tests/src/Fixtures/GermplasmCollectionImporterFiles/)
    *   - An array indicating the expected validation results:
@@ -164,7 +166,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
     // $invalid_population_entry = '';
     // $invalid_relationship_verb = '';
     $valid_population_entry = 'my_stock_1 [cultivar] (1)';
-    $valid_relationship_verb = 'cultivar (CO_010:0000029)';
+    $valid_relationship_verb = 'cultivar (EFO:0005136)';
 
     // Set our number of expected validation messages to 0, since none of
     // validators should cause this number to change at this moment, since we
@@ -204,7 +206,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
         'valid_delimited_file' => [
           'title' => 'Lines are properly delimited',
           'status' => 'fail',
-          'details' => 'This importer requires a strict number of 3 columns for each line. The following lines do not contain the expected number of columns.',
+          'details' => 'This importer requires a strict number of 4 columns for each line. The following lines do not contain the expected number of columns.',
         ],
         'valid_headers' => ['status' => 'todo'],
         'empty_cell' => ['status' => 'todo'],
@@ -224,7 +226,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
         'valid_delimited_file' => [
           'title' => 'Lines are properly delimited',
           'status' => 'fail',
-          'details' => 'This importer requires a strict number of 3 columns for each line. The following lines do not contain the expected number of columns.',
+          'details' => 'This importer requires a minimum number of 3 columns for each line. The following lines do not contain the expected number of columns.',
         ],
         // Since the header row has the correct number of columns, validation
         // for valid_header is expected to pass.
@@ -273,7 +275,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
     $scenarios[] = [
       $valid_population_entry,
       $valid_relationship_verb,
-      1,
+      0,
       'collection_importer_empty_cell.tsv',
       [
         'valid_data_file' => ['status' => 'pass'],
@@ -289,7 +291,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
       $num_form_validation_messages,
     ];
 
-    // #6: Contains a germplasm name+ scientific name combination that
+    // #6: Contains a germplasm name+type+scientific name combination that
     // doesn't exists in the database
     $scenarios[] = [
       $valid_population_entry,
@@ -375,9 +377,6 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
     array $expected_validator_results,
     int $expected_num_form_validation_errors,
   ) {
-    $formBuilder = \Drupal::formBuilder();
-    $form_id = 'Drupal\tripal\Form\TripalImporterForm';
-    $plugin_id = 'trpcultivate-germplasm-population-importer';
 
     // Create our organism and configure it.
     $organism_id = $this->chado_connection->insert('1:organism')
@@ -397,11 +396,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
     $this->assertIsNumeric($organism_id_2,
       "We were not able to create an organism for testing.");
 
-    $type_id = $this->chado_connection->select('1:cvterm', 'c')
-      ->fields('c', ['cvterm_id'])
-      ->condition('c.name', 'cultivar', '=')
-      ->execute()
-      ->fetchField();
+    $type_id = ChadoCVTermAutocompleteController::getCVtermId('cultivar (EFO:0005136)');
 
     $stock_id = $this->chado_connection->insert('1:stock')
       ->fields([
@@ -423,6 +418,10 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
 
     // Setup the form_state .
     $form_state = new FormState();
+
+    $formBuilder = \Drupal::formBuilder();
+
+    $plugin_id = 'trpcultivate-germplasm-population-importer';
     $form_state->addBuildInfo('args', [$plugin_id]);
 
     // Submit the population entry.
@@ -438,6 +437,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
     $form_state->setValue('file_upload', $file->id());
 
     // Now try validation!
+    $form_id = 'Drupal\tripal\Form\TripalImporterForm';
     $formBuilder->submitForm($form_id, $form_state);
     // And retrieve the form that would be shown after the above submit.
     $form = $formBuilder->retrieveForm($form_id, $form_state);

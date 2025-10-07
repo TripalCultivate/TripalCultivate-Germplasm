@@ -144,11 +144,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       ])
       ->execute();
 
-    $type_id = $this->chado_connection->select('1:cvterm', 'c')
-      ->fields('c', ['cvterm_id'])
-      ->condition('c.name', 'cultivar', '=')
-      ->execute()
-      ->fetchField();
+    $type_id = ChadoCVTermAutocompleteController::getCVtermId('cultivar (EFO:0005136)');
 
     $stock_id = $this->chado_connection->insert('1:stock')
       ->fields([
@@ -198,7 +194,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
    */
   public static function provideDataForRunSimple() {
     $valid_population_entry = 'my_stock_1 [cultivar] (1)';
-    $valid_relationship_verb = 'cultivar (CO_010:0000029)';
+    $valid_relationship_verb = 'cultivar (EFO:0005136)';
 
     $scenarios = [];
 
@@ -214,9 +210,9 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
         'expected_stocks' =>
           [
             [
-              'stock_id' => 2,
+              'stock_id' => 1,
               'subject_id' => 1,
-              'object_id' => 2,
+              'object_id' => 1,
             ],
           ],
       ],
@@ -234,8 +230,8 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
         'expected_stocks' =>
           [
             [
-              'stock_id' => 2,
-              'subject_id' => 2,
+              'stock_id' => 1,
+              'subject_id' => 1,
               'object_id' => 1,
             ],
           ],
@@ -489,7 +485,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
    */
   public static function provideFilesForRunExceptions() {
     $valid_population_entry = 'my_stock_1 [cultivar] (1)';
-    $valid_relationship_verb = 'cultivar (CO_010:0000029)';
+    $valid_relationship_verb = 'cultivar (EFO:0005136)';
 
     $scenarios = [];
 
@@ -498,6 +494,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       'Type does not exist.',
       $valid_population_entry,
       $valid_relationship_verb,
+      0,
       'collection_importer_type_dne.tsv',
       [
         'expected_message' => 'Type: type_dne (CO_010:00010) is not valid. Please provide a valid Type.',
@@ -510,6 +507,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       'Organism does not exist.',
       $valid_population_entry,
       $valid_relationship_verb,
+      0,
       'collection_importer_organism_dne.tsv',
       [
         'expected_message' => 'Scientific Name: Lens databasica is not valid. Please provide a valid Scientific Name.',
@@ -522,6 +520,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       'Uniquename already exist.',
       $valid_population_entry,
       $valid_relationship_verb,
+      0,
       'collection_importer_uniquename_exists.tsv',
       [
         'expected_message' => 'Uniquename is already used by another germplasm.',
@@ -534,6 +533,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       'Duplicate Term in file with same uniquename.',
       $valid_population_entry,
       $valid_relationship_verb,
+      0,
       'collection_importer_duplicate_term.tsv',
       [
         'expected_message' => 'Duplicate in lines: #2 and #3',
@@ -546,6 +546,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       'Duplicate Term in file without a uniquename.',
       $valid_population_entry,
       $valid_relationship_verb,
+      0,
       'collection_importer_duplicate_term_no_uname.tsv',
       [
         'expected_message' => 'Duplicate in lines: #2 and #3',
@@ -558,6 +559,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       'Term already exists.',
       $valid_population_entry,
       $valid_relationship_verb,
+      0,
       'collection_importer_term_exists.tsv',
       [
         'expected_message' => 'Term already exists in the database.',
@@ -570,6 +572,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       'Germplasm does not exist.',
       $valid_population_entry,
       $valid_relationship_verb,
+      1,
       'collection_importer_germplasm_dne.tsv',
       [
         'expected_message' => 'Germplasm Name: my_stock_3 does not exists. Please provide a valid Germplasm Name.',
@@ -589,6 +592,8 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
    *   The population entry that is submitted with the form.
    * @param string $relationship_verb
    *   The relationship verb that is submitted with the form.
+   * @param int $toggle
+   *   The toggle value.
    * @param string $filename
    *   The name of the file being tested. (Test files are located in
    *   tests/src/Fixtures/GermplasmCollectionImporterFiles/)
@@ -602,6 +607,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
     string $scenario,
     string $population_entry,
     string $relationship_verb,
+    int $toggle,
     string $filename,
     array $case,
   ) {
@@ -618,7 +624,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       'fld_text_population_entry' => $population_entry,
       'fld_select_relationship_verb' => $relationship_verb,
       'fld_radio_stock_position' => 'evi',
-      'relationship_toggle' => 1,
+      'relationship_toggle' => $toggle,
     ];
 
     $file_details = ['fid' => $file->id()];
