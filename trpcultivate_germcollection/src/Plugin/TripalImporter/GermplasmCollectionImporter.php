@@ -361,10 +361,18 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
     }));
 
     // Configure the valid_delimited_file metadata.
-    $valid_delimited_file_metadata = [
-      'strict_flag' => FALSE,
-      'number_of_columns' => $required_column_count,
-    ];
+    if ($this->headers[3]['type'] == 'required') {
+      $valid_delimited_file_metadata = [
+        'strict_flag' => TRUE,
+        'number_of_columns' => $required_column_count,
+      ];
+    }
+    else {
+      $valid_delimited_file_metadata = [
+        'strict_flag' => FALSE,
+        'number_of_columns' => $required_column_count,
+      ];
+    }
 
     // Call the processListWithDescribedTable() method in ValidDelimitedFile
     // class to check if there are any failures for the valid delimited
@@ -403,14 +411,20 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
       if (!empty($failures['empty_cell'])) {
         $messages['empty_cell']['status'] = 'fail';
         // Configure the metadata.
-        $metadata = [
-          'column_headers' => [
-            0 => $header_names[0],
-            1 => $header_names[1],
-            2 => $header_names[2],
-            3 => $header_names[3],
-          ],
-        ];
+        if ($this->headers[3]['type'] == 'required') {
+          $metadata = [
+            'column_headers' => $header_names,
+          ];
+        }
+        else {
+          $metadata = [
+            'column_headers' => [
+              0 => $header_names[0],
+              1 => $header_names[1],
+              2 => $header_names[2],
+            ],
+          ];
+        }
         $messages['empty_cell']['details'] = EmptyCell::processListWithDescribedTable($failures['empty_cell'], $metadata);
       }
       elseif (!$raw_row_failed) {
@@ -482,10 +496,15 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
     $file_mime_type = $file->getMimeType();
 
     foreach ($this->headers as $key => $value) {
-      if ($value['name'] == 'Uniquename' && $form_values['relationship_toggle'] == 1) {
-        // If relationship only is selected, then the uniquename
-        // is required in the file.
-        $this->headers[$key]['type'] = 'required';
+      if ($value['name'] == 'Uniquename') {
+        if ($form_values['relationship_toggle'] == 1) {
+          // If relationship only is selected, then the uniquename
+          // is required in the file.
+          $this->headers[$key]['type'] = 'required';
+        }
+        else {
+          $this->headers[$key]['type'] = 'optional';
+        }
       }
     }
 
@@ -850,7 +869,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
               // If line has no uniquename by using the prefix system
               // configuration and next sequence id of stock.
               $uniquename = ($val_uniqname == '')
-                ? 'uniquename' . $population['entry'] . ($last_id + $i) : $val_uniqname;
+                ? 'UNIQUENAME' . $population['entry'] . ($last_id + $i) : $val_uniqname;
             }
             else {
               // If relationship only is selected, then the uniquename
