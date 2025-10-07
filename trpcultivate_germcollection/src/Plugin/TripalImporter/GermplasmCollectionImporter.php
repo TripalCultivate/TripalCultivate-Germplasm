@@ -272,11 +272,21 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
 
     // Configure the empty cell validator.
     $instance_empty_cell = $this->service_validatorPluginManager->createInstance('empty_cell');
-    $indices = [
-      $header_index['Name'],
-      $header_index['Type'],
-      $header_index['Scientific Name'],
-    ];
+    if ($form_values['relationship_toggle'] == 1) {
+      $indices = [
+        $header_index['Name'],
+        $header_index['Type'],
+        $header_index['Scientific Name'],
+        $header_index['Uniquename'],
+      ];
+    }
+    else {
+      $indices = [
+        $header_index['Name'],
+        $header_index['Type'],
+        $header_index['Scientific Name'],
+      ];
+    }
     $instance_empty_cell->setIndices($indices);
     $validators['data-row']['empty_cell'] = $instance_empty_cell;
 
@@ -398,6 +408,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
             0 => $header_names[0],
             1 => $header_names[1],
             2 => $header_names[2],
+            3 => $header_names[3],
           ],
         ];
         $messages['empty_cell']['details'] = EmptyCell::processListWithDescribedTable($failures['empty_cell'], $metadata);
@@ -469,6 +480,14 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
 
     // Get the mime type which is used to validate the file and split the rows.
     $file_mime_type = $file->getMimeType();
+
+    foreach ($this->headers as $key => $value) {
+      if ($value['name'] == 'Uniquename' && $form_values['relationship_toggle'] == 1) {
+        // If relationship only is selected, then the uniquename
+        // is required in the file.
+        $this->headers[$key]['type'] = 'required';
+      }
+    }
 
     // Configure the validators.
     $validators = $this->configureValidators($form_values, $file_mime_type);
@@ -826,13 +845,18 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
             $val_sciname = $data_row[2];
             $val_uniqname = $data_row[3] ?? NULL;
 
-            // Construct uniquename:
-            // If line has no uniquename by using the prefix system
-            // configuration and next sequence id of stock.
-            $uniquename = ($val_uniqname == '')
-              ? 'uniquename' . $population['entry'] . ($last_id + $i) : $val_uniqname;
-            // Always encode in uppercase form.
-            $uniquename = strtoupper($uniquename);
+            if ($population['relationship_only'] == 0) {
+              // Construct uniquename:
+              // If line has no uniquename by using the prefix system
+              // configuration and next sequence id of stock.
+              $uniquename = ($val_uniqname == '')
+                ? 'uniquename' . $population['entry'] . ($last_id + $i) : $val_uniqname;
+            }
+            else {
+              // If relationship only is selected, then the uniquename
+              // is required in the file.
+              $uniquename = $val_uniqname;
+            }
 
             // Organism:
             // If Scientific Name is present, lookup the organism ID.
@@ -851,7 +875,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
             // Use the database name and cvterm encoded in Type to determine
             // the stock type.
             if ($val_type) {
-              $type_id = $this->parseTerm($val_type);
+              $type_id = ChadoCVTermAutocompleteController::getCVtermId($val_type);
             }
             else {
               $type_id = NULL;
@@ -875,7 +899,6 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
             // DUPLICATE LINE:
             // Line name+type+organism+uniquename must be unique regardless of
             // the case format of the name ie. Germ1 GERM1 or GerM1.
-            // Note: uniquename is always uppercase.
             $line_text = strtolower($val_name . $val_type . $val_sciname);
             if (in_array($line_text . $val_uniqname, $temp_lines)) {
               // Inspect if this name has same type, ogranism and uniquename.
@@ -895,77 +918,95 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
             // If provided in the file, check if the uniquename
             // already exists in the database.
             // If it does, throw an exception.
-            if ($val_uniqname) {
+            if ($population['relationship_only'] == 0) {
+              if ($val_uniqname) {
+                $query = $this->chado_connection->select('1:stock', 's')
+                  ->fields('s', ['stock_id'])
+                  ->condition('s.uniquename', $val_uniqname, '=')
+                  ->execute();
+
+                $result = NULL;
+                if ($stock_id = $query->fetchField()) {
+                  $result = $stock_id;
+                }
+                if ($result) {
+                  // A uniquename is already used in database.
+                  throw new \Exception('Uniquename is already used by another germplasm.');
+                }
+                else {
+                  // Check if the uniquename is duplicated
+                  // in the file. If it is, throw an exception.
+                  if (in_array($val_uniqname, $temp_uname)) {
+                    // Duplicate uniquename in file.
+                    $duplicate_uname = array_search($val_uniqname, $temp_uname);
+                    throw new \Exception('Duplicate Uniquename in lines: #' . $duplicate_uname . ' and ' . ($i + 1));
+                  }
+                  else {
+                    // If uniquename is not duplicated, add it to the temp array
+                    // to check against for future lines in the file.
+                    $temp_uname[$i + 1] = $val_uniqname;
+                  }
+                }
+              }
+
+              // Stock Name+Type+Scientific Name combination must be unique.
+              // Check if the combination already exists in the database.
+              // If it does, throw an exception.
               $query = $this->chado_connection->select('1:stock', 's')
                 ->fields('s', ['stock_id'])
-                ->condition('s.uniquename', $val_uniqname, '=')
+                ->condition('s.name', $val_name, '=')
+                ->condition('s.type_id', $type_id, '=')
+                ->condition('s.organism_id', $organism_id, '=')
                 ->execute();
-
               $result = NULL;
               if ($stock_id = $query->fetchField()) {
                 $result = $stock_id;
               }
               if ($result) {
-                // A uniquename is already used in database.
-                throw new \Exception('Uniquename is already used by another germplasm.');
+                throw new \Exception('Term already exists in the database.');
               }
-              else {
-                // Check if the uniquename is duplicated
-                // in the file. If it is, throw an exception.
-                if (in_array($val_uniqname, $temp_uname)) {
-                  // Duplicate uniquename in file.
-                  $duplicate_uname = array_search($val_uniqname, $temp_uname);
-                  throw new \Exception('Duplicate Uniquename in lines: #' . $duplicate_uname . ' and ' . ($i + 1));
-                }
-                else {
-                  // If uniquename is not duplicated, add it to the temp array
-                  // to check against for future lines in the file.
-                  $temp_uname[$i + 1] = $val_uniqname;
-                }
+
+              // STOCK:
+              $stock = [
+                'name' => $val_name,
+                'uniquename' => $uniquename,
+                'organism_id' => $organism_id,
+                'type_id' => $type_id,
+              ];
+
+              // Save the id of the individual being added
+              // and use it in the relationship below.
+              $individual_query = $this->chado_connection->insert('1:stock')
+                ->fields($stock)
+                ->execute();
+
+              // Fetch the inserted stock_id (if needed)
+              $individual = NULL;
+              if ($individual_query) {
+                $individual = $individual_query;
               }
             }
+            else {
+              // Relationship only:
+              // Fetch the stock_id of the individual using
+              // the uniquename provided in the file.
+              $individual = NULL;
+              if ($uniquename) {
+                $query = $this->chado_connection->select('1:stock', 's')
+                  ->fields('s', ['stock_id'])
+                  ->condition('s.uniquename', $uniquename, '=')
+                  ->execute();
 
-            // Stock Name+Type+Scientific Name combination must be unique.
-            // Check if the combination already exists in the database.
-            // If it does, throw an exception.
-            $query = $this->chado_connection->select('1:stock', 's')
-              ->fields('s', ['stock_id'])
-              ->condition('s.name', $val_name, '=')
-              ->condition('s.type_id', $type_id, '=')
-              ->condition('s.organism_id', $organism_id, '=')
-              ->execute();
-            $result = NULL;
-            if ($stock_id = $query->fetchField()) {
-              $result = $stock_id;
-            }
-            if ($result) {
-              throw new \Exception('Term already exists in the database.');
-            }
-
-            // STOCK:
-            $stock = [
-              'name' => $val_name,
-              'uniquename' => $uniquename,
-              'organism_id' => $organism_id,
-              'type_id' => $type_id,
-            ];
-
-            // Save the id of the individual being added
-            // and use it in the relationship below.
-            $individual_query = $this->chado_connection->insert('1:stock')
-              ->fields($stock)
-              ->execute();
-
-            // Fetch the inserted stock_id (if needed)
-            $individual = NULL;
-            if ($individual_query) {
-              $individual = $individual_query;
+                if ($stock_id = $query->fetchField()) {
+                  $individual = $stock_id;
+                }
+              }
             }
 
             // Create Relationship:
             $relation = [];
             // Verb.
-            $relation['type_id'] = $this->parseTerm($population['verb']);
+            $relation['type_id'] = ChadoCVTermAutocompleteController::getCVtermId($population['verb']);
 
             // Position.
             if ($population['position'] == 'evi') {
@@ -992,41 +1033,6 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
         fclose($handle);
       }
     }
-  }
-
-  /**
-   * Parse form values for cvterm name (Type).
-   *
-   * Fetch the matching row in chado.cvterm..
-   *
-   * @param string $value
-   *   String, containing the the type.
-   *
-   * @return int
-   *   Cvterm id number that matched the resolved cvterm id
-   *   from the input string.
-   */
-  public function parseTerm($value) {
-    $result = '';
-
-    // Capture the database name and cvterm name.
-    preg_match('/^(.*)\s\(([A-Za-z0-9_]+:\d+)\)$/', $value, $match);
-    if ($match !== FALSE && ($match[1] && $match[2])) {
-      $values = [
-        'name' => $match[1],
-      ];
-
-      // Fetch cvterm that match the dbname and cvterm name
-      // in the input string form value. The dbname will
-      // ensure that a specific term will be returned.
-      $result = $this->chado_connection->select('1:cvterm', 'c')
-        ->fields('c', ['cvterm_id'])
-        ->condition('c.name', $values['name'], '=')
-        ->execute()
-        ->fetchField();
-    }
-
-    return $result;
   }
 
   /**
