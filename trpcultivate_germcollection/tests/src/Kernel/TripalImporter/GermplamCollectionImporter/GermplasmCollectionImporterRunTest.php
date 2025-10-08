@@ -204,7 +204,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       $valid_population_entry,
       $valid_relationship_verb,
       'evi',
-      1,
+      TRUE,
       'collection_importer_example.tsv',
       [
         'expected_stocks' =>
@@ -224,7 +224,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       $valid_population_entry,
       $valid_relationship_verb,
       'ive',
-      1,
+      TRUE,
       'collection_importer_example.tsv',
       [
         'expected_stocks' =>
@@ -243,7 +243,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       $valid_population_entry,
       $valid_relationship_verb,
       'ive',
-      0,
+      FALSE,
       'collection_importer_insert_example.tsv',
       [
         'expected_stocks' =>
@@ -277,7 +277,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       $valid_population_entry,
       $valid_relationship_verb,
       'ive',
-      0,
+      FALSE,
       'collection_importer_insert_example.tsv',
       [
         'expected_stocks' =>
@@ -320,7 +320,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
    *   The relationship verb that is submitted with the form.
    * @param string $stock_position
    *   The stock position that goes as the value of radio button.
-   * @param int $toggle_value
+   * @param bool $toggle_value
    *   The toggle value.
    * @param string $filename
    *   The name of the file being tested. (Test files are located in
@@ -336,7 +336,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
     string $population_entry,
     string $relationship_verb,
     string $stock_position,
-    int $toggle_value,
+    bool $toggle_value,
     string $filename,
     array $case,
   ) {
@@ -477,6 +477,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
    *   Each scenario is an array with the following:
    *   - The population entry that gets entred in the textfield of the form
    *   - The relationship verb that gets entred in the textfield of the form
+   *   - The toggle value.
    *   - The filename of the test file used for this scenario (test files are
    *     located in: tests/src/Fixtures/GermplasmCollectionImporterFiles/)
    *   - An array indicating the expected validation results:
@@ -494,7 +495,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       'Type does not exist.',
       $valid_population_entry,
       $valid_relationship_verb,
-      0,
+      FALSE,
       'collection_importer_type_dne.tsv',
       [
         'expected_message' => 'Type: type_dne (CO_010:00010) is not valid. Please provide a valid Type.',
@@ -507,7 +508,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       'Organism does not exist.',
       $valid_population_entry,
       $valid_relationship_verb,
-      0,
+      FALSE,
       'collection_importer_organism_dne.tsv',
       [
         'expected_message' => 'Scientific Name: Lens databasica is not valid. Please provide a valid Scientific Name.',
@@ -520,7 +521,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       'Uniquename already exist.',
       $valid_population_entry,
       $valid_relationship_verb,
-      0,
+      FALSE,
       'collection_importer_uniquename_exists.tsv',
       [
         'expected_message' => 'Uniquename is already used by another germplasm.',
@@ -533,7 +534,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       'Duplicate Term in file with same uniquename.',
       $valid_population_entry,
       $valid_relationship_verb,
-      0,
+      FALSE,
       'collection_importer_duplicate_term.tsv',
       [
         'expected_message' => 'Duplicate in lines: #2 and #3',
@@ -546,7 +547,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       'Duplicate Term in file without a uniquename.',
       $valid_population_entry,
       $valid_relationship_verb,
-      0,
+      FALSE,
       'collection_importer_duplicate_term_no_uname.tsv',
       [
         'expected_message' => 'Duplicate in lines: #2 and #3',
@@ -559,7 +560,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       'Term already exists.',
       $valid_population_entry,
       $valid_relationship_verb,
-      0,
+      FALSE,
       'collection_importer_term_exists.tsv',
       [
         'expected_message' => 'Term already exists in the database.',
@@ -572,7 +573,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       'Germplasm does not exist.',
       $valid_population_entry,
       $valid_relationship_verb,
-      1,
+      TRUE,
       'collection_importer_germplasm_dne.tsv',
       [
         'expected_message' => 'Germplasm Name: my_stock_3 does not exists. Please provide a valid Germplasm Name.',
@@ -592,7 +593,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
    *   The population entry that is submitted with the form.
    * @param string $relationship_verb
    *   The relationship verb that is submitted with the form.
-   * @param int $toggle
+   * @param bool $toggle
    *   The toggle value.
    * @param string $filename
    *   The name of the file being tested. (Test files are located in
@@ -607,7 +608,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
     string $scenario,
     string $population_entry,
     string $relationship_verb,
-    int $toggle,
+    bool $toggle,
     string $filename,
     array $case,
   ) {

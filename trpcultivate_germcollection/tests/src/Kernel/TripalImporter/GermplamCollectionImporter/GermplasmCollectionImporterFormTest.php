@@ -253,7 +253,7 @@ class GermplasmCollectionImporterFormTest extends ChadoTestKernelBase {
     $form_state->setValue('fld_text_population_entry', 'my_stock_1 [cultivar] (1)');
     $form_state->setValue('fld_select_relationship_verb', 'cultivar (EFO:0005136)');
     $form_state->setValue('fld_radio_stock_position', 'evi');
-    $form_state->setValue('relationship_toggle', 1);
+    $form_state->setValue('relationship_toggle', TRUE);
     $form_state->setValue('file_upload', $file->id());
 
     // Now try validation!

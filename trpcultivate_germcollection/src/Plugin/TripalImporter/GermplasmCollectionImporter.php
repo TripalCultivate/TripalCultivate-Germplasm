@@ -272,7 +272,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
 
     // Configure the empty cell validator.
     $instance_empty_cell = $this->service_validatorPluginManager->createInstance('empty_cell');
-    if ($form_values['relationship_toggle'] == 1) {
+    if ($form_values['relationship_toggle']) {
       $indices = [
         $header_index['Name'],
         $header_index['Type'],
@@ -292,7 +292,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
 
     // Configure the Germplasm Name Exists validator only if the
     // create relationship only toggle is on.
-    if ($form_values['relationship_toggle'] == 1) {
+    if ($form_values['relationship_toggle']) {
       $instance_name_exists = $this->service_validatorPluginManager->createInstance('germplasm_name_exists');
 
       $indices = [
@@ -497,7 +497,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
 
     foreach ($this->headers as $key => $value) {
       if ($value['name'] == 'Uniquename') {
-        if ($form_values['relationship_toggle'] == 1) {
+        if ($form_values['relationship_toggle']) {
           // If relationship only is selected, then the uniquename
           // is required in the file.
           $this->headers[$key]['type'] = 'required';
@@ -651,7 +651,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
     $submit_form = TRUE;
 
     foreach ($validation_feedback as $feedback_item) {
-      if (($feedback_item['status'] == 'todo' && $form_values['relationship_toggle'] != 0) || $feedback_item['status'] == 'fail') {
+      if (($feedback_item['status'] == 'todo' && $form_values['relationship_toggle']) || $feedback_item['status'] == 'fail') {
         $submit_form = FALSE;
         break;
       }
@@ -864,7 +864,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
             $val_sciname = $data_row[2];
             $val_uniqname = $data_row[3] ?? NULL;
 
-            if ($population['relationship_only'] == 0) {
+            if (!$population['relationship_only']) {
               // Construct uniquename:
               // If line has no uniquename by using the prefix system
               // configuration and next sequence id of stock.
@@ -911,7 +911,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
             // If it does not exist, throw an exception.
             $stock_id = $this->parseStock($val_name, $type_id, $organism_id);
 
-            if ($stock_id == NULL && $population['relationship_only'] == 1) {
+            if ($stock_id == NULL && $population['relationship_only']) {
               throw new \Exception('Germplasm Name: ' . $val_name . ' does not exists. Please provide a valid Germplasm Name.');
             }
 
@@ -937,7 +937,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
             // If provided in the file, check if the uniquename
             // already exists in the database.
             // If it does, throw an exception.
-            if ($population['relationship_only'] == 0) {
+            if (!$population['relationship_only']) {
               if ($val_uniqname) {
                 $query = $this->chado_connection->select('1:stock', 's')
                   ->fields('s', ['stock_id'])
