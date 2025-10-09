@@ -397,9 +397,9 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
         );
         // Check if the type is inserted correctly.
         $this->assertEquals(
-          ChadoCVTermAutocompleteController::getCVtermId($expected_stock['type']),
+          $stock_type = ChadoCVTermAutocompleteController::getCVtermId($expected_stock['type']),
           $stock_query[$index]->type_id,
-          'We expected the inserted stock to have a type id of ' . ChadoCVTermAutocompleteController::getCVtermId($expected_stock['type']) . ', but it was ' . $stock_query[$index]->type_id . '.',
+          'We expected the inserted stock to have a type id of ' . $stock_type . ', but it was ' . $stock_query[$index]->type_id . '.',
         );
         // Check if the organism is inserted correctly.
         $this->assertEquals(
