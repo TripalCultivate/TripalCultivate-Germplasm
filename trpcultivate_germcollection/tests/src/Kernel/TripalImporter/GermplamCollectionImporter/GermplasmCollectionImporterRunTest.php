@@ -403,9 +403,9 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
         );
         // Check if the organism is inserted correctly.
         $this->assertEquals(
-          chado_get_organism_id_from_scientific_name($expected_stock['organism'])[0],
+          $stock_organism = chado_get_organism_id_from_scientific_name($expected_stock['organism'])[0],
           $stock_query[$index]->organism_id,
-          'We expected the inserted stock to have an organism id of ' . chado_get_organism_id_from_scientific_name($expected_stock['organism'])[0] . ', but it was ' . $stock_query[$index]->organism_id . '.',
+          'We expected the inserted stock to have an organism id of ' . $stock_organism . ', but it was ' . $stock_query[$index]->organism_id . '.',
         );
         // Check if the uniquename is inserted correctly.
         if ($expected_stock['has_uniquename']) {
