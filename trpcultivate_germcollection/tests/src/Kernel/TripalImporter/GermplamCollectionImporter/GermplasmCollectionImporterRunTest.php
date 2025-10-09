@@ -383,9 +383,9 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
     foreach ($case['expected_stocks'] as $index => $expected_stock) {
       // Check if the stock is inserted into the database correctly.
       $this->assertEquals(
-      $expected_stock['stock_id'],
-      $stock_query[$index]->stock_id,
-      'We expected the stock id of the inserted stock to be ' . $expected_stock['stock_id'] . ', but it was ' . $stock_query[$index]->stock_id . '.',
+        $expected_stock['stock_id'],
+        $stock_query[$index]->stock_id,
+        'We expected the stock id of the inserted stock to be ' . $expected_stock['stock_id'] . ', but it was ' . $stock_query[$index]->stock_id . '.',
       );
 
       if ($toggle_value == 0) {
