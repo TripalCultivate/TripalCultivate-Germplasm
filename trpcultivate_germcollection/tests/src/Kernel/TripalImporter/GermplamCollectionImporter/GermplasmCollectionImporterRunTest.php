@@ -436,20 +436,21 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
 
       // Check if the stock relationship is inserted into database correctly.
       $this->assertEquals(
-      $expected_stock['subject_id'],
-      $relationship_query[$index]->subject_id,
-      'We expected the inserted stock relationship to have a subject id of ' . $expected_stock['subject_id'] . ', but it was ' . $relationship_query[$index]->subject_id . '.',
+        $expected_stock['subject_id'],
+        $relationship_query[$index]->subject_id,
+        'We expected the inserted stock relationship to have a subject id of ' . $expected_stock['subject_id'] . ', but it was ' . $relationship_query[$index]->subject_id . '.',
       );
+      
       $this->assertEquals(
-      $expected_stock['object_id'],
-      $relationship_query[$index]->object_id,
-      'We expected the inserted stock relationship to have a object id of' . $expected_stock['object_id'] . ', but it was ' . $relationship_query[$index]->object_id . '.',
+        $expected_stock['object_id'],
+        $relationship_query[$index]->object_id,
+        'We expected the inserted stock relationship to have a object id of' . $expected_stock['object_id'] . ', but it was ' . $relationship_query[$index]->object_id . '.',
       );
 
       $this->assertEquals(
-      $relationship_verb_type_id,
-      $relationship_query[$index]->type_id,
-      'We expected the inserted stock relationship to have a type id that is the same as the cvterm id of the relationship verb, but it was not.',
+        $relationship_verb_type_id,
+        $relationship_query[$index]->type_id,
+        'We expected the inserted stock relationship to have a type id that is the same as the cvterm id of the relationship verb, but it was not.',
       );
 
       if ($stock_position == 'evi') {
