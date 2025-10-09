@@ -702,7 +702,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
     $form['fieldset_population_entry'] = [
       '#type' => 'fieldset',
       '#title' => $this->t('Population Entry'),
-      '#weight' => -2000,
+      '#weight' => -99,
       '#required' => TRUE,
     ];
 
@@ -734,7 +734,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
     $form['fieldset_relationship_type'] = [
       '#type' => 'fieldset',
       '#title' => $this->t('Relationship Verb'),
-      '#weight' => -1000,
+      '#weight' => -98,
       '#required' => TRUE,
     ];
 
@@ -769,7 +769,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
       '#type' => 'checkbox',
       '#title' => $this->t('Population individuals must already exist'),
       '#default_value' => 0,
-      '#weight' => -100,
+      '#weight' => -97,
     ];
 
     return $form;
