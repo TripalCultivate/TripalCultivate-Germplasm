@@ -440,7 +440,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
         $relationship_query[$index]->subject_id,
         'We expected the inserted stock relationship to have a subject id of ' . $expected_stock['subject_id'] . ', but it was ' . $relationship_query[$index]->subject_id . '.',
       );
-      
+
       $this->assertEquals(
         $expected_stock['object_id'],
         $relationship_query[$index]->object_id,
@@ -576,7 +576,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       TRUE,
       'collection_importer_germplasm_dne.tsv',
       [
-        'expected_message' => 'Germplasm Name: my_stock_3 does not exists. Please provide a valid Germplasm Name.',
+        'expected_message' => 'Germplasm with name: my_stock_3 + type: cultivar (CO_010:0000029) + scientific name: Lens culinaris does not exist. Please provide a valid Germplasm.',
 
       ],
     ];
