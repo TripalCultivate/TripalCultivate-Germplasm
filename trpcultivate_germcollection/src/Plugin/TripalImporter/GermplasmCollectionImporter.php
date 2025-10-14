@@ -146,7 +146,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
     ],
     [
       'name' => 'Type',
-      'description' => 'The type of the germplasm individual, as a controlled vocabulary term.',
+      'description' => 'The type of the germplasm individual. This includes its cvterm name, followed by the db name and dbx accession in brackets. The db name and dbx accession are separated by a single colon. (e.g. accession (CO_010:0000044))',
       'type' => 'required',
     ],
     [
@@ -763,6 +763,12 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
         'evi' => $this->t('Population Stock as SUBJECT and Population Individuals as OBJECT of the relationship.'),
         'ive' => $this->t('Population Individuals as SUBJECT and Population Stock as OBJECT of the relationship.'),
       ],
+    ];
+
+    // IMAGE: Population load illustration.
+    $path = base_path() . \Drupal::service('extension.list.module')->getPath('trpcultivate_germcollection');
+    $form['fieldset_relationship_type']['image_illustration'] = [
+      '#markup' => '<div style="margin-top: 20px"><img src="' . $path . '/theme/images/population-load-combination.gif" style="max-width: 70%" /></div>',
     ];
 
     $form['relationship_toggle'] = [
