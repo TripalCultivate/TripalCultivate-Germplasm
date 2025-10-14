@@ -918,7 +918,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
             $stock_id = $this->parseStock($val_name, $type_id, $organism_id);
 
             if ($stock_id == NULL && $population['relationship_only']) {
-              throw new \Exception('Germplasm Name: ' . $val_name . ' does not exists. Please provide a valid Germplasm Name.');
+              throw new \Exception('Germplasm with name: ' . $val_name . ' + type: ' . $val_type . ' + scientific name: ' . $val_sciname . ' does not exist. Please provide a valid Germplasm.');
             }
 
             // DUPLICATE LINE:
