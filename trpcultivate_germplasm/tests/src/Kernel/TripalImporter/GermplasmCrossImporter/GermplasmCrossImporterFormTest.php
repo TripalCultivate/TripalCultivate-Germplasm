@@ -255,7 +255,7 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
   }
 
   /**
-   * Tests building the importer form when the module is not configured.
+   * Tests building the importer form when there are no organisms.
    */
   public function testCrossImporterFormNoOrganism() {
 
@@ -322,6 +322,8 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
 
   /**
    * Tests submitting the importer form when organism select box is empty.
+   *
+   * NOTE: Currently being skipped until we handle validation for organism.
    */
   public function testCrossImporterFormSubmitNoOrganism() {
     // Skip this test until we handle validation for organism.

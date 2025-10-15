@@ -185,11 +185,11 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
    *     - Each key is the unique name of a feedback line provided to the UI
    *       through processValidationMessages(). Currently, there is a feedback
    *       line for each unique validator instance that was instantiated by the
-   *       configureValidators() method in the Traits Importer class.
+   *       configureValidators() method in the Importer class.
    *       - 'status': [REQUIRED] One of 'pass', 'todo', or 'fail'
    *       - 'title': [REQUIRED if 'status' = 'fail'] A string that matches the
-   *         title set in processValidationMessages() method in the Traits
-   *         Importer class for this validator instance.
+   *         title set in processValidationMessages() method in the Importer
+   *         class for this validator instance.
    *       - 'details': [REQUIRED if 'status' = 'fail'] A string that is ideally
    *         unique to the scenario that is expected to be in the render array.
    *   - an integer indicating the number of form validation messages we expect
@@ -364,7 +364,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
   }
 
   /**
-   * Tests the validation aspect of the trait importer form.
+   * Tests the validation aspect of the importer form.
    *
    * @param int $submitted_org_id
    *   The ID of the organism that is submitted with the form.

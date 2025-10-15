@@ -223,7 +223,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
   private $expected_columns;
 
   /**
-   * Constructs the traits importer.
+   * Constructs the cross importer.
    *
    * @param array $configuration
    *   A configuration array containing information about the plugin instance.
