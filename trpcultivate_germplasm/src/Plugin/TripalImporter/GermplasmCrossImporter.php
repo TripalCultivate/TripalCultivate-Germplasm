@@ -430,7 +430,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     // If there is only one organism, it should be the default.
     $default_organism = 0;
     if ($all_organisms && count($all_organisms) == 1) {
-      $default_organism = reset($all_organisms);
+      $default_organism = array_keys($all_organisms)[0];
     }
 
     // Field organism.

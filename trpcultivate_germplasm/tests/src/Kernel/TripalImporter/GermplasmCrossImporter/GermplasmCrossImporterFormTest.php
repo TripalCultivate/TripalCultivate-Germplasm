@@ -202,6 +202,9 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
       "We expect there to be an organism form element but there is not.");
     $this->assertEquals('select', $form['organism']['#type'],
       "We expect the organism element in the form to be a select list.");
+    // Since one organism was created, we expect it to be selected by default.
+    $this->assertEquals($organism_id, $form['organism']['#default_value'],
+      "We expect the organism element in the form to default to the organism ID of the one organism we created.");
   }
 
   /**
@@ -318,6 +321,9 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
       "We expect there to be an organism form element but there is not.");
     $this->assertEquals('select', $form['organism']['#type'],
       "We expect the organism element in the form to be a select list.");
+    // Since no organism was created, we expected there to be no default.
+    $this->assertEquals(0, $form['organism']['#default_value'],
+      "We expect the organism element in the form to default to organism ID of 0 since no organisms are available to select.");
   }
 
   /**
