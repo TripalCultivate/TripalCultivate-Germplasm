@@ -100,7 +100,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     ],
     [
       'name' => 'Season',
-      'description' => 'The season this cross was made in (e.g. Spring, Fall, Winter, Summer).',
+      'description' => 'The season this cross was made in (one of: Spring, Fall, Winter, Summer).',
       'type' => 'required',
     ],
     [
@@ -221,6 +221,18 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    * @var array
    */
   private $expected_columns;
+
+  /**
+   * Valid values for the 'Seasons' column.
+   *
+   * @var array
+   */
+  private array $valid_seasons = [
+    'Winter',
+    'Spring',
+    'Summer',
+    'Fall',
+  ];
 
   /**
    * Constructs the cross importer.
@@ -375,12 +387,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     // - The column 'Season' is one of: Winter, Spring, Summer, Fall
     $instance = $this->service_validatorPluginManager->createInstance('value_in_list');
     $instance->setIndices([$header_index['Season']]);
-    $instance->setValidValues([
-      'Winter',
-      'Spring',
-      'Summer',
-      'Fall',
-    ]);
+    $instance->setValidValues($this->valid_seasons);
     $validators['data-row']['valid_season'] = $instance;
 
     // - Maternal Parent and Paternal Parent cells exist in the database.
@@ -850,7 +857,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
         $messages[$validator_name]['status'] = 'fail';
 
         $metadata = [
-          'expected_values' => ['Winter', 'Spring', 'Summer', 'Fall'],
+          'expected_values' => $this->valid_seasons,
           'column_headers' => $header_names,
         ];
         $messages[$validator_name]['details'] = ValueInList::processListWithDescribedTable($failures[$validator_name], $metadata);
