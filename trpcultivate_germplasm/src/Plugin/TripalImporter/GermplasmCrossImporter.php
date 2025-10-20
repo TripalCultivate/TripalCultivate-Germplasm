@@ -876,7 +876,9 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
         $messages[$validator_name]['status'] = 'fail';
         $metadata = [
           'column_headers' => [
+            // Maternal Parent.
             4 => $header_names[4],
+            // Paternal Parent.
             5 => $header_names[5],
           ],
         ];
