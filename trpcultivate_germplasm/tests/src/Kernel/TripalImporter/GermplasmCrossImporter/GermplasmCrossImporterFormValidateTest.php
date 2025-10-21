@@ -27,7 +27,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
    *
    * @var string
    */
-  protected $defaultTheme = 'stark';
+  protected string $defaultTheme = 'stark';
 
   /**
    * Modules to enable.
@@ -88,7 +88,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
    *
    * @var string
    */
-  private $module_path;
+  private string $module_path;
 
   /**
    * {@inheritdoc}

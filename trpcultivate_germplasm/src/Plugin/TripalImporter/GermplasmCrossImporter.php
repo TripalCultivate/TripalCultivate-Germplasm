@@ -92,7 +92,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    *
    * NOTE: Order MUST reflect the desired order of headers in the input file.
    */
-  private $headers = [
+  private array $headers = [
     [
       'name' => 'Year',
       'description' => 'The year this cross was made in (e.g. 2020).',
@@ -206,21 +206,21 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    *
    * @var \Drupal\Core\Messenger\MessengerInterface
    */
-  protected $service_Messenger;
+  protected MessengerInterface $service_Messenger;
 
   /**
    * Used to reference the validation result summary in the form.
    *
    * @var string
    */
-  private $validation_result = 'validation_result';
+  private string $validation_result = 'validation_result';
 
   /**
    * Expected column settings.
    *
    * @var array
    */
-  private $expected_columns;
+  private array $expected_columns;
 
   /**
    * Valid values for the 'Seasons' column.
@@ -721,7 +721,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    *       render array depends on the validator, but the most common types are
    *       item list and table.
    */
-  public function processValidationMessages($failures) {
+  public function processValidationMessages(array $failures) {
     // Array to hold all the user feedback. Currently this includes an entry for
     // each validator. However, in future designs we may combine more then one
     // validator into a single line in the validate UI and, thus, a single entry

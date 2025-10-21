@@ -81,7 +81,7 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
    *
    * @var string
    */
-  private $module_path;
+  private string $module_path;
 
   /**
    * {@inheritdoc}
