@@ -249,22 +249,11 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
           [
             [
               'stock_id' => 2,
-              'name' => 'my_stock_5',
-              'type' => 'generated germplasm (CO_010:0000255)',
-              'organism' => 'Lens ervoides',
-              'has_uniquename' => FALSE,
-              'uniquename' => 'UNIQUENAME12',
-              'subject_id' => 2,
-              'object_id' => 1,
-            ],
-            [
-              'stock_id' => 3,
               'name' => 'my_stock_6',
               'type' => 'accession (CO_010:0000044)',
               'organism' => 'Lens culinaris',
-              'has_uniquename' => TRUE,
               'uniquename' => 'UNIQUENAME6',
-              'subject_id' => 3,
+              'subject_id' => 2,
               'object_id' => 1,
             ],
           ],
@@ -390,31 +379,15 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
           $stock_query[$index]->organism_id,
           'We expected the inserted stock to have an organism id of ' . $stock_organism . ', but it was ' . $stock_query[$index]->organism_id . '.',
         );
-        // Check if the uniquename is inserted correctly.
-        if ($expected_stock['has_uniquename']) {
-          $this->assertNotEmpty(
-            $stock_query[$index]->uniquename,
-            'We expected the inserted stock to have a uniquename, but it does not.',
-          );
-          $this->assertEquals(
-            $expected_stock['uniquename'],
-            $stock_query[$index]->uniquename,
-            'We expected the inserted stock to have a uniquename of ' . $expected_stock['uniquename'] . ', but it was ' . $stock_query[$index]->uniquename . '.',
-          );
-        }
-        else {
-          // If the user did not provide a uniquename, check if a uniquename
-          // is generated correctly.
-          $this->assertNotEmpty(
-            $stock_query[$index]->uniquename,
-            'We expected the inserted stock to have a uniquename, but it does not.',
-          );
-          $this->assertEquals(
-            $expected_stock['uniquename'],
-            $stock_query[$index]->uniquename,
-            'We expected the inserted stock to have a uniquename of ' . $expected_stock['uniquename'] . ', but it was ' . $stock_query[$index]->uniquename . '.',
-          );
-        }
+        $this->assertNotEmpty(
+          $stock_query[$index]->uniquename,
+          'We expected the inserted stock to have a uniquename, but it does not.',
+        );
+        $this->assertEquals(
+          $expected_stock['uniquename'],
+          $stock_query[$index]->uniquename,
+          'We expected the inserted stock to have a uniquename of ' . $expected_stock['uniquename'] . ', but it was ' . $stock_query[$index]->uniquename . '.',
+        );
       }
 
       // Check if the stock relationship is inserted into database correctly.
@@ -525,20 +498,7 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
       ],
     ];
 
-    // #4: Duplicate Term in file without a uniquename.
-    $scenarios[] = [
-      'Duplicate Term in file without a uniquename.',
-      $valid_population_entry,
-      $valid_relationship_verb,
-      FALSE,
-      'relationship_importer_duplicate_term_no_uname.tsv',
-      [
-        'expected_message' => 'Duplicate in lines: #2 and #3',
-
-      ],
-    ];
-
-    // #5: Term already exists.
+    // #4: Term already exists.
     $scenarios[] = [
       'Term already exists.',
       $valid_population_entry,
@@ -551,7 +511,7 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
       ],
     ];
 
-    // #6: Germplasm does not exist.
+    // #5: Germplasm does not exist.
     $scenarios[] = [
       'Germplasm does not exist.',
       $valid_population_entry,

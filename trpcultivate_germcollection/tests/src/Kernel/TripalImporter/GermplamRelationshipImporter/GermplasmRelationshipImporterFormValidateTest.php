@@ -199,7 +199,7 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
     $scenarios[] = [
       $valid_population_entry,
       $valid_relationship_verb,
-      TRUE,
+      FALSE,
       'relationship_importer_header_incorrectly_delimited.tsv',
       [
         'valid_data_file' => ['status' => 'pass'],
@@ -210,7 +210,6 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
         ],
         'valid_headers' => ['status' => 'todo'],
         'empty_cell' => ['status' => 'todo'],
-        'germplasm_name_exists' => ['status' => 'todo'],
       ],
       $num_form_validation_messages,
     ];
@@ -219,7 +218,7 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
     $scenarios[] = [
       $valid_population_entry,
       $valid_relationship_verb,
-      FALSE,
+      TRUE,
       'relationship_importer_incorrectly_delimited.tsv',
       [
         'valid_data_file' => ['status' => 'pass'],

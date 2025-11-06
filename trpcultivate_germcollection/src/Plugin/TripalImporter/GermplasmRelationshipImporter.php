@@ -277,7 +277,6 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
         $header_index['Name'],
         $header_index['Type'],
         $header_index['Scientific Name'],
-        $header_index['Uniquename'],
       ];
     }
     else {
@@ -285,6 +284,7 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
         $header_index['Name'],
         $header_index['Type'],
         $header_index['Scientific Name'],
+        $header_index['Uniquename'],
       ];
     }
     $instance_empty_cell->setIndices($indices);
@@ -500,10 +500,10 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
         if ($form_values['relationship_toggle']) {
           // If relationship only is selected, then the uniquename
           // is required in the file.
-          $this->headers[$key]['type'] = 'required';
+          $this->headers[$key]['type'] = 'optional';
         }
         else {
-          $this->headers[$key]['type'] = 'optional';
+          $this->headers[$key]['type'] = 'required';
         }
       }
     }
@@ -841,18 +841,6 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
       if ($handle) {
         $i = 0;
 
-        // Fetch the last stock_id auto-increment inserted, increment
-        // the value each time a stock is added. This value is concatenated
-        // to the prefix (when provided) that will make up the uniquename of
-        // the stock.
-        // Skip this when file has provided a custom uniquename.
-        $id = $this->chado_connection->select('1:stock', 's')
-          ->fields('s', ['stock_id'])
-          ->orderBy('stock_id', 'DESC')
-          ->execute()
-          ->fetchField();
-        $last_id = $id[0] ?? 0;
-
         while ($cur_line = fgets($handle)) {
           // Add all individuals in file into stock table
           // and simultaneously creating the Relationship verb.
@@ -871,15 +859,12 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
             $val_uniqname = $data_row[3] ?? NULL;
 
             if (!$population['relationship_only']) {
-              // Construct uniquename:
-              // If line has no uniquename by using the prefix system
-              // configuration and next sequence id of stock.
-              $uniquename = ($val_uniqname == '')
-                ? 'UNIQUENAME' . $population['entry'] . ($last_id + $i) : $val_uniqname;
+              if (!$val_uniqname) {
+                throw new \Exception('Uniquename is required in line #' . ($i + 1) . ' when Population individuals must already exist option is selected.');
+              }
+              $uniquename = $val_uniqname;
             }
             else {
-              // If relationship only is selected, then the uniquename
-              // is required in the file.
               $uniquename = $val_uniqname;
             }
 
@@ -940,8 +925,7 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
             }
 
             // Uniquename:
-            // If provided in the file, check if the uniquename
-            // already exists in the database.
+            // Check if the uniquename already exists in the database.
             // If it does, throw an exception.
             if (!$population['relationship_only']) {
               if ($val_uniqname) {
@@ -1016,15 +1000,15 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
               // Fetch the stock_id of the individual using
               // the uniquename provided in the file.
               $individual = NULL;
-              if ($uniquename) {
-                $query = $this->chado_connection->select('1:stock', 's')
-                  ->fields('s', ['stock_id'])
-                  ->condition('s.uniquename', $uniquename, '=')
-                  ->execute();
+              $query = $this->chado_connection->select('1:stock', 's')
+                ->fields('s', ['stock_id'])
+                ->condition('s.name', $val_name, '=')
+                ->condition('s.type_id', $type_id, '=')
+                ->condition('s.organism_id', $organism_id, '=')
+                ->execute();
 
-                if ($stock_id = $query->fetchField()) {
-                  $individual = $stock_id;
-                }
+              if ($stock_id = $query->fetchField()) {
+                $individual = $stock_id;
               }
             }
 
