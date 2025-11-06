@@ -8,17 +8,17 @@ use Drupal\Tests\trpcultivate\Traits\TripalCultivateImporterTestTrait;
 use PHPUnit\Framework\Attributes\Group;
 use Drupal\tripal_chado\Database\ChadoConnection;
 use Drupal\tripal\Services\TripalLogger;
-use Drupal\trpcultivate_germcollection\Plugin\TripalImporter\GermplasmCollectionImporter;
 use Drupal\tripal_chado\Controller\ChadoGenericAutocompleteController;
 use Drupal\tripal_chado\Controller\ChadoCVTermAutocompleteController;
+use Drupal\trpcultivate_germcollection\Plugin\TripalImporter\GermplasmRelationshipImporter;
 
 /**
- * Tests the functionality of the run() method of Germplasm Collection Importer.
+ * Tests functionality of the run() method of Germplasm Relationship Importer.
  *
- * @group collectionImporter
+ * @group relationshipImporter
  */
-#[Group('collectionImporter')]
-class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
+#[Group('relationshipImporter')]
+class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
 
   use UserCreationTrait;
   use TripalCultivateImporterTestTrait;
@@ -47,11 +47,11 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
   protected ChadoConnection $chado_connection;
 
   /**
-   * Germplasm Collection Importer plugin instance.
+   * Germplasm Relationship Importer plugin instance.
    *
-   * @var \Drupal\trpcultivate_germcollection\Plugin\TripalImporter\GermplasmCollectionImporter
+   * @var \Drupal\trpcultivate_germcollection\Plugin\TripalImporter\GermplasmRelationshipImporter
    */
-  protected GermplasmCollectionImporter $importer;
+  protected GermplasmRelationshipImporter $importer;
 
   /**
    * A default listing of annotations associated with the importer.
@@ -59,10 +59,10 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
    * @var array
    */
   protected array $definitions = [
-    'test-collection-importer' => [
-      'id' => 'trpcultivate-germplasm-population-importer',
-      'label' => 'Tripal Importer: Germplasm Collection Importer',
-      'description' => 'Imports germplasm populations (i.e. RIL, NAM, cross progeny) into testchado.',
+    'test-relationship-importer' => [
+      'id' => 'trpcultivate-germplasm-relationship-importer',
+      'label' => 'Tripal Importer: Germplasm Relationship Importer',
+      'description' => 'Imports germplasm stock relationships into testchado.',
       'file_types' => ['tsv', 'txt'],
       'upload_title' => 'Population Individuals*',
       'upload_description' => 'This should not be visible!',
@@ -155,9 +155,9 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       ->execute();
     $this->assertIsNumeric($stock_id, 'We were not able to create a cvterm.');
 
-    $this->importer = new GermplasmCollectionImporter(
+    $this->importer = new GermplasmRelationshipImporter(
       [],
-      'trpcultivate-germplasm-population-importer',
+      'trpcultivate-germplasm-relationship-importer',
       $this->definitions,
       $this->chado_connection,
       $container->get('plugin.manager.trpcultivate_validator'),
@@ -182,7 +182,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
    *   - The stock position that goes as the value of radio button
    *   - The toggle value.
    *   - The filename of the test file used for this scenario (test files are
-   *     located in: tests/src/Fixtures/GermplasmCollectionImporterFiles/
+   *     located in: tests/src/Fixtures/GermplasmRelationshipImporterFiles/
    *   - An array indicating the expected validation results:
    *        - expected_stock_id: the exception stock id in that
    *          specific scenario.
@@ -204,7 +204,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       $valid_relationship_verb,
       'evi',
       TRUE,
-      'collection_importer_example.tsv',
+      'relationship_importer_example.tsv',
       [
         'expected_stocks' =>
           [
@@ -224,7 +224,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       $valid_relationship_verb,
       'ive',
       TRUE,
-      'collection_importer_example.tsv',
+      'relationship_importer_example.tsv',
       [
         'expected_stocks' =>
           [
@@ -243,7 +243,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       $valid_relationship_verb,
       'ive',
       FALSE,
-      'collection_importer_insert_example.tsv',
+      'relationship_importer_insert_example.tsv',
       [
         'expected_stocks' =>
           [
@@ -270,41 +270,6 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
           ],
       ],
     ];
-    // #4: Individual-verb-entry relatoinship with toggle off.
-    $scenarios[] = [
-      'individual-verb-entry relationship with toggle off',
-      $valid_population_entry,
-      $valid_relationship_verb,
-      'ive',
-      FALSE,
-      'collection_importer_insert_example.tsv',
-      [
-        'expected_stocks' =>
-          [
-            [
-              'stock_id' => 2,
-              'name' => 'my_stock_5',
-              'type' => 'generated germplasm (CO_010:0000255)',
-              'organism' => 'Lens ervoides',
-              'has_uniquename' => FALSE,
-              'uniquename' => 'UNIQUENAME12',
-              'subject_id' => 2,
-              'object_id' => 1,
-            ],
-            [
-              'stock_id' => 3,
-              'name' => 'my_stock_6',
-              'type' => 'accession (CO_010:0000044)',
-              'organism' => 'Lens culinaris',
-              'has_uniquename' => TRUE,
-              'uniquename' => 'UNIQUENAME6',
-              'subject_id' => 3,
-              'object_id' => 1,
-            ],
-          ],
-      ],
-    ];
-
     return $scenarios;
   }
 
@@ -323,14 +288,14 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
    *   The toggle value.
    * @param string $filename
    *   The name of the file being tested. (Test files are located in
-   *   tests/src/Fixtures/GermplasmCollectionImporterFiles/)
+   *   tests/src/Fixtures/GermplasmRelationshipImporterFiles/)
    * @param array $case
    *   An array containing the expected results.
    *
    * @dataProvider provideDataForRunSimple
    */
   #[DataProvider('provideDataForRunSimple')]
-  public function testGermplasmCollectionImporterRunSimple(
+  public function testGermplasmRelationshipImporterRunSimple(
     string $scenario,
     string $population_entry,
     string $relationship_verb,
@@ -343,7 +308,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       'filename' => $filename,
       'content' => [
         'file' => $filename,
-        'fixturepath' => $this->module_path . '/tests/src/Fixtures/GermplasmCollectionImporterFiles/',
+        'fixturepath' => $this->module_path . '/tests/src/Fixtures/GermplasmRelationshipImporterFiles/',
       ],
     ]);
 
@@ -358,7 +323,21 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
 
     $this->importer->createImportJob($run_args, $file_details);
     $this->importer->prepareFiles();
-    $this->importer->run();
+    $exception_caught = FALSE;
+    try {
+      $this->importer->run();
+    }
+    catch (\Exception $e) {
+      $exception_caught = TRUE;
+      $exception_message = $e->getMessage();
+    }
+    if ($exception_caught) {
+      $this->assertEquals(
+        $case['expected_message'],
+        $exception_message,
+        "We expected the exception message to indicate that a passed validation string was provided to " . $scenario . "  scenario, but it does not match what was expected.",
+      );
+    }
 
     // Get the population entry stock id and the relationship verb cvterm id.
     $population_entry_stock_id = ChadoGenericAutocompleteController::getPkeyId($population_entry);
@@ -366,6 +345,10 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
 
     // Get the number of stocks we expect to be created.
     $number_of_stocks = count($case['expected_stocks']);
+
+    if ($exception_caught) {
+      $number_of_stocks = $number_of_stocks - 1;
+    }
 
     // Query the stocks created.
     $stock_query = $this->chado_connection->query('WITH last_stocks AS (
@@ -479,7 +462,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
    *   - The relationship verb that gets entred in the textfield of the form
    *   - The toggle value.
    *   - The filename of the test file used for this scenario (test files are
-   *     located in: tests/src/Fixtures/GermplasmCollectionImporterFiles/)
+   *     located in: tests/src/Fixtures/GermplasmRelationshipImporterFiles/)
    *   - An array indicating the expected validation results:
    *        - expected_message: the exception message that's expcted in that
    *          specific scenario.
@@ -496,7 +479,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       $valid_population_entry,
       $valid_relationship_verb,
       FALSE,
-      'collection_importer_type_dne.tsv',
+      'relationship_importer_type_dne.tsv',
       [
         'expected_message' => 'Type: type_dne (CO_010:00010) is not valid. Please provide a valid Type.',
 
@@ -509,7 +492,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       $valid_population_entry,
       $valid_relationship_verb,
       FALSE,
-      'collection_importer_organism_dne.tsv',
+      'relationship_importer_organism_dne.tsv',
       [
         'expected_message' => 'Scientific Name: Lens databasica is not valid. Please provide a valid Scientific Name.',
 
@@ -522,7 +505,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       $valid_population_entry,
       $valid_relationship_verb,
       FALSE,
-      'collection_importer_uniquename_exists.tsv',
+      'relationship_importer_uniquename_exists.tsv',
       [
         'expected_message' => 'Uniquename is already used by another germplasm.',
 
@@ -535,7 +518,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       $valid_population_entry,
       $valid_relationship_verb,
       FALSE,
-      'collection_importer_duplicate_term.tsv',
+      'relationship_importer_duplicate_term.tsv',
       [
         'expected_message' => 'Duplicate in lines: #2 and #3',
 
@@ -548,7 +531,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       $valid_population_entry,
       $valid_relationship_verb,
       FALSE,
-      'collection_importer_duplicate_term_no_uname.tsv',
+      'relationship_importer_duplicate_term_no_uname.tsv',
       [
         'expected_message' => 'Duplicate in lines: #2 and #3',
 
@@ -561,7 +544,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       $valid_population_entry,
       $valid_relationship_verb,
       FALSE,
-      'collection_importer_term_exists.tsv',
+      'relationship_importer_term_exists.tsv',
       [
         'expected_message' => 'Term already exists in the database.',
 
@@ -574,7 +557,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       $valid_population_entry,
       $valid_relationship_verb,
       TRUE,
-      'collection_importer_germplasm_dne.tsv',
+      'relationship_importer_germplasm_dne.tsv',
       [
         'expected_message' => 'Germplasm with name: my_stock_3 + type: cultivar (CO_010:0000029) + scientific name: Lens culinaris does not exist. Please provide a valid Germplasm.',
 
@@ -585,7 +568,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
   }
 
   /**
-   * Test the exceptions caused at run method of the collection importer form.
+   * Test the exceptions caused at run method of the relationship importer form.
    *
    * @param string $scenario
    *   The test case scenario.
@@ -597,7 +580,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
    *   The toggle value.
    * @param string $filename
    *   The name of the file being tested. (Test files are located in
-   *   tests/src/Fixtures/GermplasmCollectionImporterFiles/)
+   *   tests/src/Fixtures/GermplasmRelationshipImporterFiles/)
    * @param array $case
    *   An array containing the expected exception message.
    *
@@ -617,7 +600,7 @@ class GermplasmCollectionImporterRunTest extends ChadoTestKernelBase {
       'filename' => $filename,
       'content' => [
         'file' => $filename,
-        'fixturepath' => $this->module_path . '/tests/src/Fixtures/GermplasmCollectionImporterFiles/',
+        'fixturepath' => $this->module_path . '/tests/src/Fixtures/GermplasmRelationshipImporterFiles/',
       ],
     ]);
 

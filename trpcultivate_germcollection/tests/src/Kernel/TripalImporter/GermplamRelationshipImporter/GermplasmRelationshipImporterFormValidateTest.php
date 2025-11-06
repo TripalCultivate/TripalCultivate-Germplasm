@@ -13,12 +13,12 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Drupal\tripal_chado\Controller\ChadoCVTermAutocompleteController;
 
 /**
- * Tests the formValidate() functionality of the Germplasm Collection Importer.
+ * Tests formValidate() functionality of the Germplasm Relationship Importer.
  *
- * @group collectionImporter
+ * @group relationshipImporter
  */
-#[Group('collectionImporter')]
-class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
+#[Group('relationshipImporter')]
+class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase {
 
   use UserCreationTrait;
   use TripalCultivateImporterTestTrait;
@@ -47,11 +47,11 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
   protected ChadoConnection $chado_connection;
 
   /**
-   * Germplasm Collection Importer plugin instance.
+   * Germplasm Relationship Importer plugin instance.
    *
-   * @var \Drupal\trpcultivate_germcollection\Plugin\TripalImporter\GermplasmCollectionImporter
+   * @var \Drupal\trpcultivate_germcollection\Plugin\TripalImporter\GermplasmRelationshipImporter
    */
-  protected GermplasmCollectionImporter $importer;
+  protected GermplasmRelationshipImporter $importer;
 
   /**
    * A default listing of annotations associated with the importer.
@@ -59,10 +59,10 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
    * @var array
    */
   protected array $definitions = [
-    'test-collection-importer' => [
-      'id' => 'trpcultivate-germplasm-population-importer',
-      'label' => 'Tripal Importer: Germplasm Collection Importer',
-      'description' => 'Imports germplasm populations (i.e. RIL, NAM, cross progeny) into testchado.',
+    'test-relationship-importer' => [
+      'id' => 'trpcultivate-germplasm-relationship-importer',
+      'label' => 'Tripal Importer: Germplasm Relationship Importer',
+      'description' => 'Imports germplasm stock relationships into testchado.',
       'file_types' => ['tsv', 'txt'],
       'upload_title' => 'Population Individuals*',
       'upload_description' => 'This should not be visible!',
@@ -141,16 +141,16 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
    *   - The relationship verb that gets entred in the textfield of the form
    *   - The toggle value to indicate whether the population must exists.
    *   - The filename of the test file used for this scenario (test files are
-   *     located in: tests/src/Fixtures/GermplasmCollectionImporterFiles/)
+   *     located in: tests/src/Fixtures/GermplasmRelationshipImporterFiles/)
    *   - An array indicating the expected validation results:
    *     - Each key is the unique name of a feedback line provided to the UI
    *       through processValidationMessages(). Currently, there is a feedback
    *       line for each unique validator instance that was instantiated by the
-   *       configureValidators() method in the Germplasm Collection Importer.
+   *       configureValidators() method in the Germplasm Relationship Importer.
    *       - 'status': [REQUIRED] One of 'pass', 'todo', or 'fail'
    *       - 'title': [REQUIRED if 'status' = 'fail'] A string that matches the
    *         title set in processValidationMessages() method in the Germplasm
-   *         Collection Importer class for this validator instance.
+   *         Relationship Importer class for this validator instance.
    *       - 'details': [REQUIRED if 'status' = 'fail'] A string that is ideally
    *         unique to the scenario that is expected to be in the render array.
    *   - an integer indicating the number of form validation messages we expect
@@ -200,7 +200,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
       $valid_population_entry,
       $valid_relationship_verb,
       TRUE,
-      'collection_importer_header_incorrectly_delimited.tsv',
+      'relationship_importer_header_incorrectly_delimited.tsv',
       [
         'valid_data_file' => ['status' => 'pass'],
         'valid_delimited_file' => [
@@ -220,7 +220,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
       $valid_population_entry,
       $valid_relationship_verb,
       FALSE,
-      'collection_importer_incorrectly_delimited.tsv',
+      'relationship_importer_incorrectly_delimited.tsv',
       [
         'valid_data_file' => ['status' => 'pass'],
         'valid_delimited_file' => [
@@ -242,7 +242,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
       $valid_population_entry,
       $valid_relationship_verb,
       TRUE,
-      'collection_importer_correct_header_no_data.tsv',
+      'relationship_importer_correct_header_no_data.tsv',
       [
         'valid_data_file' => ['status' => 'pass'],
         'valid_delimited_file' => ['status' => 'pass'],
@@ -257,7 +257,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
       $valid_population_entry,
       $valid_relationship_verb,
       FALSE,
-      'collection_importer_invalid_header.tsv',
+      'relationship_importer_invalid_header.tsv',
       [
         'valid_data_file' => ['status' => 'pass'],
         'valid_delimited_file' => ['status' => 'pass'],
@@ -276,7 +276,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
       $valid_population_entry,
       $valid_relationship_verb,
       FALSE,
-      'collection_importer_empty_cell.tsv',
+      'relationship_importer_empty_cell.tsv',
       [
         'valid_data_file' => ['status' => 'pass'],
         'valid_delimited_file' => ['status' => 'pass'],
@@ -296,7 +296,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
       $valid_population_entry,
       $valid_relationship_verb,
       TRUE,
-      'collection_importer_unmatched_organism.tsv',
+      'relationship_importer_unmatched_organism.tsv',
       [
         'valid_data_file' => ['status' => 'pass'],
         'valid_delimited_file' => ['status' => 'pass'],
@@ -317,7 +317,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
       $valid_population_entry,
       $valid_relationship_verb,
       TRUE,
-      'collection_importer_germplasm_dne.tsv',
+      'relationship_importer_germplasm_dne.tsv',
       [
         'valid_data_file' => ['status' => 'pass'],
         'valid_delimited_file' => ['status' => 'pass'],
@@ -337,7 +337,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
   }
 
   /**
-   * Tests the validation aspect of the collection importer form.
+   * Tests the validation aspect of the Relationship importer form.
    *
    * @param string $population_entry
    *   The population entry that is submitted with the form.
@@ -348,16 +348,16 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
    *   exist in the database or not.
    * @param string $filename
    *   The name of the file being tested. (Test files are located in
-   *   tests/src/Fixtures/GermplasmCollectionImporterFiles/)
+   *   tests/src/Fixtures/GermplasmRelationshipImporterFiles/)
    * @param array $expected_validator_results
    *   An array that is keyed by the unique name of each validator instance
    *   (these names are declared in the configureValidators() method in the
-   *   Germplasm Collection Importer class).
+   *   Germplasm Relationship Importer class).
    *   Each validator instance in the array is further keyed by the following.
    *   - 'status': [REQUIRED] One of 'pass', 'todo', or 'fail'.
    *   - 'title': [REQUIRED if 'status' = 'fail'] A string that matches the
    *     title set in processValidationMessages() method in the Germplasm
-   *     Collection Importer class for this validator instance.
+   *     Relationship Importer class for this validator instance.
    *   - 'details': [REQUIRED if 'status' = 'fail'] A string that is ideally
    *     unique to the scenario that is expected to be in the render array.
    * @param int $expected_num_form_validation_errors
@@ -368,7 +368,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
    * @dataProvider provideFilesForValidation
    */
   #[DataProvider('provideFilesForValidation')]
-  public function testGermplasmCollectionImporterFormValidation(
+  public function testGermplasmRelationshipImporterFormValidation(
     string $population_entry,
     string $relationship_verb,
     bool $toggle_value,
@@ -411,7 +411,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
       'filename' => $filename,
       'content' => [
         'file' => $filename,
-        'fixturepath' => $this->module_path . '/tests/src/Fixtures/GermplasmCollectionImporterFiles/',
+        'fixturepath' => $this->module_path . '/tests/src/Fixtures/GermplasmRelationshipImporterFiles/',
       ],
     ]);
 
@@ -420,7 +420,7 @@ class GermplasmCollectionImporterFormValidateTest extends ChadoTestKernelBase {
 
     $formBuilder = \Drupal::formBuilder();
 
-    $plugin_id = 'trpcultivate-germplasm-population-importer';
+    $plugin_id = 'trpcultivate-germplasm-relationship-importer';
     $form_state->addBuildInfo('args', [$plugin_id]);
 
     // Submit the population entry.

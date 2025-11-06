@@ -24,12 +24,12 @@ use Drupal\trpcultivate\TripalImporter\Attribute\TripalImporter;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * This is a Germplasm Collection Importer.
+ * This is a Germplasm Relationship Importer.
  *
  * @TripalImporter(
- *   id = "trpcultivate-germplasm-population-importer",
- *   label = @Translation("Tripal Importer: Germplasm Collection Importer"),
- *   description = @Translation("Imports germplasm populations (i.e. RIL, NAM, cross progeny) into testchado."),
+ *   id = "trpcultivate-germplasm-relationship-importer",
+ *   label = @Translation("Tripal Importer: Germplasm Relationship Importer"),
+ *   description = @Translation("Imports germplasm stock relationships into testchado."),
  *   file_types = {"tsv", "txt"},
  *   upload_description = @Translation("Please provide a data file."),
  *   upload_title = @Translation("<strong>Population Individuals*</strong>"),
@@ -50,9 +50,9 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * )
  */
 #[TripalImporter(
-  id: 'trpcultivate-germplasm-population-importer',
-  label: new TranslatableMarkup('Tripal Importer: Germplasm Collection Importer'),
-  description: new TranslatableMarkup('Imports germplasm populations (i.e. RIL, NAM, cross progeny) into testchado.'),
+  id: 'trpcultivate-germplasm-relationship-importer',
+  label: new TranslatableMarkup('Tripal Importer: Germplasm Relationship Importer'),
+  description: new TranslatableMarkup('Imports germplasm stock relationships into testchado.'),
   file_types: ['tsv', 'txt'],
   upload_description: new TranslatableMarkup('Please provide a data file.'),
   upload_title: new TranslatableMarkup('<strong>Population Individuals*</strong>'),
@@ -71,7 +71,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
   callback_module: '',
   callback_path: '',
 )]
-class GermplasmCollectionImporter extends ChadoImporterBase implements ContainerFactoryPluginInterface {
+class GermplasmRelationshipImporter extends ChadoImporterBase implements ContainerFactoryPluginInterface {
 
   use StringTranslationTrait;
 
@@ -169,7 +169,7 @@ class GermplasmCollectionImporter extends ChadoImporterBase implements Container
   protected $organism_ids = [];
 
   /**
-   * Constructs the Germpalsm Collection importer.
+   * Constructs the Germpalsm Relationship importer.
    *
    * @param array $configuration
    *   A configuration array containing information about the plugin instance.

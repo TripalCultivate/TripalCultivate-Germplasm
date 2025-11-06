@@ -12,12 +12,12 @@ use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tripal_chado\Controller\ChadoCVTermAutocompleteController;
 
 /**
- * Tests form + form-related functionality of the Germplasm Collection Importer.
+ * Tests form + form-related functionality of Germplasm Relationship Importer.
  *
- * @group collectionImporter
+ * @group relationshipImporter
  */
-#[Group('collectionImporter')]
-class GermplasmCollectionImporterFormTest extends ChadoTestKernelBase {
+#[Group('relationshipImporter')]
+class GermplasmRelationshipImporterFormTest extends ChadoTestKernelBase {
 
   use UserCreationTrait;
   use TripalCultivateImporterTestTrait;
@@ -46,11 +46,11 @@ class GermplasmCollectionImporterFormTest extends ChadoTestKernelBase {
   protected ChadoConnection $chado_connection;
 
   /**
-   * Germplasm Collection Importer plugin instance.
+   * Germplasm Relationship Importer plugin instance.
    *
-   * @var \Drupal\trpcultivate_germcollection\Plugin\TripalImporter\GermplasmCollectionImporter
+   * @var \Drupal\trpcultivate_germcollection\Plugin\TripalImporter\GermplasmRelationshipImporter
    */
-  protected $germplasm_collection_importer;
+  protected $germplasm_Relationship_importer;
 
   /**
    * A default listing of annotations associated with the importer.
@@ -58,10 +58,10 @@ class GermplasmCollectionImporterFormTest extends ChadoTestKernelBase {
    * @var array
    */
   protected array $definitions = [
-    'test-collection-importer' => [
-      'id' => 'trpcultivate-germplasm-population-importer',
-      'label' => 'Tripal Importer: Germplasm Collection Importer',
-      'description' => 'Imports germplasm populations (i.e. RIL, NAM, cross progeny) into testchado.',
+    'test-relationship-importer' => [
+      'id' => 'trpcultivate-germplasm-relationship-importer',
+      'label' => 'Tripal Importer: Germplasm Relationship Importer',
+      'description' => 'Imports germplasm stock relationships into testchado.',
       'file_types' => ['tsv', 'txt'],
       'upload_title' => 'Population Individuals*',
       'upload_description' => 'This should not be visible!',
@@ -134,9 +134,9 @@ class GermplasmCollectionImporterFormTest extends ChadoTestKernelBase {
   /**
    * Tests building the importer form.
    */
-  public function testCollectionImporterFormValid() {
-    $plugin_id = 'trpcultivate-germplasm-population-importer';
-    $importer_label = 'Tripal Importer: Germplasm Collection Importer';
+  public function testRelationshipImporterFormValid() {
+    $plugin_id = 'trpcultivate-germplasm-relationship-importer';
+    $importer_label = 'Tripal Importer: Germplasm Relationship Importer';
 
     // Configure the module.
     $organism_id = $this->chado_connection->insert('1:organism')
@@ -214,8 +214,8 @@ class GermplasmCollectionImporterFormTest extends ChadoTestKernelBase {
   /**
    * Tests submitting the importer form with valid input.
    */
-  public function testCollectionImporterFormSubmitValid() {
-    $plugin_id = 'trpcultivate-germplasm-population-importer';
+  public function testRelationshipImporterFormSubmitValid() {
+    $plugin_id = 'trpcultivate-germplasm-relationship-importer';
 
     // Configure the module.
     $organism_id = $this->chado_connection->insert('1:organism')
@@ -240,10 +240,10 @@ class GermplasmCollectionImporterFormTest extends ChadoTestKernelBase {
 
     // Create a file to upload.
     $file = $this->createTestFile([
-      'filename' => 'collection_importer_example.tsv',
+      'filename' => 'relationship_importer_example.tsv',
       'content' => [
-        'file' => 'collection_importer_example.tsv',
-        'fixturepath' => $this->module_path . '/tests/src/Fixtures/GermplasmCollectionImporterFiles/',
+        'file' => 'relationship_importer_example.tsv',
+        'fixturepath' => $this->module_path . '/tests/src/Fixtures/GermplasmRelationshipImporterFiles/',
       ],
     ]);
 
