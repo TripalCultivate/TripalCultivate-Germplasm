@@ -33,7 +33,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * @TripalImporter(
  *   id = "trpcultivate-germplasm-cross-importer",
  *   label = @Translation("Tripal Cultivate: Germplasm Cross Importer"),
- *   description = @Translation("Loads germplasm crosses into the system. This is useful for large datasets to ease the upload process."),
+ *   description = @Translation("Creates germplasm cross pages associated with parental material through upload of a germplasm cross data file."),
  *   file_types = {"tsv"},
  *   upload_description = @Translation("Please provide a data file."),
  *   upload_title = @Translation("Germplasm Cross Data File*"),
@@ -56,7 +56,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 #[TripalImporter(
    id: 'trpcultivate-germplasm-cross-importer',
    label: new TranslatableMarkup('Tripal Cultivate: Germplasm Cross Importer'),
-   description: new TranslatableMarkup('Loads germplasm crosses into the system. This is useful for large datasets to ease the upload process.'),
+   description: new TranslatableMarkup('Creates germplasm cross pages associated with parental material through upload of a germplasm cross data file.'),
    file_types: ['tsv'],
    upload_description: new TranslatableMarkup('Please provide a data file.'),
    upload_title: new TranslatableMarkup('Germplasm Cross Data File*'),
