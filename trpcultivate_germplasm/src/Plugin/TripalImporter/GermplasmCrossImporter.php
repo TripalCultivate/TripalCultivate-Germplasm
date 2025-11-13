@@ -92,7 +92,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    *
    * NOTE: Order MUST reflect the desired order of headers in the input file.
    */
-  private array $headers = [
+  protected array $headers = [
     [
       'name' => 'Year',
       'description' => 'The year this cross was made in (e.g. 2020).',
@@ -213,21 +213,21 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    *
    * @var string
    */
-  private string $validation_result = 'validation_result';
+  protected string $validation_result = 'validation_result';
 
   /**
    * Expected column settings.
    *
    * @var array
    */
-  private array $expected_columns;
+  protected array $expected_columns;
 
   /**
    * Valid values for the 'Seasons' column.
    *
    * @var array
    */
-  private array $valid_seasons = [
+  protected array $valid_seasons = [
     'Winter',
     'Spring',
     'Summer',
