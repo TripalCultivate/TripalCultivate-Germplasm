@@ -363,14 +363,15 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     // Use our $headers property to configure what we expect for a header in the
     // input file.
     $instance->setHeaders($this->headers);
-    // Configure the expected number of columns and set it to be strict.
+    // Configure the minimum expected number of columns. Any additional columns
+    // will be ignored.
     $num_columns = count($this->headers);
-    $instance->setExpectedColumns($num_columns, TRUE);
+    $instance->setExpectedColumns($num_columns, FALSE);
     $validators['header-row']['valid_header'] = $instance;
 
     // -----------------------------------------------------
     // Data Row Level
-    // - All data row cells in columns 0-5 are not empty
+    // - All data row cells in columns 0-6 are not empty
     $instance = $this->service_validatorPluginManager->createInstance('empty_cell');
     $indices = [
       $header_index['Year'],
