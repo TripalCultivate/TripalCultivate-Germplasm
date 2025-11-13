@@ -10,6 +10,7 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\tripal\TripalImporter\Attribute\TripalImporter;
 use Drupal\tripal_chado\ChadoBuddy\PluginManagers\ChadoBuddyPluginManager;
+use Drupal\tripal_chado\Controller\ChadoOrganismFormElementController;
 use Drupal\tripal_chado\Database\ChadoConnection;
 use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoCvtermBuddy;
 use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoPropertyBuddy;
@@ -433,7 +434,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
 
     // Field Organism:
     // Prepare select options with only active organisms.
-    $all_organisms = chado_get_organism_select_options();
+    $all_organisms = ChadoOrganismFormElementController::getSelectOptions([]);
 
     // If there is only one organism, it should be the default.
     $default_organism = 0;
