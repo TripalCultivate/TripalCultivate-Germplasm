@@ -402,8 +402,9 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       $header_index['Paternal Parent'],
     ];
     $instance->setIndices($indices);
-    $organism_id = $form_values['organism'];
-    $instance->setOrganismID($organism_id);
+    $cross_organism_id = $form_values['organism'];
+    $cross_genus = $this->getGenusFromOrgId($cross_organism_id);
+    $instance->setGenus($cross_genus);
     $validators['data-row']['germplasm_name_exists'] = $instance;
     return $validators;
   }
@@ -969,6 +970,31 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     ];
 
     return $this->service_Renderer->renderPlain($build);
+  }
+
+  /**
+   * Given an organism ID, returns the genus as a string.
+   *
+   * @param int $organism_id
+   *   The organism_id of the desired organism in chado.organism.
+   *
+   * @return string
+   *   The genus of the organism.
+   *
+   * @throws \Exception
+   *   - if organism_id is not in chado.
+   */
+  public function getGenusFromOrgId(int $organism_id) {
+    // Lookup the organism ID and make sure its valid.
+    $organism_obj = chado_get_organism(['organism_id' => $organism_id]);
+    if ($organism_obj == NULL) {
+      $error_message = "The organism ID $organism_id is not valid.";
+      $this->logger->error($error_message);
+      throw new \Exception($error_message);
+    }
+
+    // Return just the genus.
+    return $organism_obj->genus;
   }
 
 }

@@ -16,9 +16,9 @@ use PHPUnit\Framework\Attributes\Group;
  *
  * @group crossImporter
  */
-#[Group('tripal-importer')]  
-#[Group('chado-importer')]  
-#[Group('importer-germplasmcross')]  
+#[Group('tripal-importer')]
+#[Group('chado-importer')]
+#[Group('importer-germplasmcross')]
 class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
 
   use UserCreationTrait;
