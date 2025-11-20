@@ -135,8 +135,11 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
    *
    * @return array
    *   Each scenario is an array with the following:
-   *   - An array of organism_ids that should appear in the organism form field
-   *     dropdown.
+   *   - A nested array of organisms to insert into the database, which should
+   *     then appear in the organism form field dropdown. Each organism array
+   *     has the following keys:
+   *     - 'genus': A string of the genus to insert.
+   *     - 'species': A string of the species to insert.
    *   - The organism_id of the organism that is expected to be shown to the
    *     user by default.
    *   - The string message to be passed into assertEquals when evaluating the
@@ -154,9 +157,36 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
 
     // #1: 1 valid organism
     $scenarios[] = [
-      [1],
+      [
+        [
+          'genus' => 'Tripalus',
+          'species' => 'databasica',
+        ],
+      ],
       1,
       'We expect the organism element in the form to default to the organism ID of the one organism we created.',
+    ];
+
+    // #2: 3 valid organisms
+    $scenarios[] = [
+      [
+        [
+          'genus' => 'Tripalus',
+          'species' => 'databasica',
+        ],
+        [
+          'genus' => 'Tripalus',
+          'species' => 'chadoii',
+        ],
+        [
+          'genus' => 'Lorem',
+          'species' => 'ipsum',
+        ],
+      ],
+      // Since there is more than one organism, the default value is expected to
+      // be the -Select- text, therefore no organism ID.
+      0,
+      'We expect the organism element in the form to default to organism ID of 0 since more than one organism is available to select.',
     ];
 
     return $scenarios;
@@ -165,9 +195,12 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
   /**
    * Tests building the importer form with a variable number of organisms.
    *
-   * @param array $organism_ids
-   *   An array of organism_ids that should appear in the organism form field
-   *   dropdown.
+   * @param array $organisms
+   *   A nested array of organisms to insert into the database, which should
+   *   then appear in the organism form field dropdown. Each organism array
+   *   has the following keys:
+   *   - 'genus': A string of the genus to insert.
+   *   - 'species': A string of the species to insert.
    * @param int $default_org_id
    *   The organism_id of the organism that is expected to be shown to the user
    *   by default.
@@ -178,10 +211,23 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
    * @dataProvider provideOrganismsForForm
    */
   #[DataProvider('provideOrganismsForForm')]
-  public function testCrossImporterForm(array $organism_ids, int $default_org_id, string $assert_organism_field_message) {
+  public function testCrossImporterForm(array $organisms, int $default_org_id, string $assert_organism_field_message) {
 
     $plugin_id = 'trpcultivate-germplasm-cross-importer';
     $importer_label = 'Tripal Cultivate: Germplasm Cross Importer';
+
+    // Insert any organisms if available.
+    $organism_ids = [];
+    if ($organisms) {
+      foreach ($organisms as $organism) {
+        $organism_id = $this->chado_connection->insert('1:organism')
+          ->fields($organism)
+          ->execute();
+        $this->assertIsNumeric($organism_id,
+        'We were not able to create the organism "' . $organism['genus'] . $organism['species'] . '" for testing.');
+        $organism_ids[] = $organism_id;
+      }
+    }
 
     // Build the form using the Drupal form builder.
     $form = \Drupal::formBuilder()->getForm(
@@ -241,7 +287,7 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
     $this->assertEquals('select', $form['organism']['#type'],
       "We expect the organism element in the form to be a select list.");
     // Since one organism was created, we expect it to be selected by default.
-    $this->assertEquals($default_organism_id, $form['organism']['#default_value'],
+    $this->assertEquals($default_org_id, $form['organism']['#default_value'],
       $assert_organism_field_message);
   }
 
