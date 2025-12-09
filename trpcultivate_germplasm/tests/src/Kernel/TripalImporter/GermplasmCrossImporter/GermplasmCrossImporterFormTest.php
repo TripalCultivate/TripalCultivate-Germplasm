@@ -478,7 +478,7 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
     );
 
     // Assert a download link was provided.
-    // Construct the templage file filename.
+    // Construct the template file filename.
     // Only the first item in the 'file_types' importer annotation is used as
     // default file extension of the template file.
     $importer_annotations = $importer_plugin_manager->getDefinitions();
