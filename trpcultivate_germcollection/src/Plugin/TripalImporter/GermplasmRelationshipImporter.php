@@ -673,14 +673,13 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
     $form = parent::form($form, $form_state);
 
     // INFO:
-    $info = $this->t('This importer will create individuals of a population and
-        relate them back to the population stock. More specifically, for every line
-        in the file, a new chado stock record with that information will be created.
-        Then a relationship as specified in this form will be made between that new
-        stock record and the population stock selected in this form. As such this
-        importer can be used in any case where you want to create a number of new
-        stock records related to an existing stock. Examples of such situations are
-        recombinant inbred line populations or nested association mapping panels.');
+    $info = $this->t('This importer will relate a group of germplasm to an existing
+        germplasm. More specifically, for every line in the file, the importer will
+        look up to see if the germplasm already exists or create the germplasm if
+        allowed to do so. Then, a relationship, with the type specified in this
+        form, will be made between that new germpasm and the primary germplasm
+        selected in this form. An example use case of this importer is to relate
+        multiple individuals to a single breeding cross.');
     $this->service_Messenger->addStatus($info);
 
     $storage = $form_state->getStorage();
