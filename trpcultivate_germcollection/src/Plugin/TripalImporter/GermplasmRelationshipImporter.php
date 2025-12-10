@@ -767,7 +767,7 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
     // IMAGE: Population load illustration.
     $path = base_path() . \Drupal::service('extension.list.module')->getPath('trpcultivate_germcollection');
     $form['fieldset_relationship_type']['image_illustration'] = [
-      '#markup' => '<div style="margin-top: 20px"><img src="' . $path . '/theme/images/population-load-combination.gif" style="max-width: 70%" /></div>',
+      '#markup' => '<div style="margin-top: 20px"><img src="' . $path . '/theme/images/relationship_importer.png" style="max-width: 70%" /></div>',
     ];
 
     $form['relationship_toggle'] = [
