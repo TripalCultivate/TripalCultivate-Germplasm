@@ -738,9 +738,7 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
       '#required' => TRUE,
     ];
 
-    $cv_autocomplete = new ChadoCVTermAutocompleteController();
-    $cv_term_id = $cv_autocomplete->getCvTermID('SIO', '0000059');
-    $term_autocomplete_default = $cv_autocomplete->formatCVterm($cv_term_id);
+    $term_autocomplete_default = 'Has Member (SIO:000059)';
 
     $form['fieldset_relationship_type']['fld_select_relationship_verb'] = [
       '#type' => 'textfield',
