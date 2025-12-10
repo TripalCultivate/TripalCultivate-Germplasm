@@ -972,7 +972,7 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
                 $result = $stock_id;
               }
               if ($result) {
-                throw new \Exception('Term already exists in the database.');
+                throw new \Exception('Germplasm with name: ' . $val_name . ' + type: ' . $val_type . ' + scientific name: ' . $val_sciname . ' already exists in the database, but the toggle was set to create new individuals.');
               }
 
               // STOCK:
