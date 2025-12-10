@@ -64,7 +64,7 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
       'label' => 'Tripal Importer: Germplasm Relationship Importer',
       'description' => 'Imports germplasm stock relationships into testchado.',
       'file_types' => ['tsv', 'txt'],
-      'upload_title' => 'Population Individuals*',
+      'upload_title' => 'Related Germplasm*',
       'upload_description' => 'This should not be visible!',
       'use_analysis' => FALSE,
       'require_analysis' => FALSE,
@@ -137,7 +137,7 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
    *
    * @return array
    *   Each scenario is an array with the following:
-   *   - The population entry that gets entred in the textfield of the form
+   *   - The primary germplasm that gets entred in the textfield of the form
    *   - The relationship verb that gets entred in the textfield of the form
    *   - The toggle value to indicate whether the population must exists.
    *   - The filename of the test file used for this scenario (test files are
@@ -160,17 +160,17 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
    */
   public static function provideFilesForValidation() {
 
-    // @todo Once we have a validator set up to check if the population entry
+    // @todo Once we have a validator set up to check if the primary germplasm
     // and the relationship verb exists, we would add test cases here to
     // test those
-    // $invalid_population_entry = '';
+    // $invalid_primary_germplasm = '';
     // $invalid_relationship_verb = '';
-    $valid_population_entry = 'my_stock_1 [cultivar] (1)';
+    $valid_primary_germplasm = 'my_stock_1 [cultivar] (1)';
     $valid_relationship_verb = 'cultivar (EFO:0005136)';
 
     // Set our number of expected validation messages to 0, since none of
     // validators should cause this number to change at this moment, since we
-    // don't have validators set up for population entry and relationship verb
+    // don't have validators set up for primary germplasm and relationship verb
     // yet.
     $num_form_validation_messages = 0;
 
@@ -178,7 +178,7 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
 
     // 0: File is empty.
     $scenarios[] = [
-      $valid_population_entry,
+      $valid_primary_germplasm,
       $valid_relationship_verb,
       FALSE,
       'empty_file.tsv',
@@ -197,7 +197,7 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
 
     // #1: Header is improperly delimited, with proper data rows.
     $scenarios[] = [
-      $valid_population_entry,
+      $valid_primary_germplasm,
       $valid_relationship_verb,
       FALSE,
       'relationship_importer_header_incorrectly_delimited.tsv',
@@ -216,7 +216,7 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
 
     // #2: 2nd row of file is improperly delimited.
     $scenarios[] = [
-      $valid_population_entry,
+      $valid_primary_germplasm,
       $valid_relationship_verb,
       TRUE,
       'relationship_importer_incorrectly_delimited.tsv',
@@ -238,7 +238,7 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
     // #3: Contains correct header but no data.
     // Never reaches the validators for data-row since file content is empty.
     $scenarios[] = [
-      $valid_population_entry,
+      $valid_primary_germplasm,
       $valid_relationship_verb,
       TRUE,
       'relationship_importer_correct_header_no_data.tsv',
@@ -253,7 +253,7 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
 
     // #4: Contains incorrect header and one line of correct data.
     $scenarios[] = [
-      $valid_population_entry,
+      $valid_primary_germplasm,
       $valid_relationship_verb,
       FALSE,
       'relationship_importer_invalid_header.tsv',
@@ -272,7 +272,7 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
 
     // #5: Contains correct header but data row contains an empty cell.
     $scenarios[] = [
-      $valid_population_entry,
+      $valid_primary_germplasm,
       $valid_relationship_verb,
       FALSE,
       'relationship_importer_empty_cell.tsv',
@@ -292,7 +292,7 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
     // #6: Contains a germplasm name+type+scientific name combination that
     // doesn't exists in the database
     $scenarios[] = [
-      $valid_population_entry,
+      $valid_primary_germplasm,
       $valid_relationship_verb,
       TRUE,
       'relationship_importer_unmatched_organism.tsv',
@@ -313,7 +313,7 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
     // #7: Contains a germplasm that does not exists in the
     // database.
     $scenarios[] = [
-      $valid_population_entry,
+      $valid_primary_germplasm,
       $valid_relationship_verb,
       TRUE,
       'relationship_importer_germplasm_dne.tsv',
@@ -338,8 +338,8 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
   /**
    * Tests the validation aspect of the Relationship importer form.
    *
-   * @param string $population_entry
-   *   The population entry that is submitted with the form.
+   * @param string $primary_germplasm
+   *   The primary germplasm that is submitted with the form.
    * @param string $relationship_verb
    *   The relationship verb that is submitted with the form.
    * @param bool $toggle_value
@@ -368,7 +368,7 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
    */
   #[DataProvider('provideFilesForValidation')]
   public function testGermplasmRelationshipImporterFormValidation(
-    string $population_entry,
+    string $primary_germplasm,
     string $relationship_verb,
     bool $toggle_value,
     string $filename,
@@ -422,8 +422,8 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
     $plugin_id = 'trpcultivate-germplasm-relationship-importer';
     $form_state->addBuildInfo('args', [$plugin_id]);
 
-    // Submit the population entry.
-    $form_state->setValue('fld_text_population_entry', $population_entry);
+    // Submit the primary germplasm.
+    $form_state->setValue('fld_text_primary_germplasm', $primary_germplasm);
 
     // Submit the relationship verb.
     $form_state->setValue('fld_select_relationship_verb', $relationship_verb);

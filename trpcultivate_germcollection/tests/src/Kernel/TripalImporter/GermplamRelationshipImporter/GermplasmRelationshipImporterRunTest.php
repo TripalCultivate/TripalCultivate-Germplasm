@@ -64,7 +64,7 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
       'label' => 'Tripal Importer: Germplasm Relationship Importer',
       'description' => 'Imports germplasm stock relationships into testchado.',
       'file_types' => ['tsv', 'txt'],
-      'upload_title' => 'Population Individuals*',
+      'upload_title' => 'Related Germplasm*',
       'upload_description' => 'This should not be visible!',
       'use_analysis' => FALSE,
       'require_analysis' => FALSE,
@@ -177,7 +177,7 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
    *
    * @return array
    *   Each scenario is an array with the following:
-   *   - The population entry that gets entred in the textfield of the form
+   *   - The primary germplasm that gets entred in the textfield of the form
    *   - The relationship verb that gets entred in the textfield of the form
    *   - The stock position that goes as the value of radio button
    *   - The toggle value.
@@ -192,7 +192,7 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
    *          specific scenario.
    */
   public static function provideDataForRunSimple() {
-    $valid_population_entry = 'my_stock_1 [cultivar] (1)';
+    $valid_primary_germplasm = 'my_stock_1 [cultivar] (1)';
     $valid_relationship_verb = 'cultivar (EFO:0005136)';
 
     $scenarios = [];
@@ -200,7 +200,7 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
     // #1: Entry-verb-individual relatoinship with toggle on.
     $scenarios[] = [
       'entry-verb-individual relationship with toggle on',
-      $valid_population_entry,
+      $valid_primary_germplasm,
       $valid_relationship_verb,
       'evi',
       TRUE,
@@ -220,7 +220,7 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
     // #2: Individual-verb-entry relatoinship with toggle on.
     $scenarios[] = [
       'individual-verb-entry relationship with toggle on',
-      $valid_population_entry,
+      $valid_primary_germplasm,
       $valid_relationship_verb,
       'ive',
       TRUE,
@@ -239,7 +239,7 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
     // #3: Individual-verb-entry relatoinship with toggle off.
     $scenarios[] = [
       'individual-verb-entry relationship with toggle off',
-      $valid_population_entry,
+      $valid_primary_germplasm,
       $valid_relationship_verb,
       'ive',
       FALSE,
@@ -267,8 +267,8 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
    *
    * @param string $scenario
    *   The test case scenario.
-   * @param string $population_entry
-   *   The population entry that is submitted with the form.
+   * @param string $primary_germplasm
+   *   The primary germplasm that is submitted with the form.
    * @param string $relationship_verb
    *   The relationship verb that is submitted with the form.
    * @param string $stock_position
@@ -286,7 +286,7 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
   #[DataProvider('provideDataForRunSimple')]
   public function testGermplasmRelationshipImporterRunSimple(
     string $scenario,
-    string $population_entry,
+    string $primary_germplasm,
     string $relationship_verb,
     string $stock_position,
     bool $toggle_value,
@@ -302,7 +302,7 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
     ]);
 
     $run_args = [
-      'fld_text_population_entry' => $population_entry,
+      'fld_text_primary_germplasm' => $primary_germplasm,
       'fld_select_relationship_verb' => $relationship_verb,
       'fld_radio_stock_position' => $stock_position,
       'relationship_toggle' => $toggle_value,
@@ -328,8 +328,8 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
       );
     }
 
-    // Get the population entry stock id and the relationship verb cvterm id.
-    $population_entry_stock_id = ChadoGenericAutocompleteController::getPkeyId($population_entry);
+    // Get the primary germplasm stock id and the relationship verb cvterm id.
+    $primary_germplasm_stock_id = ChadoGenericAutocompleteController::getPkeyId($primary_germplasm);
     $relationship_verb_type_id = ChadoCVTermAutocompleteController::getCVtermId($relationship_verb);
 
     // Get the number of stocks we expect to be created.
@@ -411,16 +411,16 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
 
       if ($stock_position == 'evi') {
         $this->assertEquals(
-          $population_entry_stock_id,
+          $primary_germplasm_stock_id,
           $relationship_query[$index]->subject_id,
-          'We expected the inserted stock relationship to have a subject id that is the same as the population entry id when the relationship is set to evi, but it was not.',
+          'We expected the inserted stock relationship to have a subject id that is the same as the primary germplasm id when the relationship is set to evi, but it was not.',
         );
       }
       elseif ($stock_position == 'ive') {
         $this->assertEquals(
-          $population_entry_stock_id,
+          $primary_germplasm_stock_id,
           $relationship_query[$index]->object_id,
-          'We expected the inserted stock relationship to have a object id that is the same as the population entry id when the relationship is set to ive, but it was not.',
+          'We expected the inserted stock relationship to have a object id that is the same as the primary germplasm id when the relationship is set to ive, but it was not.',
         );
       }
     }
@@ -431,7 +431,7 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
    *
    * @return array
    *   Each scenario is an array with the following:
-   *   - The population entry that gets entred in the textfield of the form
+   *   - The primary germplasm that gets entred in the textfield of the form
    *   - The relationship verb that gets entred in the textfield of the form
    *   - The toggle value.
    *   - The filename of the test file used for this scenario (test files are
@@ -441,7 +441,7 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
    *          specific scenario.
    */
   public static function provideFilesForRunExceptions() {
-    $valid_population_entry = 'my_stock_1 [cultivar] (1)';
+    $valid_primary_germplasm = 'my_stock_1 [cultivar] (1)';
     $valid_relationship_verb = 'cultivar (EFO:0005136)';
 
     $scenarios = [];
@@ -449,7 +449,7 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
     // #0: Type does not exist.
     $scenarios[] = [
       'Type does not exist.',
-      $valid_population_entry,
+      $valid_primary_germplasm,
       $valid_relationship_verb,
       FALSE,
       'relationship_importer_type_dne.tsv',
@@ -462,7 +462,7 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
     // #1: Organism not exist.
     $scenarios[] = [
       'Organism does not exist.',
-      $valid_population_entry,
+      $valid_primary_germplasm,
       $valid_relationship_verb,
       FALSE,
       'relationship_importer_organism_dne.tsv',
@@ -475,7 +475,7 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
     // #2: Uniquename already exists.
     $scenarios[] = [
       'Uniquename already exist.',
-      $valid_population_entry,
+      $valid_primary_germplasm,
       $valid_relationship_verb,
       FALSE,
       'relationship_importer_uniquename_exists.tsv',
@@ -488,7 +488,7 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
     // #3: Duplicate Term in file with same uniquename.
     $scenarios[] = [
       'Duplicate Term in file with same uniquename.',
-      $valid_population_entry,
+      $valid_primary_germplasm,
       $valid_relationship_verb,
       FALSE,
       'relationship_importer_duplicate_term.tsv',
@@ -501,12 +501,12 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
     // #4: Term already exists.
     $scenarios[] = [
       'Term already exists.',
-      $valid_population_entry,
+      $valid_primary_germplasm,
       $valid_relationship_verb,
       FALSE,
       'relationship_importer_term_exists.tsv',
       [
-        'expected_message' => 'Term already exists in the database.',
+        'expected_message' => 'Germplasm with name: my_stock_1 + type: cultivar (EFO:0005136) + scientific name: Lens culinaris already exists in the database, but the toggle was set to create new individuals.',
 
       ],
     ];
@@ -514,7 +514,7 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
     // #5: Germplasm does not exist.
     $scenarios[] = [
       'Germplasm does not exist.',
-      $valid_population_entry,
+      $valid_primary_germplasm,
       $valid_relationship_verb,
       TRUE,
       'relationship_importer_germplasm_dne.tsv',
@@ -532,8 +532,8 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
    *
    * @param string $scenario
    *   The test case scenario.
-   * @param string $population_entry
-   *   The population entry that is submitted with the form.
+   * @param string $primary_germplasm
+   *   The primary germplasm that is submitted with the form.
    * @param string $relationship_verb
    *   The relationship verb that is submitted with the form.
    * @param bool $toggle
@@ -549,7 +549,7 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
   #[DataProvider('provideFilesForRunExceptions')]
   public function testRunExceptions(
     string $scenario,
-    string $population_entry,
+    string $primary_germplasm,
     string $relationship_verb,
     bool $toggle,
     string $filename,
@@ -565,7 +565,7 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
     ]);
 
     $run_args = [
-      'fld_text_population_entry' => $population_entry,
+      'fld_text_primary_germplasm' => $primary_germplasm,
       'fld_select_relationship_verb' => $relationship_verb,
       'fld_radio_stock_position' => 'evi',
       'relationship_toggle' => $toggle,

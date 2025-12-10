@@ -32,7 +32,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *   description = @Translation("Imports germplasm stock relationships into testchado."),
  *   file_types = {"tsv", "txt"},
  *   upload_description = @Translation("Please provide a data file."),
- *   upload_title = @Translation("<strong>Population Individuals*</strong>"),
+ *   upload_title = @Translation("<strong>Related Germplasm*</strong>"),
  *   use_analysis = FALSE,
  *   require_analysis = FALSE,
  *   use_button = True,
@@ -55,7 +55,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
   description: new TranslatableMarkup('Imports germplasm stock relationships into testchado.'),
   file_types: ['tsv', 'txt'],
   upload_description: new TranslatableMarkup('Please provide a data file.'),
-  upload_title: new TranslatableMarkup('<strong>Population Individuals*</strong>'),
+  upload_title: new TranslatableMarkup('<strong>Related Germplasm*</strong>'),
   use_analysis: FALSE,
   require_analysis: FALSE,
   use_button: TRUE,
@@ -468,15 +468,15 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
 
     $form_values = $form_state->getValues();
 
-    // Validate Population Entry.
-    $fld_name_population_entry = 'fld_text_population_entry';
-    $fld_value_population_entry = $form_values[$fld_name_population_entry];
+    // Validate Primary Germplasm.
+    $fld_name_primary_germplasm = 'fld_text_primary_germplasm';
+    $fld_value_primary_germplasm = $form_values[$fld_name_primary_germplasm];
 
-    $parsed_stock_id = ChadoGenericAutocompleteController::getPkeyId($fld_value_population_entry);
+    $parsed_stock_id = ChadoGenericAutocompleteController::getPkeyId($fld_value_primary_germplasm);
 
     // Failed to locate the poplation stock field element.
     if ($parsed_stock_id == 0) {
-      $form_state->setErrorByName($fld_name_population_entry, 'Germplasm does not exist. Please enter a valid germplasm in Population Entry.');
+      $form_state->setErrorByName($fld_name_primary_germplasm, 'Germplasm does not exist. Please enter a valid germplasm in Primary Germplasm.');
     }
 
     $fld_name_relationship_verb = 'fld_select_relationship_verb';
@@ -696,11 +696,12 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
       ];
     }
 
-    // Population Entry.
-    // FIELDSET: Population Entry fieldset.
-    $form['fieldset_population_entry'] = [
+    // Primary Germplasm.
+    // FIELDSET: Primary Germplasm fieldset.
+    $form['fieldset_primary_germplasm'] = [
       '#type' => 'fieldset',
-      '#title' => $this->t('Population Entry'),
+      '#title' => $this->t('Primary Germplasm'),
+      '#markup' => $this->t('<p>Choose the germplasm individual whom you would like to create 1+ relationships with. For example, if you want to create a number of germplasm selections (e.g. 1234S-red, 1234S-green, 1234S-black) and relate them to the original germplasm individual (e.g. 1234S) then the "Primary Germplasm" would be the original germplasm individual (e.g. 1234S) and the selections would be documented in the "Related Germplasm" file.</p>'),
       '#weight' => -99,
       '#required' => TRUE,
     ];
@@ -716,7 +717,7 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
     ];
 
     // Get the autocomplete search for the population stock.
-    $form['fieldset_population_entry']['fld_text_population_entry'] = [
+    $form['fieldset_primary_germplasm']['fld_text_primary_germplasm'] = [
       '#type' => 'textfield',
       '#autocomplete_route_name' => 'tripal_chado.generic_autocomplete',
       '#autocomplete_route_parameters' => $options,
@@ -727,7 +728,7 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
     ];
 
     // FIELD: Autocomplete search.
-    // Search germplasm/stock as the population entry.
+    // Search germplasm/stock as the primary germplasm.
     // Relationship Verb.
     // FIELDSET: Relationship Verb fieldset.
     $form['fieldset_relationship_type'] = [
@@ -759,8 +760,8 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
       '#type' => 'radios',
       '#default_value' => 'evi',
       '#options' => [
-        'evi' => $this->t('Population Stock as SUBJECT and Population Individuals as OBJECT of the relationship.'),
-        'ive' => $this->t('Population Individuals as SUBJECT and Population Stock as OBJECT of the relationship.'),
+        'evi' => $this->t('Primary Germplasm as SUBJECT and Related Germplasm as OBJECT of the relationship.'),
+        'ive' => $this->t('Related Germplasm as SUBJECT and Primary Germplasm as OBJECT of the relationship.'),
       ],
     ];
 
@@ -772,10 +773,16 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
 
     $form['relationship_toggle'] = [
       '#type' => 'checkbox',
-      '#title' => $this->t('Population individuals must already exist'),
+      '#title' => $this->t('Related germplasm must already exist'),
       '#default_value' => 0,
       '#weight' => -97,
     ];
+
+    // This importer does not support using file sources from existing field.
+    // #access: (bool) Whether the element is accessible or not; when FALSE,
+    // the element is not rendered and the user submitted value is not taken
+    // into consideration.
+    $form['file']['file_upload_existing']['#access'] = FALSE;
 
     return $form;
   }
@@ -798,12 +805,12 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
     // Get the arguments from the form.
     $arguments = $this->getArguments();
 
-    // Get the population entry stock id.
-    $population_entry_stock_id = ChadoGenericAutocompleteController::getPkeyId($arguments['run_args']['fld_text_population_entry']);
+    // Get the primary germplasm stock id.
+    $primary_germplasm_stock_id = ChadoGenericAutocompleteController::getPkeyId($arguments['run_args']['fld_text_primary_germplasm']);
 
     // Form values.
     $population = [
-      'entry' => $population_entry_stock_id,
+      'entry' => $primary_germplasm_stock_id,
       'verb' => $arguments['run_args']['fld_select_relationship_verb'],
       'position' => $arguments['run_args']['fld_radio_stock_position'],
       'relationship_only' => $arguments['run_args']['relationship_toggle'],
@@ -818,10 +825,10 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
    *
    * @param array $population
    *   Array, with the following keys:
-   *   entry: Form field value for Population Entry field.
+   *   entry: Form field value for Primary Germplasm field.
    *   verb : Form field value for Relationship Verb field.
    *   position: Form field value for Stock Position field.
-   *   individuals: Form file field value for Population Individuals Field.
+   *   individuals: Form file field value for Related Germplasm Field.
    */
   public function importPopulation($population) {
     $file = $this->service_entityTypeManager->getStorage('file')->load($population['individuals']);
@@ -859,7 +866,7 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
 
             if (!$population['relationship_only']) {
               if (!$val_uniqname) {
-                throw new \Exception('Uniquename is required in line #' . ($i + 1) . ' when Population individuals must already exist option is selected.');
+                throw new \Exception('Uniquename is required in line #' . ($i + 1) . ' when Related germplasm must already exist option is selected.');
               }
               $uniquename = $val_uniqname;
             }
@@ -1044,7 +1051,7 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
   }
 
   /**
-   * Parse form values for Stock/Germplasm (Population Entry).
+   * Parse form values for Stock/Germplasm (Primary Germplasm).
    *
    * Fetch the matching row in chado.stock table.
    *

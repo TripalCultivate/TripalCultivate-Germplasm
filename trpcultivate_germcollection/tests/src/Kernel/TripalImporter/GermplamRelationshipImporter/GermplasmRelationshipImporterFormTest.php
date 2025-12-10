@@ -63,7 +63,7 @@ class GermplasmRelationshipImporterFormTest extends ChadoTestKernelBase {
       'label' => 'Tripal Importer: Germplasm Relationship Importer',
       'description' => 'Imports germplasm stock relationships into testchado.',
       'file_types' => ['tsv', 'txt'],
-      'upload_title' => 'Population Individuals*',
+      'upload_title' => 'Related Germplasm*',
       'upload_description' => 'This should not be visible!',
       'use_analysis' => FALSE,
       'require_analysis' => FALSE,
@@ -185,14 +185,14 @@ class GermplasmRelationshipImporterFormTest extends ChadoTestKernelBase {
     $this->assertArrayNotHasKey('file_remote', $form['file'],
       "The remote file element should not be available.");
 
-    // Check the population entry field element.
-    $this->assertArrayHasKey('fieldset_population_entry', $form,
-      'We expect there to be a population entry form element on the form but there is not.');
-    $this->assertEquals('fieldset', $form['fieldset_population_entry']['#type'],
+    // Check the primary germplasm field element.
+    $this->assertArrayHasKey('fieldset_primary_germplasm', $form,
+      'We expect there to be a primary germplasm form element on the form but there is not.');
+    $this->assertEquals('fieldset', $form['fieldset_primary_germplasm']['#type'],
       'We expect the population element for the title in the form to be a fieldset.');
-    $this->assertArrayHasKey('fld_text_population_entry', $form['fieldset_population_entry'], 'We expect there to be a textfield for entering the population entry.');
-    $this->assertEquals('textfield', $form['fieldset_population_entry']['fld_text_population_entry']['#type'],
-      'We expect the population entry element in the form to be a textfield.');
+    $this->assertArrayHasKey('fld_text_primary_germplasm', $form['fieldset_primary_germplasm'], 'We expect there to be a textfield for entering the primary germplasm.');
+    $this->assertEquals('textfield', $form['fieldset_primary_germplasm']['fld_text_primary_germplasm']['#type'],
+      'We expect the primary germplasm element in the form to be a textfield.');
 
     // Check the Relationship type element.
     $this->assertArrayHasKey('fieldset_relationship_type', $form,
@@ -250,7 +250,7 @@ class GermplasmRelationshipImporterFormTest extends ChadoTestKernelBase {
     // Setup the form_state.
     $form_state = new FormState();
     $form_state->addBuildInfo('args', [$plugin_id]);
-    $form_state->setValue('fld_text_population_entry', 'my_stock_1 [cultivar] (1)');
+    $form_state->setValue('fld_text_primary_germplasm', 'my_stock_1 [cultivar] (1)');
     $form_state->setValue('fld_select_relationship_verb', 'cultivar (EFO:0005136)');
     $form_state->setValue('fld_radio_stock_position', 'evi');
     $form_state->setValue('relationship_toggle', TRUE);
