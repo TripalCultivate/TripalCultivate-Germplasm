@@ -1166,7 +1166,7 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
       ->generateFile($importer_id, $column_headers, $file_extensions);
 
     // Additional notes to the headers.
-    $notes = $this->t('Each row in the file should describe a specific individual to be created and linked to the Population Entry with the specified relationship.</p><p><strong>NOTE:</strong> This importer will not permit duplicate lines with identical Name + Type + Scientific Name + Uniquename in the file.<br />A warning will be issued when duplicate line, with the exception Uniquename has been detected and the Importer may proceed.</p>');
+    $notes = $this->t('Each row in the file should describe a specific individual to be linked to the primary germplasm with the specified relationship. If the toggle is set for germplasm individuals to already exist, Uniquename will be looked up if not provided. Otherwise, Uniquename is required to insert individuals.</p><p><strong>NOTE:</strong> This importer will not permit duplicate lines with identical Name + Type + Scientific Name + Uniquename in the file.</p>');
 
     // Render the header and notes/lists in a template and use the file link as
     // the value to href attribute of the link to download a template file.
