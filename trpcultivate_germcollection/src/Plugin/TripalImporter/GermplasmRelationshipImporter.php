@@ -721,7 +721,7 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
       '#autocomplete_route_name' => 'tripal_chado.generic_autocomplete',
       '#autocomplete_route_parameters' => $options,
       '#maxlength' => 1000,
-      '#placeholder' => $this->t('Germplasm / Stock Name'),
+      '#placeholder' => $this->t('Germplasm / Variety / Cultivar'),
       '#disabled' => FALSE,
       '#id' => 'population-importer-fld-text-population-entry',
     ];
