@@ -349,8 +349,8 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     // Raw row level
     // - File rows are properly delimited
     $instance = $this->service_validatorPluginManager->createInstance('valid_delimited_file');
-    // Configure the number of columns in a single row for this validator. We 
-    // will count the columns tht are type 'required' and set that as a strict 
+    // Configure the number of columns in a single row for this validator. We
+    // will count the columns that are type 'required' and set that as a strict
     // number of columns.
     $required_column_count = count(array_filter($this->headers, function ($h) {
       return $h['type'] == 'required';
@@ -382,7 +382,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       $header_index['Year'],
       $header_index['Season'],
       $header_index['Cross Number'],
-      $header_index['Uniquename'],
+      $header_index['Unique Name'],
       $header_index['Maternal Parent'],
       $header_index['Paternal Parent'],
       $header_index['Cross Type'],

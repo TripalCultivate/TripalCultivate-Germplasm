@@ -306,7 +306,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
       $num_form_validation_messages,
     ];
 
-    // #5: Contains correct header + 1 line with empty Cross Number/Uniquename.
+    // #5: Contains correct header + 1 line with empty Cross Number/Unique Name.
     $scenarios[] = [
       $valid_organism,
       'correct_header_emptycell_crossnumber.tsv',
