@@ -110,7 +110,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       'type' => 'required',
     ],
     [
-      'name' => 'Uniquename',
+      'name' => 'Unique Name',
       'description' => 'A unique identifier for this cross. This can be the same as Cross Number, if desired.',
       'type' => 'required',
     ],
