@@ -29,23 +29,60 @@ jobs:
           - "8.1"
           - "8.2"
           - "8.3"
+          - "8.4"
+          - "8.5"
         pgsql-version:
           - "13"
-          - "16"
+          - "17"
         drupal-version:
-          - "10.4.x-dev"
           - "10.5.x-dev"
-          - "11.1.x-dev"
+          - "10.6.x-dev"
           - "11.2.x-dev"
+          - "11.3.x-dev"
         exclude:
+          ## TripalDocker removed support for PHP 8.1.
           - php-version: "8.1"
-            drupal-version: "11.1.x-dev"
-          - php-version: "8.2"
-            drupal-version: "11.1.x-dev"
+            drupal-version: "10.6.x-dev"
+          # Only Drupal 11.x supports PHP 8.4.
+          - php-version: '8.4'
+            drupal-version: '10.5.x-dev'
+          - php-version: '8.4'
+            drupal-version: '10.6.x-dev'
+          # Only Drupal 11.3+ supports PHP 8.5.
+          - php-version: '8.5'
+            drupal-version: '10.5.x-dev'
+          - php-version: '8.5'
+            drupal-version: '10.6.x-dev'
+          - php-version: '8.5'
+            drupal-version: '11.2.x-dev'
+          # Drupal 11+ requires at least Postgresql 16.
+          - php-version: '8.3'
+            pgsql-version: '13'
+            drupal-version: '11.2.x-dev'
+          - php-version: '8.4'
+            pgsql-version: '13'
+            drupal-version: '11.2.x-dev'
+          - php-version: '8.5'
+            pgsql-version: '13'
+            drupal-version: '11.2.x-dev'
+          - php-version: '8.3'
+            pgsql-version: '13'
+            drupal-version: '11.3.x-dev'
+          - php-version: '8.4'
+            pgsql-version: '13'
+            drupal-version: '11.3.x-dev'
+          - php-version: '8.5'
+            pgsql-version: '13'
+            drupal-version: '11.3.x-dev'
+          # Drupal 11+ requires at least php 8.3.
           - php-version: "8.1"
             drupal-version: "11.2.x-dev"
           - php-version: "8.2"
             drupal-version: "11.2.x-dev"
+          - php-version: "8.1"
+            drupal-version: "11.3.x-dev"
+          - php-version: "8.2"
+            drupal-version: "11.3.x-dev"
 
     steps:
       # Check out the repo

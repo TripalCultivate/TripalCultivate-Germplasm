@@ -1,6 +1,6 @@
-ARG drupalversion=11.2.x-dev
-ARG phpversion=8.3
-ARG pgsqlversion=16
+ARG drupalversion=11.3.x-dev
+ARG phpversion=8.5
+ARG pgsqlversion=17
 FROM knowpulse/tripalcultivate-base:drupal${drupalversion}-php${phpversion}-pgsql${pgsqlversion}
 
 COPY . /var/www/drupal/web/modules/contrib/TripalCultivate-Germplasm
