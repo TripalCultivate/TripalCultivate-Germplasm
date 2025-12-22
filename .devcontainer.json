@@ -3,12 +3,12 @@
   "build": {
     "dockerfile": "Dockerfile",
     "args": {
-      "drupalversion": "11.2.x-dev",
-      "phpversion": "8.3",
-      "pgsqlversion": "16"
+      "drupalversion": "11.x-dev",
+      "phpversion": "8.5",
+      "pgsqlversion": "17"
     }
   },
-  "initializeCommand": "docker pull knowpulse/tripalcultivate-base:drupal11.2.x-dev-php8.3-pgsql16",
+  "initializeCommand": "docker pull knowpulse/tripalcultivate-base:drupal11.x-dev-php8.5-pgsql17",
   "workspaceMount": "source=${localWorkspaceFolder},target=/var/www/drupal/web/modules/contrib/TripalCultivate-Germplasm,type=bind",
   "workspaceFolder": "/var/www/drupal/web/modules/contrib/TripalCultivate-Germplasm",
   "customizations": {
