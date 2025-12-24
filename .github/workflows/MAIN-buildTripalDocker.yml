@@ -84,7 +84,7 @@ jobs:
             drupal-version: "11.3.x-dev"
     name: Tripal ${{ matrix.drupal-version }}-php${{ matrix.php-version }}-pgsql${{ matrix.pgsql-version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         name: Check out code
       - uses: mr-smithers-excellent/docker-build-push@v6.3
         name: Build & push Full matrix of Docker images
