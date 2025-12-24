@@ -36,6 +36,10 @@
       <directory>trpcultivate_germcollection/tests</directory>
     </testsuite>
   </testsuites>
+  <listeners>
+    <listener class="\Drupal\Tests\Listeners\DrupalListener">
+    </listener>
+  </listeners>
   <coverage>
     <include>
       <directory suffix=".php">trpcultivate_germplasm/src</directory>
