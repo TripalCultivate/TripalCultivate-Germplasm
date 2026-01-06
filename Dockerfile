@@ -6,6 +6,9 @@ FROM knowpulse/tripalcultivate-base:drupal${drupalversion}-php${phpversion}-pgsq
 COPY . /var/www/drupal/web/modules/contrib/TripalCultivate-Germplasm
 WORKDIR /var/www/drupal/web/modules/contrib/TripalCultivate-Germplasm
 
+RUN rm ./phpunit.xml
+RUN bash /var/www/drupal/web/modules/contrib/tripal/set_phpunit_config.sh
+
 RUN service postgresql restart \
   && drush en trpcultivate_germplasm trpcultivate_germcollection --yes \
   && drush tripal:trp-run-jobs --username=drupaladmin \

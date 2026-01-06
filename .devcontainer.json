@@ -140,5 +140,5 @@
     5432,
     9003
   ],
-  "postCreateCommand": "init.sh"
+  "postCreateCommand": "rm phpunit.xml && bash /var/www/drupal/web/modules/contrib/tripal/set_phpunit_config.sh"
 }
