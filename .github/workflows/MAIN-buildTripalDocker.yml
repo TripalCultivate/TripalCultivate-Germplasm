@@ -28,6 +28,7 @@ jobs:
           - "15"
           - "16"
           - "17"
+          - "18"
         drupal-version:
           - "10.5.x-dev"
           - "10.6.x-dev"
@@ -109,8 +110,8 @@ jobs:
           buildArgs: "drupalversion=${{ matrix.drupal-version }},phpversion=${{ matrix.php-version }},pgsqlversion=${{ matrix.pgsql-version }},installTheme=FALSE"
           labels: 'drupal.version.label="${{ matrix.drupal-version }}",php.version.label="${{ matrix.php-version }}", postgresql.version.label="${{ matrix.pgsql-version }}", tripal.version="4.x", theme="Olivero"'
       - uses: mr-smithers-excellent/docker-build-push@v6.3
-        name: Build latest using 11.3.x-dev, PHP 8.5, PgSQL 17
-        if: ${{ matrix.drupal-version == '11.3.x-dev' && matrix.php-version == '8.5' && matrix.pgsql-version == '17' }}
+        name: Build latest using 11.3.x-dev, PHP 8.5, PgSQL 18
+        if: ${{ matrix.drupal-version == '11.3.x-dev' && matrix.php-version == '8.5' && matrix.pgsql-version == '18' }}
         with:
           image: knowpulse/tripalcultivate-tripal
           tags: latest

@@ -7,7 +7,7 @@ on: [push, workflow_dispatch]
 
 jobs:
   run-coverage:
-    name: "Drupal 11.3.x-dev - PHP 8.5 - PostgreSQL 17"
+    name: "Drupal 11.3.x-dev - PHP 8.5 - PostgreSQL 18"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -20,6 +20,6 @@ jobs:
           build-image: TRUE
           dockerfile: 'Dockerfile'
           php-version: 8.5
-          pgsql-version: 17
+          pgsql-version: 18
           drupal-version: 11.3.x-dev
           qltycloud-reporter-id: ${{ secrets.QLTY_COVERAGE_TOKEN }}

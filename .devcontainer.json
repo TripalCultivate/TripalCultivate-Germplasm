@@ -5,10 +5,10 @@
     "args": {
       "drupalversion": "11.x-dev",
       "phpversion": "8.5",
-      "pgsqlversion": "17"
+      "pgsqlversion": "18"
     }
   },
-  "initializeCommand": "docker pull knowpulse/tripalcultivate-base:drupal11.x-dev-php8.5-pgsql17",
+  "initializeCommand": "docker pull knowpulse/tripalcultivate-base:drupal11.x-dev-php8.5-pgsql18",
   "workspaceMount": "source=${localWorkspaceFolder},target=/var/www/drupal/web/modules/contrib/TripalCultivate-Germplasm,type=bind",
   "workspaceFolder": "/var/www/drupal/web/modules/contrib/TripalCultivate-Germplasm",
   "customizations": {
