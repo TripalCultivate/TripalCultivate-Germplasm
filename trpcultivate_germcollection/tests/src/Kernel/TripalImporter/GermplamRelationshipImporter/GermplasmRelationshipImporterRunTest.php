@@ -491,7 +491,7 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
       $valid_primary_germplasm,
       $valid_relationship_verb,
       FALSE,
-      'relationship_importer_duplicate_term.tsv',
+      'relationship_importer_duplicate_term_1.tsv',
       [
         'expected_message' => 'Duplicate in lines: #2 and #3',
 
@@ -520,6 +520,19 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
       'relationship_importer_germplasm_dne.tsv',
       [
         'expected_message' => 'Germplasm with name: my_stock_3 + type: cultivar (CO_010:0000029) + scientific name: Lens culinaris does not exist. Please provide a valid Germplasm.',
+
+      ],
+    ];
+
+    // #6: Duplicate rows in file with different uniquenames.
+    $scenarios[] = [
+      'Duplicate Term in file with different uniquenames.',
+      $valid_primary_germplasm,
+      $valid_relationship_verb,
+      FALSE,
+      'relationship_importer_duplicate_term_2.tsv',
+      [
+        'expected_message' => 'Germplasm with name: my_stock_3 + type: accession (CO_010:0000044) + scientific name: Lens culinaris already exists in the database, but the toggle was set to create new individuals.',
 
       ],
     ];
