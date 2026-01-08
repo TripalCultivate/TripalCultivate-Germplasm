@@ -474,13 +474,13 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
 
     // #2: Uniquename already exists.
     $scenarios[] = [
-      'Uniquename already exist.',
+      'Unique Name already exist.',
       $valid_primary_germplasm,
       $valid_relationship_verb,
       FALSE,
       'relationship_importer_uniquename_exists.tsv',
       [
-        'expected_message' => 'Uniquename is already used by another germplasm.',
+        'expected_message' => 'Unique Name is already used by another germplasm.',
 
       ],
     ];

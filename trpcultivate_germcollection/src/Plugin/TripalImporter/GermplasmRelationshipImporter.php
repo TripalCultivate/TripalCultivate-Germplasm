@@ -28,8 +28,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *
  * @TripalImporter(
  *   id = "trpcultivate-germplasm-relationship-importer",
- *   label = @Translation("Tripal Importer: Germplasm Relationship Importer"),
- *   description = @Translation("Imports germplasm stock relationships into testchado."),
+ *   label = @Translation("Tripal Cultivate: Relate Germplasm"),
+ *   description = @Translation("Creates relationships between a single primary accession and related germplasm individuals (both new and existing)."),
  *   file_types = {"tsv", "txt"},
  *   upload_description = @Translation("Please provide a data file."),
  *   upload_title = @Translation("<strong>Related Germplasm*</strong>"),
@@ -51,8 +51,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  */
 #[TripalImporter(
   id: 'trpcultivate-germplasm-relationship-importer',
-  label: new TranslatableMarkup('Tripal Importer: Germplasm Relationship Importer'),
-  description: new TranslatableMarkup('Imports germplasm stock relationships into testchado.'),
+  label: new TranslatableMarkup('Tripal Cultivate: Relate Germplasm'),
+  description: new TranslatableMarkup('Creates relationships between a single primary accession and related germplasm individuals (both new and existing).'),
   file_types: ['tsv', 'txt'],
   upload_description: new TranslatableMarkup('Please provide a data file.'),
   upload_title: new TranslatableMarkup('<strong>Related Germplasm*</strong>'),
@@ -141,22 +141,22 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
   protected array $headers = [
     [
       'name' => 'Name',
-      'description' => 'The name of the germplasm individual.',
+      'description' => 'The name of the germplasm individual. For existing germplasm individuals, this must match the name in this site exactly including capitalization and spaces.',
       'type' => 'required',
     ],
     [
       'name' => 'Type',
-      'description' => 'The type of the germplasm individual. This includes its cvterm name, followed by the db name and dbx accession in brackets. The db name and dbx accession are separated by a single colon. (e.g. accession (CO_010:0000044))',
+      'description' => 'The type of the germplasm individual. This must be an existing ontology term in the site and follows the format "TERM NAME (ID SPACE:ACCESSION)". For example, if the individual is a germplasm accession then type would be "germplasm (EFO:0007059)", whereas, if it is a cross, the type would be "progeny (PBO:0000065)".',
       'type' => 'required',
     ],
     [
       'name' => 'Scientific Name',
-      'description' => 'The scientific name of the germplasm individual.',
+      'description' => 'The scientific name of the germplasm individual. Specifically, this will include the genus, species and infraspecies (when present).',
       'type' => 'required',
     ],
     [
-      'name' => 'Uniquename',
-      'description' => 'A unique identifier for the germplasm individual.',
+      'name' => 'Unique Name',
+      'description' => "A name that uniquely identifies this germplasm individual within it's species. This is usually its accession in a genebank.",
       'type' => 'optional',
     ],
   ];
@@ -271,6 +271,9 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
     $validators['header-row']['valid_headers'] = $instance_header_row;
 
     // Configure the empty cell validator.
+    // If the relationship toggle indicates that related germplasm must already
+    // exist (i.e. is TRUE) then the uniquename is optional; however, if we may
+    // need to insert related germplasm then the uniquename is also required.
     $instance_empty_cell = $this->service_validatorPluginManager->createInstance('empty_cell');
     if ($form_values['relationship_toggle']) {
       $indices = [
@@ -284,14 +287,15 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
         $header_index['Name'],
         $header_index['Type'],
         $header_index['Scientific Name'],
-        $header_index['Uniquename'],
+        $header_index['Unique Name'],
       ];
     }
     $instance_empty_cell->setIndices($indices);
     $validators['data-row']['empty_cell'] = $instance_empty_cell;
 
-    // Configure the Germplasm Name Exists validator only if the
-    // create relationship only toggle is on.
+    // Create relationship only toggle is on as in this case
+    // the related germplasm must already exist which is what
+    // this validator checks.
     if ($form_values['relationship_toggle']) {
       $instance_name_exists = $this->service_validatorPluginManager->createInstance('germplasm_name_exists');
 
@@ -410,12 +414,14 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
     if (array_key_exists('empty_cell', $failures)) {
       if (!empty($failures['empty_cell'])) {
         $messages['empty_cell']['status'] = 'fail';
-        // Configure the metadata.
+        // If the 'uniquename' column is required, then tell the process
+        // message method that the column headers include all columns.
         if ($this->headers[3]['type'] == 'required') {
           $metadata = [
             'column_headers' => $header_names,
           ];
         }
+        // Otherwise, exclude the uniquename header.
         else {
           $metadata = [
             'column_headers' => [
@@ -496,7 +502,7 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
     $file_mime_type = $file->getMimeType();
 
     foreach ($this->headers as $key => $value) {
-      if ($value['name'] == 'Uniquename') {
+      if ($value['name'] == 'Unique Name') {
         if ($form_values['relationship_toggle']) {
           // If relationship only is selected, then the uniquename
           // is required in the file.
@@ -651,6 +657,10 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
     $submit_form = TRUE;
 
     foreach ($validation_feedback as $feedback_item) {
+      // The uniquename is not required when relationship only
+      // toggle is off, so the status will stay as 'todo' in that case.
+      // Thus, we only submit the form when the status is 'todo' and
+      // relationship only toggle is on, or when the status is 'fail'.
       if (($feedback_item['status'] == 'todo' && $form_values['relationship_toggle']) || $feedback_item['status'] == 'fail') {
         $submit_form = FALSE;
         break;
@@ -680,7 +690,11 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
         form, will be made between that new germpasm and the primary germplasm
         selected in this form. An example use case of this importer is to relate
         multiple individuals to a single breeding cross.');
-    $this->service_Messenger->addStatus($info);
+    $form['note'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'p',
+      '#value' => $info,
+    ];
 
     $storage = $form_state->getStorage();
     if (isset($storage[self::VALIDATION_RESULT])) {
@@ -769,7 +783,7 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
       '#markup' => '<div style="margin-top: 20px"><img src="' . $path . '/theme/images/relationship_importer.png" style="max-width: 70%" /></div>',
     ];
 
-    $form['relationship_toggle'] = [
+    $form['file']['relationship_toggle'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Related germplasm must already exist'),
       '#default_value' => 0,
@@ -819,16 +833,28 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
   }
 
   /**
-   * Function callback, create population.
+   * Relate individuals in the file with the entry.
+   *
+   * Germplasm individuals may be created if they do not exist and the importer
+   * is configured to allow it. Individuals are related with the entry by
+   * creating a stock_relationship record linking the individual and the entry.
    *
    * @param array $population
-   *   Array, with the following keys:
-   *   entry: Form field value for Primary Germplasm field.
-   *   verb : Form field value for Relationship Verb field.
-   *   position: Form field value for Stock Position field.
-   *   individuals: Form file field value for Related Germplasm Field.
+   *   Details for the import as an associative array with the following keys:
+   *   - entry (int): stock.stock_id of the primary germplasm.
+   *   - verb (string): the term to be used for the stock relationship.
+   *     This will match the format "TERM NAME (ID SPACE:ACCESSION)" such as
+   *     that returned by the cvterm autocomplete controller.
+   *     @see 'fld_select_relationship_verb'
+   *   - position (string): the position of the primary germplasm in the stock
+   *     relationshion. Specifically, 'evi' if its the subject and 'ive' if
+   *     its the object.
+   *     @see 'fld_radio_stock_position'
+   *   - individuals (int): the FID of a managed file describing the related
+   *     germplasm individuals. The file consists of 4 columns, see the
+   *     headers property for more details.
    */
-  public function importPopulation($population) {
+  public function importPopulation(array $population) {
     $file = $this->service_entityTypeManager->getStorage('file')->load($population['individuals']);
     $this->setTotalItems($file->filesize);
     $this->setItemsHandled(0);
@@ -862,16 +888,6 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
             $val_sciname = $data_row[2];
             $val_uniqname = $data_row[3] ?? NULL;
 
-            if (!$population['relationship_only']) {
-              if (!$val_uniqname) {
-                throw new \Exception('Uniquename is required in line #' . ($i + 1) . ' when Related germplasm must already exist option is selected.');
-              }
-              $uniquename = $val_uniqname;
-            }
-            else {
-              $uniquename = $val_uniqname;
-            }
-
             // Organism:
             // If Scientific Name is present, lookup the organism ID.
             if ($val_sciname) {
@@ -896,7 +912,7 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
             }
 
             // Throw exception if type is not valid.
-            if ($type_id == NULL) {
+            if (!is_int($type_id) || $type_id <= 0) {
               throw new \Exception('Type: ' . $val_type . ' is not valid. Please provide a valid Type.');
             }
 
@@ -908,6 +924,16 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
 
             if ($stock_id == NULL && $population['relationship_only']) {
               throw new \Exception('Germplasm with name: ' . $val_name . ' + type: ' . $val_type . ' + scientific name: ' . $val_sciname . ' does not exist. Please provide a valid Germplasm.');
+            }
+
+            if (!$population['relationship_only']) {
+              if (!$val_uniqname) {
+                throw new \Exception('Unique Name is required in line #' . ($i + 1) . ' when Related germplasm must already exist option is selected.');
+              }
+              $uniquename = $val_uniqname;
+            }
+            else {
+              $uniquename = $val_uniqname;
             }
 
             // DUPLICATE LINE:
@@ -928,7 +954,7 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
               $temp_lines[$i + 1] = $line_text . $val_uniqname;
             }
 
-            // Uniquename:
+            // Unique Name:
             // Check if the uniquename already exists in the database.
             // If it does, throw an exception.
             if (!$population['relationship_only']) {
@@ -944,7 +970,7 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
                 }
                 if ($result) {
                   // A uniquename is already used in database.
-                  throw new \Exception('Uniquename is already used by another germplasm.');
+                  throw new \Exception('Unique Name is already used by another germplasm.');
                 }
                 else {
                   // Check if the uniquename is duplicated
@@ -952,7 +978,7 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
                   if (in_array($val_uniqname, $temp_uname)) {
                     // Duplicate uniquename in file.
                     $duplicate_uname = array_search($val_uniqname, $temp_uname);
-                    throw new \Exception('Duplicate Uniquename in lines: #' . $duplicate_uname . ' and ' . ($i + 1));
+                    throw new \Exception('Duplicate Unique Name in lines: #' . $duplicate_uname . ' and ' . ($i + 1));
                   }
                   else {
                     // If uniquename is not duplicated, add it to the temp array
@@ -1090,9 +1116,13 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
    *
    * @param string $organism
    *   The scientific name of the organism.
+   *
+   * @return int
+   *   The organism_id number. This will be 0 if the organism
+   *   could not be found.
    */
-  public function getOrganismIds($organism) {
-    $organism_id = '';
+  public function getOrganismIds(string $organism) : int {
+    $organism_id = 0;
     // Organism:
     // Use the genus and species encoded in the Scientific Name to
     // determine the organism.
@@ -1113,7 +1143,7 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
         // the organism_id number.
         $scientific_name = $values['genus'] . ' ' . $values['species'];
 
-        $organism_id = NULL;
+        $organism_id = 0;
         $organism_id_array = chado_get_organism_id_from_scientific_name($scientific_name);
         if (array_key_exists(0, $organism_id_array)) {
           $organism_id = $organism_id_array[0];
@@ -1123,11 +1153,6 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
     }
     return $organism_id;
   }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function postRun() {}
 
   /**
    * Describe the upload format including column descriptions + template file.
@@ -1171,7 +1196,7 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
       ->generateFile($importer_id, $column_headers, $file_extensions);
 
     // Additional notes to the headers.
-    $notes = $this->t('Each row in the file should describe a specific individual to be linked to the primary germplasm with the specified relationship. If the toggle is set for germplasm individuals to already exist, Uniquename will be looked up if not provided. Otherwise, Uniquename is required to insert individuals.</p><p><strong>NOTE:</strong> This importer will not permit duplicate lines with identical Name + Type + Scientific Name + Uniquename in the file.</p>');
+    $notes = $this->t('Each row in the file should describe a specific individual to be linked to the primary germplasm with the specified relationship. If the toggle is set for germplasm individuals to already exist, Unique Name will be looked up if not provided. Otherwise, Unique Name is required to insert individuals.</p><p><strong>NOTE:</strong> This importer will not permit duplicate lines with identical Name + Type + Scientific Name + Unique Name in the file.</p>');
 
     // Render the header and notes/lists in a template and use the file link as
     // the value to href attribute of the link to download a template file.

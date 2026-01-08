@@ -14,9 +14,13 @@ use Drupal\tripal_chado\Controller\ChadoCVTermAutocompleteController;
 /**
  * Tests form + form-related functionality of Germplasm Relationship Importer.
  *
- * @group relationshipImporter
+ * @group tripal-importer
+ * @group chado-importer
+ * @group importer-germrelationship
  */
-#[Group('relationshipImporter')]
+#[Group('tripal-importer')]
+#[Group('chado-importer')]
+#[Group('importer-germrelationship')]
 class GermplasmRelationshipImporterFormTest extends ChadoTestKernelBase {
 
   use UserCreationTrait;
@@ -60,8 +64,8 @@ class GermplasmRelationshipImporterFormTest extends ChadoTestKernelBase {
   protected array $definitions = [
     'test-relationship-importer' => [
       'id' => 'trpcultivate-germplasm-relationship-importer',
-      'label' => 'Tripal Importer: Germplasm Relationship Importer',
-      'description' => 'Imports germplasm stock relationships into testchado.',
+      'label' => 'Tripal Cultivate: Relate Germplasm',
+      'description' => 'Creates relationships between a single primary accession and related germplasm individuals (both new and existing).',
       'file_types' => ['tsv', 'txt'],
       'upload_title' => 'Related Germplasm*',
       'upload_description' => 'This should not be visible!',
@@ -136,7 +140,7 @@ class GermplasmRelationshipImporterFormTest extends ChadoTestKernelBase {
    */
   public function testRelationshipImporterFormValid() {
     $plugin_id = 'trpcultivate-germplasm-relationship-importer';
-    $importer_label = 'Tripal Importer: Germplasm Relationship Importer';
+    $importer_label = 'Tripal Cultivate: Relate Germplasm';
 
     // Configure the module.
     $organism_id = $this->chado_connection->insert('1:organism')
@@ -155,10 +159,6 @@ class GermplasmRelationshipImporterFormTest extends ChadoTestKernelBase {
     $this->assertIsArray($form, 'We expect the form builder to return a form but it did not.');
     $this->assertEquals('tripal_admin_form_tripalimporter', $form['#form_id'], 'We did not get the form id we expected.');
 
-    // Expect a status on the form.
-    $status = \Drupal::messenger()->messagesByType('status');
-    $this->assertCount(1, $status, 'We expect a single status message on the form.');
-
     // We also expect the full form to be rendered, so check that now.
     // Now that we have provided a plugin_id, we expect it to have...
     // title matching our importer label.
@@ -167,6 +167,10 @@ class GermplasmRelationshipImporterFormTest extends ChadoTestKernelBase {
     // The plugin_id stored in a value from element.
     $this->assertArrayHasKey('importer_plugin_id', $form, 'The form should have an element to save the plugin_id.');
     $this->assertEquals($plugin_id, $form['importer_plugin_id']['#value'], 'The importer_plugin_id[#value] should be set to our plugin_id.');
+
+    // Check the file fieldset contents.
+    $this->assertArrayHasKey('note', $form, 'We expect there to be a note element on the form but there is not.');
+    $this->assertEquals('html_tag', $form['note']['#type'], 'We expect the note element in the form to be an HTML tag.');
 
     // Check the file fieldset contents.
     $this->assertArrayHasKey('file', $form, 'We expect there to be a file fieldset on the form but there is not.');
@@ -184,6 +188,11 @@ class GermplasmRelationshipImporterFormTest extends ChadoTestKernelBase {
       "The local file element should not be available.");
     $this->assertArrayNotHasKey('file_remote', $form['file'],
       "The remote file element should not be available.");
+
+    // Check the Relationship toggle element.
+    $this->assertArrayHasKey('relationship_toggle', $form['file'], 'We expect there to be an checkbox for relationship toggle field.');
+    $this->assertEquals('checkbox', $form['file']['relationship_toggle']['#type'], 'We expect the relationship toggle element in the form to be a checkbox.');
+    $this->assertEquals(0, $form['file']['relationship_toggle']['#default_value'], 'We expect the relationship toggle element in the form to be set to false by default.');
 
     // Check the primary germplasm field element.
     $this->assertArrayHasKey('fieldset_primary_germplasm', $form,
@@ -204,11 +213,6 @@ class GermplasmRelationshipImporterFormTest extends ChadoTestKernelBase {
       'We expect the relationship type element in the form to be a textfield.');
     $this->assertArrayHasKey('fld_radio_stock_position', $form['fieldset_relationship_type'], 'We expect there to be a radio button for selecting the stock position.');
     $this->assertEquals('radios', $form['fieldset_relationship_type']['fld_radio_stock_position']['#type'], 'We expect the stock position element in the form to be a set of radio buttons.');
-
-    // Check the Relationship toggle element.
-    $this->assertArrayHasKey('relationship_toggle', $form, 'We expect there to be an checkbox for relationship toggle field.');
-    $this->assertEquals('checkbox', $form['relationship_toggle']['#type'], 'We expect the relationship toggle element in the form to be a checkbox.');
-    $this->assertEquals(0, $form['relationship_toggle']['#default_value'], 'We expect the relationship toggle element in the form to be set to false by default.');
   }
 
   /**

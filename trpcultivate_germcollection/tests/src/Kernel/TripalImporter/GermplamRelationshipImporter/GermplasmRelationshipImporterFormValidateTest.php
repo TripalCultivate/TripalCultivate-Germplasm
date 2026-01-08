@@ -15,9 +15,13 @@ use Drupal\tripal_chado\Controller\ChadoCVTermAutocompleteController;
 /**
  * Tests formValidate() functionality of the Germplasm Relationship Importer.
  *
- * @group relationshipImporter
+ * @group tripal-importer
+ * @group chado-importer
+ * @group importer-germrelationship
  */
-#[Group('relationshipImporter')]
+#[Group('tripal-importer')]
+#[Group('chado-importer')]
+#[Group('importer-germrelationship')]
 class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase {
 
   use UserCreationTrait;
@@ -61,8 +65,8 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
   protected array $definitions = [
     'test-relationship-importer' => [
       'id' => 'trpcultivate-germplasm-relationship-importer',
-      'label' => 'Tripal Importer: Germplasm Relationship Importer',
-      'description' => 'Imports germplasm stock relationships into testchado.',
+      'label' => 'Tripal Cultivate: Relate Germplasm',
+      'description' => 'Creates relationships between a single primary accession and related germplasm individuals (both new and existing).',
       'file_types' => ['tsv', 'txt'],
       'upload_title' => 'Related Germplasm*',
       'upload_description' => 'This should not be visible!',
