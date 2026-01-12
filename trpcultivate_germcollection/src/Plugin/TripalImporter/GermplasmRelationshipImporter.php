@@ -612,6 +612,10 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
               $failures[$validator_name] = [];
             }
             if ($validator_name == 'germplasm_name_exists') {
+              // @todo Validate that the unique name is not duplicated with in
+              // the file (currently, run method checks the database to check
+              // whether the unique name is in the database, but there's no
+              // validator to check for duplicates within the file).
               // @todo Validate the organism first, once we have a organism
               // validator plugin, then only set the organism ID if the organism
               // is valid.
@@ -862,7 +866,6 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
     $file_mime_type = $file->getMimeType();
 
     $temp_lines = [];
-    $temp_uname = [];
     $duplicate  = [];
 
     if ($file) {
@@ -970,21 +973,9 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
                 }
                 if ($result) {
                   // A uniquename is already used in database.
+                  // This exception will also be thrown if the uniquename
+                  // is duplicated in the file.
                   throw new \Exception('Unique Name is already used by another germplasm.');
-                }
-                else {
-                  // Check if the uniquename is duplicated
-                  // in the file. If it is, throw an exception.
-                  if (in_array($val_uniqname, $temp_uname)) {
-                    // Duplicate uniquename in file.
-                    $duplicate_uname = array_search($val_uniqname, $temp_uname);
-                    throw new \Exception('Duplicate Unique Name in lines: #' . $duplicate_uname . ' and ' . ($i + 1));
-                  }
-                  else {
-                    // If uniquename is not duplicated, add it to the temp array
-                    // to check against for future lines in the file.
-                    $temp_uname[$i + 1] = $val_uniqname;
-                  }
                 }
               }
 
