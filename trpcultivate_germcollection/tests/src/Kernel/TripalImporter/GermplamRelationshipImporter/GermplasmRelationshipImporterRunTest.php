@@ -524,7 +524,19 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
       ],
     ];
 
-    // #6: Duplicate rows in file with different uniquenames.
+    // #6: Missing uniquename when toggle is off.
+    $scenarios[] = [
+      'Missing uniquename when toggle is off.',
+      $valid_primary_germplasm,
+      $valid_relationship_verb,
+      FALSE,
+      'relationship_importer_missing_uniquename.tsv',
+      [
+        'expected_message' => 'Unique Name is required in line #2 when Related germplasm must already exist option is selected.',
+      ],
+    ];
+
+    // #7: Duplicate rows in file with different uniquenames.
     $scenarios[] = [
       'Duplicate Term in file with different uniquenames.',
       $valid_primary_germplasm,
