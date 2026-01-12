@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - 4.x
+      - g5.45-updateTestingGrid
   schedule:
     - cron: '0 6 * * *'
 
