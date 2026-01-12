@@ -894,10 +894,10 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
               $organism_id = $this->getOrganismIds($val_sciname);
             }
             else {
-              $organism_id = NULL;
+              $organism_id = 0;
             }
             // Throw exception if organism is not valid.
-            if ($organism_id == NULL) {
+            if (!is_int($organism_id) || $organism_id <= 0) {
               throw new \Exception('Scientific Name: ' . $val_sciname . ' is not valid. Please provide a valid Scientific Name.');
             }
 
