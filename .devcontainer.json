@@ -5,7 +5,7 @@
     "args": {
       "drupalversion": "11.x-dev",
       "phpversion": "8.5",
-      "pgsqlversion": "18"
+      "postgresqlversion": "18"
     }
   },
   "initializeCommand": "docker pull knowpulse/tripalcultivate-base:drupal11.x-dev-php8.5-pgsql18",
