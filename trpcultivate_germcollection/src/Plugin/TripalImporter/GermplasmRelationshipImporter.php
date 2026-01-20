@@ -698,6 +698,7 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
       '#type' => 'html_tag',
       '#tag' => 'p',
       '#value' => $info,
+      '#weight' => -101,
     ];
 
     $storage = $form_state->getStorage();
