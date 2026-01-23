@@ -7,19 +7,19 @@ on: [push, workflow_dispatch]
 
 jobs:
   run-coverage:
-    name: "Drupal 11.1.x-dev - PHP 8.3 - PostgreSQL 16"
+    name: "Drupal 11.3.x-dev - PHP 8.5 - PostgreSQL 18"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Run Automated testing + report coverage
-        uses: tripal/test-tripal-action@v1.7
+        uses: tripal/test-tripal-action@v1.8
         with:
           directory-name: 'TripalCultivate-Germplasm'
           modules: 'trpcultivate_germplasm trpcultivate_germcollection'
           build-image: TRUE
           dockerfile: 'Dockerfile'
-          php-version: 8.3
-          pgsql-version: 16
-          drupal-version: 11.1.x-dev
+          php-version: 8.5
+          pgsql-version: 18
+          drupal-version: 11.3.x-dev
           qltycloud-reporter-id: ${{ secrets.QLTY_COVERAGE_TOKEN }}
