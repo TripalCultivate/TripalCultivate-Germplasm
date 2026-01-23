@@ -20,55 +20,53 @@ jobs:
       fail-fast: false
       matrix:
         php-version:
-          - "8.1"
           - "8.2"
           - "8.3"
+          - "8.4"
+          - "8.5"
         pgsql-version:
-          - "13"
           - "14"
           - "15"
           - "16"
           - "17"
+          - "18"
         drupal-version:
-          - "10.4.x-dev"
           - "10.5.x-dev"
-          - "11.1.x-dev"
+          - "10.6.x-dev"
           - "11.x-dev"
           - "11.2.x-dev"
+          - "11.3.x-dev"
         exclude:
-          - php-version: "8.1"
-            drupal-version: "11.1.x-dev"
+          # Only Drupal 11.3+ supports PHP 8.5.
+          - php-version: "8.5"
+            drupal-version: "10.5.x-dev"
+          - php-version: "8.5"
+            drupal-version: "10.6.x-dev"
+          - php-version: "8.5"
+            drupal-version: "11.2.x-dev"
+          # Drupal 11.x requires PHP 8.3+.
           - php-version: "8.2"
-            drupal-version: "11.1.x-dev"
-          - php-version: "8.1"
             drupal-version: "11.x-dev"
           - php-version: "8.2"
-            drupal-version: "11.x-dev"
-          - php-version: "8.1"
             drupal-version: "11.2.x-dev"
           - php-version: "8.2"
-            drupal-version: "11.2.x-dev"
-          - pgsql-version: "13"
-            drupal-version: "11.1.x-dev"
-          - pgsql-version: "14"
-            drupal-version: "11.1.x-dev"
-          - pgsql-version: "15"
-            drupal-version: "11.1.x-dev"
-          - pgsql-version: "13"
-            drupal-version: "11.x-dev"
+            drupal-version: "11.3.x-dev"
+          # Drupal 11+ requires at least Postgresql 16.
           - pgsql-version: "14"
             drupal-version: "11.x-dev"
           - pgsql-version: "15"
             drupal-version: "11.x-dev"
-          - pgsql-version: "13"
-            drupal-version: "11.2.x-dev"
           - pgsql-version: "14"
             drupal-version: "11.2.x-dev"
           - pgsql-version: "15"
             drupal-version: "11.2.x-dev"
+          - pgsql-version: "14"
+            drupal-version: "11.3.x-dev"
+          - pgsql-version: "15"
+            drupal-version: "11.3.x-dev"
     name: TripalCultivate ${{ matrix.drupal-version }}-php${{ matrix.php-version }}-pgsql${{ matrix.pgsql-version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         name: Check out code
       - uses: mr-smithers-excellent/docker-build-push@v6.5
         name: Build & push Full matrix of Docker images
@@ -78,7 +76,7 @@ jobs:
           registry: docker.io
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
-          buildArgs: "drupalversion=${{ matrix.drupal-version }},phpversion=${{ matrix.php-version }},pgsqlversion=${{ matrix.pgsql-version }}"
+          buildArgs: "drupalversion=${{ matrix.drupal-version }},phpversion=${{ matrix.php-version }},postgresqlversion=${{ matrix.pgsql-version }}"
           labels: 'drupal.version.label="${{ matrix.drupal-version }}",php.version.label="${{ matrix.php-version }}", postgresql.version.label="${{ matrix.pgsql-version }}"'
       - uses: mr-smithers-excellent/docker-build-push@v6.5
         name: Build & push Full matrix of Docker images WITHOUT THEME
@@ -88,16 +86,16 @@ jobs:
           registry: docker.io
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
-          buildArgs: "drupalversion=${{ matrix.drupal-version }},phpversion=${{ matrix.php-version }},pgsqlversion=${{ matrix.pgsql-version }},installTheme='notheme-'"
+          buildArgs: "drupalversion=${{ matrix.drupal-version }},phpversion=${{ matrix.php-version }},postgresqlversion=${{ matrix.pgsql-version }},installTheme='notheme-'"
           labels: 'drupal.version.label="${{ matrix.drupal-version }}",php.version.label="${{ matrix.php-version }}", postgresql.version.label="${{ matrix.pgsql-version }}"'
       - uses: mr-smithers-excellent/docker-build-push@v6.5
-        name: Build baseonly-latest using 11.2.x-dev, PHP 8.3, PgSQL 17
-        if: ${{ matrix.drupal-version == '11.2.x-dev' && matrix.php-version == '8.3' && matrix.pgsql-version == '17' }}
+        name: Build baseonly-latest using 11.3.x-dev, PHP 8.5, PgSQL 18
+        if: ${{ matrix.drupal-version == '11.3.x-dev' && matrix.php-version == '8.5' && matrix.pgsql-version == '18' }}
         with:
           image: knowpulse/tripalcultivate-base
           tags: latest
           registry: docker.io
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
-          buildArgs: "drupalversion=${{ matrix.drupal-version }},phpversion=${{ matrix.php-version }},pgsqlversion=${{ matrix.pgsql-version }}"
+          buildArgs: "drupalversion=${{ matrix.drupal-version }},phpversion=${{ matrix.php-version }},postgresqlversion=${{ matrix.pgsql-version }}"
           labels: 'drupal.version.label="${{ matrix.drupal-version }}",php.version.label="${{ matrix.php-version }}", postgresql.version.label="${{ matrix.pgsql-version }}"'
