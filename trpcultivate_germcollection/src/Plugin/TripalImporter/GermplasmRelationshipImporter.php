@@ -156,10 +156,17 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
     ],
     [
       'name' => 'Unique Name',
-      'description' => "A name that uniquely identifies this germplasm individual within it's species. This is usually its accession in a genebank.",
+      'description' => "A name that uniquely identifies this germplasm individual within its species. This is usually its accession in a genebank.",
       'type' => 'optional',
     ],
   ];
+
+  /**
+   * Number of required columns.
+   *
+   * @var int
+   */
+  protected int $required_column_count;
 
   /**
    * Looked up organism ids, keyed by scientific name.
@@ -230,6 +237,19 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
   }
 
   /**
+   * Get the number of required columns.
+   *
+   * @return int
+   *   The number of required columns.
+   */
+  public function getRequiredColumnsCount() {
+    $this->required_column_count = count(array_filter($this->headers, function ($h) {
+      return $h['type'] == 'required';
+    }));
+    return $this->required_column_count;
+  }
+
+  /**
    * {@inheritDoc}
    */
   public function configureValidators(array $form_values, string $file_mime_type) {
@@ -255,11 +275,8 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
 
     // Configure the valid delimitted file validator.
     $instance_delimited = $this->service_validatorPluginManager->createInstance('valid_delimited_file');
-    // Filter the headers with type = 'required' then Count the result.
-    $required_column_count = count(array_filter($this->headers, function ($h) {
-      return $h['type'] == 'required';
-    }));
-    $instance_delimited->setExpectedColumns($required_column_count, FALSE);
+
+    $instance_delimited->setExpectedColumns($this->required_column_count, FALSE);
     $instance_delimited->setFileMimeType($file_mime_type);
     $validators['raw-row']['valid_delimited_file'] = $instance_delimited;
 
@@ -275,20 +292,11 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
     // exist (i.e. is TRUE) then the uniquename is optional; however, if we may
     // need to insert related germplasm then the uniquename is also required.
     $instance_empty_cell = $this->service_validatorPluginManager->createInstance('empty_cell');
-    if ($form_values['relationship_toggle']) {
-      $indices = [
-        $header_index['Name'],
-        $header_index['Type'],
-        $header_index['Scientific Name'],
-      ];
+    if ($this->headers[3]['type'] == 'required') {
+      $indices = [0, 1, 2, 3];
     }
     else {
-      $indices = [
-        $header_index['Name'],
-        $header_index['Type'],
-        $header_index['Scientific Name'],
-        $header_index['Unique Name'],
-      ];
+      $indices = [0, 1, 2];
     }
     $instance_empty_cell->setIndices($indices);
     $validators['data-row']['empty_cell'] = $instance_empty_cell;
@@ -359,24 +367,13 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
       }
     }
 
-    // Filter the headers with type = 'required' then Count the result.
-    $required_column_count = count(array_filter($this->headers, function ($h) {
-      return $h['type'] == 'required';
-    }));
-
     // Configure the valid_delimited_file metadata.
-    if ($this->headers[3]['type'] == 'required') {
-      $valid_delimited_file_metadata = [
-        'strict_flag' => TRUE,
-        'number_of_columns' => $required_column_count,
-      ];
-    }
-    else {
-      $valid_delimited_file_metadata = [
-        'strict_flag' => FALSE,
-        'number_of_columns' => $required_column_count,
-      ];
-    }
+    $strict = ($this->headers[3]['type'] == 'required') ? TRUE : FALSE;
+
+    $valid_delimited_file_metadata = [
+      'strict_flag' => $strict,
+      'number_of_columns' => $this->required_column_count,
+    ];
 
     // Call the processListWithDescribedTable() method in ValidDelimitedFile
     // class to check if there are any failures for the valid delimited
@@ -513,6 +510,8 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
         }
       }
     }
+
+    $this->getRequiredColumnsCount();
 
     // Configure the validators.
     $validators = $this->configureValidators($form_values, $file_mime_type);
@@ -689,7 +688,7 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
     // INFO:
     $info = $this->t('This importer will relate a group of germplasm to an existing
         germplasm. More specifically, for every line in the file, the importer will
-        look up to see if the germplasm already exists or create the germplasm if
+        look up if the germplasm already exists or create the germplasm if
         allowed to do so. Then, a relationship, with the type specified in this
         form, will be made between that new germpasm and the primary germplasm
         selected in this form. An example use case of this importer is to relate
@@ -852,8 +851,8 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
    *     that returned by the cvterm autocomplete controller.
    *     @see 'fld_select_relationship_verb'
    *   - position (string): the position of the primary germplasm in the stock
-   *     relationshion. Specifically, 'evi' if its the subject and 'ive' if
-   *     its the object.
+   *     relationship. Specifically, 'evi' if it's the subject and 'ive' if
+   *     it's the object.
    *     @see 'fld_radio_stock_position'
    *   - individuals (int): the FID of a managed file describing the related
    *     germplasm individuals. The file consists of 4 columns, see the
@@ -1079,12 +1078,11 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
    * @param int $organism_id
    *   Integer, containing organism_id of the scientific name.
    *
-   * @return int
-   *   Stock id number that matched the resolved stock id
-   *   from the input string.
+   * @return int|null
+   *   The stock id number that matched the resolved stock id
+   *   from the input string, otherwise NULL.
    */
   public function parseStock($stock_name, $type_id, $organism_id) {
-    $result = '';
 
     // Fetch the germplasm name and return
     // the stock_id number.
@@ -1122,6 +1120,9 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
       $organism_id = $this->organism_ids[$organism];
     }
     else {
+      // @todo Once the ChadoOrganismBuddy service is declared and available to
+      // use here, switch to using getOrganismFromScientificName() to lookup
+      // organism IDs.
       // Not previously looked up, so do it now.
       // Capture the genus and species from Scientific Name.
       preg_match('/^(\w+)\s{1}(.*)/', $organism, $match);
