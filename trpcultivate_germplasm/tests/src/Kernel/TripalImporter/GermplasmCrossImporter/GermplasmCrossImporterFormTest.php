@@ -16,7 +16,9 @@ use PHPUnit\Framework\Attributes\Group;
  *
  * @group crossImporter
  */
-#[Group('crossImporter')]
+#[Group('tripal-importer')]
+#[Group('chado-importer')]
+#[Group('importer-germplasmcross')]
 class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
 
   use UserCreationTrait;
@@ -81,7 +83,7 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
    *
    * @var string
    */
-  private $module_path;
+  private string $module_path;
 
   /**
    * {@inheritdoc}
@@ -129,28 +131,110 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
   }
 
   /**
-   * Tests building the importer form when all should be well.
+   * Data Provider: provides organism IDs and the expected default organism.
+   *
+   * @return array
+   *   Each scenario is an array with the following:
+   *   - A nested array of organisms to insert into the database, which should
+   *     then appear in the organism form field dropdown. Each organism array
+   *     has the following keys:
+   *     - 'genus': A string of the genus to insert.
+   *     - 'species': A string of the species to insert.
+   *   - The organism_id of the organism that is expected to be shown to the
+   *     user by default.
+   *   - The string message to be passed into assertEquals when evaluating the
+   *     organism_id of the default organism.
    */
-  public function testCrossImporterFormValid() {
+  public static function provideOrganismsForForm() {
+    $scenarios = [];
+
+    // #0: No organisms exist in the database.
+    $scenarios[] = [
+      [],
+      0,
+      'We expect the organism element in the form to default to organism ID of 0 since no organisms are available to select.',
+    ];
+
+    // #1: 1 valid organism
+    $scenarios[] = [
+      [
+        [
+          'genus' => 'Tripalus',
+          'species' => 'databasica',
+        ],
+      ],
+      1,
+      'We expect the organism element in the form to default to the organism ID of the one organism we created.',
+    ];
+
+    // #2: 3 valid organisms
+    $scenarios[] = [
+      [
+        [
+          'genus' => 'Tripalus',
+          'species' => 'databasica',
+        ],
+        [
+          'genus' => 'Tripalus',
+          'species' => 'chadoii',
+        ],
+        [
+          'genus' => 'Lorem',
+          'species' => 'ipsum',
+        ],
+      ],
+      // Since there is more than one organism, the default value is expected to
+      // be the -Select- text, therefore no organism ID.
+      0,
+      'We expect the organism element in the form to default to organism ID of 0 since more than one organism is available to select.',
+    ];
+
+    return $scenarios;
+  }
+
+  /**
+   * Tests building the importer form with a variable number of organisms.
+   *
+   * @param array $organisms
+   *   A nested array of organisms to insert into the database, which should
+   *   then appear in the organism form field dropdown. Each organism array
+   *   has the following keys:
+   *   - 'genus': A string of the genus to insert.
+   *   - 'species': A string of the species to insert.
+   * @param int $default_org_id
+   *   The organism_id of the organism that is expected to be shown to the user
+   *   by default.
+   * @param string $assert_organism_field_message
+   *   The string message to be passed into assertEquals when evaluating the
+   *   organism_id of the default organism.
+   *
+   * @dataProvider provideOrganismsForForm
+   */
+  #[DataProvider('provideOrganismsForForm')]
+  public function testCrossImporterForm(array $organisms, int $default_org_id, string $assert_organism_field_message) {
 
     $plugin_id = 'trpcultivate-germplasm-cross-importer';
     $importer_label = 'Tripal Cultivate: Germplasm Cross Importer';
 
-    // Configure the module.
-    $organism_id = $this->chado_connection->insert('1:organism')
-      ->fields([
-        'genus' => 'Tripalus',
-        'species' => 'databasica',
-      ])
-      ->execute();
-    $this->assertIsNumeric($organism_id,
-      "We were not able to create an organism for testing.");
+    // Insert any organisms if available.
+    $organism_ids = [];
+    if ($organisms) {
+      foreach ($organisms as $organism) {
+        $organism_id = $this->chado_connection->insert('1:organism')
+          ->fields($organism)
+          ->execute();
+        $this->assertIsNumeric($organism_id,
+        'We were not able to create the organism "' . $organism['genus'] . $organism['species'] . '" for testing.');
+        $organism_ids[] = $organism_id;
+      }
+    }
 
     // Build the form using the Drupal form builder.
     $form = \Drupal::formBuilder()->getForm(
       'Drupal\tripal\Form\TripalImporterForm',
       $plugin_id
     );
+
     // Ensure we are able to build the form.
     $this->assertIsArray($form,
       'We expect the form builder to return a form but it did not.');
@@ -202,6 +286,14 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
       "We expect there to be an organism form element but there is not.");
     $this->assertEquals('select', $form['organism']['#type'],
       "We expect the organism element in the form to be a select list.");
+    // Check that the select list contains all of our organisms.
+    foreach ($organism_ids as $org_id) {
+      $this->assertArrayHasKey($org_id, $form['organism']['#options'],
+        "We expect the organism select list to contain the organism with ID '$org_id'.");
+    }
+    // Check the select list's default value.
+    $this->assertEquals($default_org_id, $form['organism']['#default_value'],
+      $assert_organism_field_message);
   }
 
   /**
@@ -255,73 +347,9 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
   }
 
   /**
-   * Tests building the importer form when the module is not configured.
-   */
-  public function testCrossImporterFormNoOrganism() {
-
-    $plugin_id = 'trpcultivate-germplasm-cross-importer';
-    $importer_label = 'Tripal Cultivate: Germplasm Cross Importer';
-
-    // Build the form using the Drupal form builder.
-    $form = \Drupal::formBuilder()->getForm(
-      'Drupal\tripal\Form\TripalImporterForm',
-      $plugin_id
-    );
-    // Ensure we are able to build the form.
-    $this->assertIsArray($form,
-      'We expect the form builder to return a form but it did not.');
-    $this->assertEquals('tripal_admin_form_tripalimporter', $form['#form_id'],
-      'We did not get the form id we expected.');
-
-    // Expect no Drupal warnings at this point.
-    $warnings = \Drupal::messenger()->messagesByType('warning');
-    $this->assertCount(0, $warnings,
-      "We expect no warnings when the form for this importer is first built.");
-
-    // We also expect the full form to be rendered, so check that now.
-    // Now that we have provided a plugin_id, we expect it to have a
-    // title matching our importer label.
-    $this->assertArrayHasKey('#title', $form,
-      "The form should have a title set.");
-    $this->assertEquals($importer_label, $form['#title'],
-      "The title should match the label annotated for our plugin.");
-    // The plugin_id stored in a value form element.
-    $this->assertArrayHasKey('importer_plugin_id', $form,
-      "The form should have an element to save the plugin_id.");
-    $this->assertEquals($plugin_id, $form['importer_plugin_id']['#value'],
-      "The importer_plugin_id[#value] should be set to our plugin_id.");
-
-    // Check the file fieldset contents.
-    $this->assertArrayHasKey('file', $form,
-      "We expect there to be a file fieldset but there is not.");
-    $this->assertEquals('fieldset', $form['file']['#type'],
-      "We expect the file element in the form to be a fieldset.");
-    // We expect there to be an upload description including a template link
-    // and numbered column description.
-    $this->assertArrayHasKey('upload_description', $form['file'],
-      "We expect the upload description to have been added to the form by the TripalImporter base class.");
-    $this->assertStringContainsString('<a href', $form['file']['upload_description']['#markup'],
-      "We expected the upload description to have a link in it.");
-    $this->assertStringContainsString('<ol id="tcp-header-notes">', $form['file']['upload_description']['#markup'],
-      "We expected the upload description to have an ordered list in it.");
-    // We also expect the file upload HTML5 element provided by Tripal
-    // and not the file local/remote.
-    $this->assertArrayHasKey('file_upload', $form['file'],
-      "We expect the file upload element to be added by the Tripal Importer base class.");
-    $this->assertArrayNotHasKey('file_local', $form['file'],
-      "The local file element should not be available.");
-    $this->assertArrayNotHasKey('file_remote', $form['file'],
-      "The remote file element should not be available.");
-
-    // Check the Organism form element.
-    $this->assertArrayHasKey('organism', $form,
-      "We expect there to be an organism form element but there is not.");
-    $this->assertEquals('select', $form['organism']['#type'],
-      "We expect the organism element in the form to be a select list.");
-  }
-
-  /**
    * Tests submitting the importer form when organism select box is empty.
+   *
+   * NOTE: Currently being skipped until we handle validation for organism.
    */
   public function testCrossImporterFormSubmitNoOrganism() {
     // Skip this test until we handle validation for organism.
@@ -423,7 +451,7 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
       'Year',
       'Season',
       'Cross Number',
-      'Uniquename',
+      'Unique Name',
       'Maternal Parent',
       'Paternal Parent',
       'Cross Type',
@@ -450,7 +478,7 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
     );
 
     // Assert a download link was provided.
-    // Construct the templage file filename.
+    // Construct the template file filename.
     // Only the first item in the 'file_types' importer annotation is used as
     // default file extension of the template file.
     $importer_annotations = $importer_plugin_manager->getDefinitions();

@@ -7,7 +7,10 @@ use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Render\Renderer;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\tripal\TripalImporter\Attribute\TripalImporter;
 use Drupal\tripal_chado\ChadoBuddy\PluginManagers\ChadoBuddyPluginManager;
+use Drupal\tripal_chado\Controller\ChadoOrganismFormElementController;
 use Drupal\tripal_chado\Database\ChadoConnection;
 use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoCvtermBuddy;
 use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoPropertyBuddy;
@@ -22,8 +25,6 @@ use Drupal\trpcultivate\TripalCultivateValidator\TripalCultivateValidatorManager
 use Drupal\trpcultivate\Service\TripalCultivateFileTemplateService;
 use Drupal\trpcultivate\Service\ImportValidationHelper;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\tripal\TripalImporter\Attribute\TripalImporter;
 
 /**
  * Tripal Cultivate Germplasm - Cross Importer.
@@ -33,7 +34,7 @@ use Drupal\tripal\TripalImporter\Attribute\TripalImporter;
  * @TripalImporter(
  *   id = "trpcultivate-germplasm-cross-importer",
  *   label = @Translation("Tripal Cultivate: Germplasm Cross Importer"),
- *   description = @Translation("Loads germplasm crosses into the system. This is useful for large datasets to ease the upload process."),
+ *   description = @Translation("Creates germplasm cross pages associated with parental material through upload of a germplasm cross data file."),
  *   file_types = {"tsv"},
  *   upload_description = @Translation("Please provide a data file."),
  *   upload_title = @Translation("Germplasm Cross Data File*"),
@@ -56,7 +57,7 @@ use Drupal\tripal\TripalImporter\Attribute\TripalImporter;
 #[TripalImporter(
    id: 'trpcultivate-germplasm-cross-importer',
    label: new TranslatableMarkup('Tripal Cultivate: Germplasm Cross Importer'),
-   description: new TranslatableMarkup('Loads germplasm crosses into the system. This is useful for large datasets to ease the upload process.'),
+   description: new TranslatableMarkup('Creates germplasm cross pages associated with parental material through upload of a germplasm cross data file.'),
    file_types: ['tsv'],
    upload_description: new TranslatableMarkup('Please provide a data file.'),
    upload_title: new TranslatableMarkup('Germplasm Cross Data File*'),
@@ -92,7 +93,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    *
    * NOTE: Order MUST reflect the desired order of headers in the input file.
    */
-  private $headers = [
+  protected array $headers = [
     [
       'name' => 'Year',
       'description' => 'The year this cross was made in (e.g. 2020).',
@@ -100,7 +101,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     ],
     [
       'name' => 'Season',
-      'description' => 'The season this cross was made in (e.g. Spring, Fall, Winter, Summer).',
+      'description' => 'The season this cross was made in (one of: Spring, Fall, Winter, Summer).',
       'type' => 'required',
     ],
     [
@@ -109,7 +110,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       'type' => 'required',
     ],
     [
-      'name' => 'Uniquename',
+      'name' => 'Unique Name',
       'description' => 'A unique identifier for this cross. This can be the same as Cross Number, if desired.',
       'type' => 'required',
     ],
@@ -206,24 +207,36 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    *
    * @var \Drupal\Core\Messenger\MessengerInterface
    */
-  protected $service_Messenger;
+  protected MessengerInterface $service_Messenger;
 
   /**
    * Used to reference the validation result summary in the form.
    *
    * @var string
    */
-  private $validation_result = 'validation_result';
+  protected string $validation_result = 'validation_result';
 
   /**
    * Expected column settings.
    *
    * @var array
    */
-  private $expected_columns;
+  protected array $expected_columns;
 
   /**
-   * Constructs the traits importer.
+   * Valid values for the 'Seasons' column.
+   *
+   * @var array
+   */
+  protected array $valid_seasons = [
+    'Winter',
+    'Spring',
+    'Summer',
+    'Fall',
+  ];
+
+  /**
+   * Constructs the cross importer.
    *
    * @param array $configuration
    *   A configuration array containing information about the plugin instance.
@@ -337,8 +350,12 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     // - File rows are properly delimited
     $instance = $this->service_validatorPluginManager->createInstance('valid_delimited_file');
     // Configure the number of columns in a single row for this validator. We
-    // want a minimum number of 6 columns, so no need to set strict.
-    $instance->setExpectedColumns(6, FALSE);
+    // will count the columns that are type 'required' and set that as a strict
+    // number of columns.
+    $required_column_count = count(array_filter($this->headers, function ($h) {
+      return $h['type'] == 'required';
+    }));
+    $instance->setExpectedColumns($required_column_count, FALSE);
     $this->expected_columns = $instance->getExpectedColumns();
     // Set the MIME type of this input file.
     $instance->setFileMimeType($file_mime_type);
@@ -351,20 +368,21 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     // Use our $headers property to configure what we expect for a header in the
     // input file.
     $instance->setHeaders($this->headers);
-    // Configure the expected number of columns and set it to be strict.
+    // Configure the minimum expected number of columns. Any additional columns
+    // will be ignored.
     $num_columns = count($this->headers);
-    $instance->setExpectedColumns($num_columns, TRUE);
+    $instance->setExpectedColumns($num_columns, FALSE);
     $validators['header-row']['valid_header'] = $instance;
 
     // -----------------------------------------------------
     // Data Row Level
-    // - All data row cells in columns 0-5 are not empty
+    // - All data row cells in columns 0-6 are not empty
     $instance = $this->service_validatorPluginManager->createInstance('empty_cell');
     $indices = [
       $header_index['Year'],
       $header_index['Season'],
       $header_index['Cross Number'],
-      $header_index['Uniquename'],
+      $header_index['Unique Name'],
       $header_index['Maternal Parent'],
       $header_index['Paternal Parent'],
       $header_index['Cross Type'],
@@ -375,12 +393,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     // - The column 'Season' is one of: Winter, Spring, Summer, Fall
     $instance = $this->service_validatorPluginManager->createInstance('value_in_list');
     $instance->setIndices([$header_index['Season']]);
-    $instance->setValidValues([
-      'Winter',
-      'Spring',
-      'Summer',
-      'Fall',
-    ]);
+    $instance->setValidValues($this->valid_seasons);
     $validators['data-row']['valid_season'] = $instance;
 
     // - Maternal Parent and Paternal Parent cells exist in the database.
@@ -393,8 +406,9 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       $header_index['Paternal Parent'],
     ];
     $instance->setIndices($indices);
-    $organism_id = $form_values['organism'];
-    $instance->setOrganismID($organism_id);
+    $cross_organism_id = $form_values['organism'];
+    $cross_genus = $this->getGenusFromOrgId($cross_organism_id);
+    $instance->setGenus($cross_genus);
     $validators['data-row']['germplasm_name_exists'] = $instance;
     return $validators;
   }
@@ -425,12 +439,12 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
 
     // Field Organism:
     // Prepare select options with only active organisms.
-    $all_organisms = chado_get_organism_select_options();
+    $all_organisms = ChadoOrganismFormElementController::getSelectOptions([]);
 
     // If there is only one organism, it should be the default.
     $default_organism = 0;
     if ($all_organisms && count($all_organisms) == 1) {
-      $default_organism = reset($all_organisms);
+      $default_organism = array_keys($all_organisms)[0];
     }
 
     // Field organism.
@@ -714,7 +728,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    *       render array depends on the validator, but the most common types are
    *       item list and table.
    */
-  public function processValidationMessages($failures) {
+  public function processValidationMessages(array $failures) {
     // Array to hold all the user feedback. Currently this includes an entry for
     // each validator. However, in future designs we may combine more then one
     // validator into a single line in the validate UI and, thus, a single entry
@@ -850,7 +864,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
         $messages[$validator_name]['status'] = 'fail';
 
         $metadata = [
-          'expected_values' => ['Winter', 'Spring', 'Summer', 'Fall'],
+          'expected_values' => $this->valid_seasons,
           'column_headers' => $header_names,
         ];
         $messages[$validator_name]['details'] = ValueInList::processListWithDescribedTable($failures[$validator_name], $metadata);
@@ -869,7 +883,9 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
         $messages[$validator_name]['status'] = 'fail';
         $metadata = [
           'column_headers' => [
+            // Maternal Parent.
             4 => $header_names[4],
+            // Paternal Parent.
             5 => $header_names[5],
           ],
         ];
@@ -889,282 +905,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    * {@inheritDoc}
    */
   public function run() {
-    // Organism value.
-    $organism_id = $this->arguments['run_args']['organism'];
-    // Lookup the organism ID to make sure its valid.
-    $organism_obj = chado_get_organism(['organism_id' => $organism_id]);
-    if ($organism_obj == NULL) {
-      $error_message = "The organism ID $organism_id is not valid. Please check that the organism you selected in the form is in the database.";
-      $this->logger->error($error_message);
-      throw new \Exception($error_message);
-    }
 
-    // Lookup necessary CVterms prior to inserting anything.
-    $cvterms = $this->setUpCvTerms();
-
-    // Traits data file id.
-    $file_id = $this->arguments['files'][0]['fid'];
-    // Load file object.
-    $file = $this->service_entityTypeManager->getStorage('file')->load($file_id);
-    // Get the mime type which is used to split the rows.
-    $file_mime_type = $file->getMimeType();
-    // Open and read file in this uri.
-    $file_uri = $file->getFileUri();
-    $handle = fopen($file_uri, 'r');
-
-    // Line counter.
-    $line_no = 0;
-    // Headers.
-    // Only the header names are needed, so pull them out into a new array.
-    $headers = array_column($this->headers, 'name');
-    $headers_count = count($headers);
-
-    while ($cur_line = fgets($handle)) {
-      if ($line_no > 0 && $cur_line) {
-        // Current row.
-        $data_row = ImportValidationHelper::splitRowIntoColumns($cur_line, $file_mime_type);
-        // Required columns.
-        $val_year = $data_row[0];
-        $val_season = $data_row[1];
-        $val_crossnum = $data_row[2];
-        $val_uniquename = $data_row[3];
-        $val_maternal = $data_row[4];
-        $val_paternal = $data_row[5];
-        $val_crosstype = $data_row[6];
-        // Optional columns.
-        $val_seedtype = $data_row[7] ?? NULL;
-        $val_cotyledon = $data_row[8] ?? NULL;
-        $val_comment = $data_row[9] ?? NULL;
-
-        // Validate that the maternal and paternal parents are still in the db.
-        $instance = $this->service_validatorPluginManager->createInstance('germplasm_name_exists');
-        // Set the logger since this validator uses a setter (setOrganismID)
-        // which may log messages.
-        $instance->setLogger($this->logger);
-        $instance->setIndices([4, 5]);
-        $instance->setOrganismID($organism_id);
-        $result = $instance->validateRow($data_row);
-        // Check if validation failed.
-        if (array_key_exists('valid', $result) && $result['valid'] === FALSE) {
-          // Log the error and throw an exception to stop data import.
-          $error_message = "One or both of maternal parent ($val_maternal) and paternal parent ($val_paternal) is not in the database, but should be.";
-          $this->logger->error($error_message);
-          throw new \Exception($error_message);
-        }
-        // Insert our breeding cross.
-        $progeny = [
-          'crossnum' => $val_crossnum,
-          'uniquename' => $val_uniquename,
-          'maternal' => $val_maternal,
-          'paternal' => $val_paternal,
-          'crosstype' => $val_crosstype,
-          'organism_id' => $organism_id,
-          'stocktype_id' => $cvterms['progeny']['cvterm_id'],
-        ];
-        $progeny_stock_id = $this->importCross($progeny);
-
-        // Create our stock properties for this progeny.
-        // $this->createStockProp()
-      }
-
-      // Next line.
-      $line_no++;
-    }
-
-    // Close the file.
-    fclose($handle);
-  }
-
-  /**
-   * Check that all of the cvterms needed by this importer are available.
-   *
-   * In the future, this method will grab all of our terms from the config.
-   *
-   * @return array
-   *   An array of cvterms. The key is the name of the term (as will be
-   *   supplied in trpcultivate_germplasm.settings) and each key is further
-   *   nested with the following key-value pairs:
-   *   - 'cvterm.name': The name of the cvterm
-   *   - 'db.name': The name of the DB
-   *   - 'dbxref.accession': The DBxref code
-   *   - 'cvterm_id': The cvterm ID
-   */
-  public function setUpCvTerms() {
-
-    // Setup our CV terms array with information we know so that we can
-    // perform a database lookup for the cvterm ID.
-    $cvterms = [
-      'progeny' => [
-        'cvterm.name' => 'progeny',
-        'db.name' => 'PBO',
-        'dbxref.accession' => '0000065',
-      ],
-      'maternal_parent' => [
-        'cvterm.name' => 'maternal parent',
-        'db.name' => 'TRPC',
-        'dbxref.accession' => '0022',
-      ],
-      'paternal_parent' => [
-        'cvterm.name' => 'paternal parent',
-        'db.name' => 'TRPC',
-        'dbxref.accession' => '0023',
-      ],
-      'crossing_block_year' => [
-        'cvterm.name' => 'Crossing Block Year',
-        'db.name' => 'TRPC',
-        'dbxref.accession' => '0047',
-      ],
-      'crossing_block_season' => [
-        'cvterm.name' => 'Crossing Block Season',
-        'db.name' => 'TRPC',
-        'dbxref.accession' => '0046',
-      ],
-      'seed_type' => [
-        'cvterm.name' => 'Seed Type',
-        'db.name' => 'TRPC',
-        'dbxref.accession' => '0050',
-      ],
-      'cotyledon_colour' => [
-        'cvterm.name' => 'Cotyledon Colour',
-        'db.name' => 'TRPC',
-        'dbxref.accession' => '0048',
-      ],
-      'comment' => [
-        'cvterm.name' => 'comment',
-        'db.name' => 'schema',
-        'dbxref.accession' => 'comment',
-      ],
-    ];
-    // @todo Add terms to our config.
-    /*
-    $germplasm_config = $this->config_factory->get('trpcultivate_germplasm.settings');
-    // Iterate through our cvterms
-    // If it hasn't been set before, set it now
-    foreach ($this->cvterms as $term) {
-      if (!isset($this->cvterms[$term])) {
-        $terms_string = 'terms.' . $term;
-        $this->setCVterm($term, $germplasm_config->get($terms_string));
-      }
-    }
-     */
-    foreach ($cvterms as $term => $info) {
-      $chado_buddy_records = $this->cvterm_buddy->getCvterm($info);
-      if ($chado_buddy_records) {
-        $cvterm_id = $chado_buddy_records[0]->getValue('cvterm.cvterm_id');
-        // Store the CVterm ID in our array.
-        $cvterms[$term]['cvterm_id'] = $cvterm_id;
-      }
-      else {
-        $error_message = "Unable to get the cvterm ID for '$term'.";
-        $this->logger->error($error_message);
-        throw new \Exception($error_message);
-      }
-    }
-
-    return $cvterms;
-  }
-
-  /**
-   * Inserts a stock and creates relationships with existing parental stocks.
-   *
-   * NOTE: This method assumes that the maternal and paternal parent already
-   * exist in the database. Make sure these are validated prior to calling this
-   * method.
-   *
-   * @param array $progeny
-   *   An array containing information about a progeny for import. It has the
-   *   following keys:
-   *   - 'crossnum': The cross number, aka name of the progeny.
-   *   - 'uniquename': The uniquename of the progeny.
-   *   - 'crosstype': The type of cross that resulted in the progeny.
-   *   - 'maternal': The name of the maternal parent of a progeny.
-   *   - 'paternal': The name of the paternal parent of a progeny.
-   *   - 'organism_id': The organism ID of the progeny.
-   *   - 'stocktype_id': The type_id of the progeny.
-   *
-   * @return int|null
-   *   The stock ID of the inserted stock, otherwise null.
-   */
-  public function importCross(array $progeny) {
-
-    $crossnum = $progeny['crossnum'];
-    $uniquename = $progeny['uniquename'];
-    $organism_id = $progeny['organism_id'];
-    $stocktype_id = $progeny['stocktype_id'];
-    // First, query the stock table to see if our cross for import already
-    // exists.
-    // There are 3 scenarios to look for:
-    // 1. Germplasm name + stock type + organism
-    // 2. Uniquename + stock type + organism
-    // 3. Scenario 1 or 2 with the same genus, but different species.
-    $stock_query = $this->connection->select('1:stock', 's')
-      ->fields('s', ['stock_id', 'name', 'uniquename', 'type_id'])
-    // Add the organism_id and stocktype_id as regular conditions.
-      ->condition('s.organism_id', $organism_id, '=')
-      ->condition('s.type_id', $stocktype_id, '=');
-    // Create an OR condition group for germplasm name OR uniquename.
-    $orGroup = $stock_query->orConditionGroup()
-      ->condition('s.name', $crossnum, '=')
-      ->condition('s.uniquename', $uniquename, '=');
-    // Now add the OR condition group to the query and execute it.
-    $stock_query->condition($orGroup);
-    $stock_record = $stock_query->execute()->fetchAll();
-
-    // If we retrieved more than one stock, throw an error.
-    if (count($stock_record) >= 2) {
-      $stocks_retrieved = [];
-      foreach ($stock_record as $stock_hit) {
-        $stock_string = $stock_hit->name . " (uniquename=" . $stock_hit->uniquename . "; stock_id=" . $stock_hit->stock_id . ")";
-        array_push($stocks_retrieved, $stock_string);
-      }
-      $error_message = "Found more than one stock ID for \"$crossnum\" and/or \"$uniquename\" with type ID \"$stocktype_id\" and organism ID \"$organism_id\". The existing stocks are: " . implode(", ", $stocks_retrieved) . ".";
-      $this->logger->error($error_message);
-      throw new \Exception($error_message);
-    }
-
-    // Lookup our crossnum + uniquename + stocktype + organism combo and throw
-    // an error if it already exists.
-    $stock_query = $this->chado_connection->select('1:stock', 's')
-      ->fields('s', ['stock_id'])
-      ->condition('s.name', $progeny['crossnum'], '=')
-      ->condition('s.uniquename', $progeny['uniquename'], '=')
-      ->condition('s.type_id', $progeny['stocktype_id'], '=')
-      ->condition('s.organism_id', $progeny['organism_id'], '=')
-      ->execute();
-    $stock_id = $stock_query->fetchField();
-    if ($stock_id) {
-      $crossnum = $progeny['crossnum'];
-      $error_message = "There is already a stock_id for cross $crossnum in the database.";
-      $this->logger->error($error_message);
-      throw new \Exception($error_message);
-    }
-    // Next, grab the genus of the organism id, and check if there is a stock
-    // with the same name under a different species.
-    // Can I re-run the previous query but without uniquename?
-    // Log a warning message if this is the case?
-    // Confirmed the stock doesn't already exist, now insert.
-    $stock = [
-      'name' => $progeny['crossnum'],
-      'uniquename' => $progeny['uniquename'],
-      'organism_id' => $progeny['organism_id'],
-      'type_id' => $progeny['stocktype_id'],
-    ];
-    $stock_id = $this->chado_connection->insert('1:stock')
-      ->fields($stock)
-      ->execute();
-
-    // 3. Create relationships with parents
-    // Lookup the parents by name and genus since we can't assume they are the
-    // same species. (Eg. if this is an interspecific cross.)
-    // 4. Return stock_id
-    return NULL;
-  }
-
-  /**
-   * Creates a property for a stock by storing it in the stockprop table.
-   */
-  public function createStockProp(int $stock_id, int $stockprop_type_id, string $stockprop_value) {
-    return NULL;
   }
 
   /**
@@ -1233,6 +974,31 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     ];
 
     return $this->service_Renderer->renderPlain($build);
+  }
+
+  /**
+   * Given an organism ID, returns the genus as a string.
+   *
+   * @param int $organism_id
+   *   The organism_id of the desired organism in chado.organism.
+   *
+   * @return string
+   *   The genus of the organism.
+   *
+   * @throws \Exception
+   *   - if organism_id is not in chado.
+   */
+  public function getGenusFromOrgId(int $organism_id) {
+    // Lookup the organism ID and make sure its valid.
+    $organism_obj = chado_get_organism(['organism_id' => $organism_id]);
+    if ($organism_obj == NULL) {
+      $error_message = "The organism ID $organism_id is not valid.";
+      $this->logger->error($error_message);
+      throw new \Exception($error_message);
+    }
+
+    // Return just the genus.
+    return $organism_obj->genus;
   }
 
 }

@@ -16,7 +16,9 @@ use PHPUnit\Framework\Attributes\Group;
  *
  * @group crossImporter
  */
-#[Group('crossImporter')]
+#[Group('tripal-importer')]
+#[Group('chado-importer')]
+#[Group('importer-germplasmcross')]
 class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
 
   use UserCreationTrait;
@@ -27,7 +29,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
    *
    * @var string
    */
-  protected $defaultTheme = 'stark';
+  protected string $defaultTheme = 'stark';
 
   /**
    * Modules to enable.
@@ -88,7 +90,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
    *
    * @var string
    */
-  private $module_path;
+  private string $module_path;
 
   /**
    * {@inheritdoc}
@@ -185,11 +187,11 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
    *     - Each key is the unique name of a feedback line provided to the UI
    *       through processValidationMessages(). Currently, there is a feedback
    *       line for each unique validator instance that was instantiated by the
-   *       configureValidators() method in the Traits Importer class.
+   *       configureValidators() method in the Importer class.
    *       - 'status': [REQUIRED] One of 'pass', 'todo', or 'fail'
    *       - 'title': [REQUIRED if 'status' = 'fail'] A string that matches the
-   *         title set in processValidationMessages() method in the Traits
-   *         Importer class for this validator instance.
+   *         title set in processValidationMessages() method in the Importer
+   *         class for this validator instance.
    *       - 'details': [REQUIRED if 'status' = 'fail'] A string that is ideally
    *         unique to the scenario that is expected to be in the render array.
    *   - an integer indicating the number of form validation messages we expect
@@ -257,7 +259,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
         'valid_delimited_file' => [
           'title' => 'Lines are properly delimited',
           'status' => 'fail',
-          'details' => 'This importer requires a minimum number of 6 columns for each line. The following lines do not contain the expected number of columns.',
+          'details' => 'This importer requires a minimum number of 7 columns for each line. The following lines do not contain the expected number of columns.',
         ],
         // Since the header row has the correct number of columns, validation
         // for valid_header is expected to pass.
@@ -304,7 +306,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
       $num_form_validation_messages,
     ];
 
-    // #5: Contains correct header + 1 line with empty Cross Number/Uniquename.
+    // #5: Contains correct header + 1 line with empty Cross Number/Unique Name.
     $scenarios[] = [
       $valid_organism,
       'correct_header_emptycell_crossnumber.tsv',
@@ -364,7 +366,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
   }
 
   /**
-   * Tests the validation aspect of the trait importer form.
+   * Tests the validation aspect of the importer form.
    *
    * @param int $submitted_org_id
    *   The ID of the organism that is submitted with the form.

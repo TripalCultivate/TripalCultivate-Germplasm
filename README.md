@@ -61,22 +61,23 @@ maintainability issues and test coverage.
 
 The following compatibility is proven via automated testing workflows.
 
-|  Drupal     |  10.4.x         |  10.5.x         |  11.1.x         | 11.2.x          |
-|-------------|-----------------|-----------------|-----------------|-----------------|
-| **PHP 8.1** | ![Grid1A-Badge] | ![Grid2A-Badge] |                 |                 |
-| **PHP 8.2** | ![Grid1B-Badge] | ![Grid2B-Badge] |                 |                 |
-| **PHP 8.3** | ![Grid1C-Badge] | ![Grid2C-Badge] | ![Grid3C-Badge] | ![Grid4C-Badge] |
+| PHP\Drupal | 10.5.x-dev          | 10.6.x-dev          | 11.2.x-dev          | 11.3.x-dev          |
+|------------|---------------------|---------------------|---------------------|---------------------|
+| **PHP8.2** | ![Grid82-105-Badge] | ![Grid82-106-Badge] |                     |                     |
+| **PHP8.3** | ![Grid83-105-Badge] | ![Grid83-106-Badge] | ![Grid83-112-Badge] | ![Grid83-113-Badge] |
+| **PHP8.4** | ![Grid84-105-Badge] | ![Grid84-106-Badge] | ![Grid84-112-Badge] | ![Grid84-113-Badge] |
+| **PHP8.5** |                     |                     |                     | ![Grid85-113-Badge] |
 
 [our QLTY Cloud project page]: https://qlty.sh/gh/TripalCultivate/projects/TripalCultivate-Germplasm
 
-[Grid1A-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-Grid1A.yml/badge.svg
-[Grid1B-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-Grid1B.yml/badge.svg
-[Grid1C-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-Grid1C.yml/badge.svg
-
-[Grid2A-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-Grid2A.yml/badge.svg
-[Grid2B-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-Grid2B.yml/badge.svg
-[Grid2C-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-Grid2C.yml/badge.svg
-
-[Grid3C-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-Grid3C.yml/badge.svg
-
-[Grid4C-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-Grid4C.yml/badge.svg
+[Grid82-105-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-php8.2_D10_5x.yml/badge.svg
+[Grid82-106-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-php8.2_D10_6x.yml/badge.svg
+[Grid83-105-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-php8.3_D10_5x.yml/badge.svg
+[Grid83-106-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-php8.3_D10_6x.yml/badge.svg
+[Grid83-112-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-php8.3_D11_2x.yml/badge.svg
+[Grid83-113-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-php8.3_D11_3x.yml/badge.svg
+[Grid84-105-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-php8.4_D10_5x.yml/badge.svg
+[Grid84-106-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-php8.4_D10_6x.yml/badge.svg
+[Grid84-112-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-php8.4_D11_2x.yml/badge.svg
+[Grid84-113-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-php8.4_D11_3x.yml/badge.svg
+[Grid85-113-Badge]: https://github.com/TripalCultivate/TripalCultivate-Germplasm/actions/workflows/MAIN-phpunit-php8.5_D11_3x.yml/badge.svg
