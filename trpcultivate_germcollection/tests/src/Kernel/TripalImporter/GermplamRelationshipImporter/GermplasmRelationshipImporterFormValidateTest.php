@@ -167,16 +167,15 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
     // @todo Once we have a validator set up to check if the primary germplasm
     // and the relationship verb exists, we would add test cases here to
     // test those
-    // $invalid_primary_germplasm = '';
-    // $invalid_relationship_verb = '';
+    // Define invalid primary germplasm and relationship verb
+    // values to use in scenarios.
+    $invalid_primary_germplasm = 'invalid_germplasm';
+    $invalid_relationship_verb = 'invalid_verb (EFO:0000000)';
+
+    // Define valid primary germplasm and relationship verb
+    // values to use in scenarios.
     $valid_primary_germplasm = 'my_stock_1 [cultivar] (1)';
     $valid_relationship_verb = 'cultivar (EFO:0005136)';
-
-    // Set our number of expected validation messages to 0, since none of
-    // validators should cause this number to change at this moment, since we
-    // don't have validators set up for primary germplasm and relationship verb
-    // yet.
-    $num_form_validation_messages = 0;
 
     $scenarios = [];
 
@@ -196,7 +195,7 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
         'valid_headers' => ['status' => 'todo'],
         'empty_cell' => ['status' => 'todo'],
       ],
-      $num_form_validation_messages,
+      0,
     ];
 
     // #1: Header is improperly delimited, with proper data rows.
@@ -215,7 +214,7 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
         'valid_headers' => ['status' => 'todo'],
         'empty_cell' => ['status' => 'todo'],
       ],
-      $num_form_validation_messages,
+      0,
     ];
 
     // #2: 2nd row of file is improperly delimited.
@@ -236,7 +235,7 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
         'valid_headers' => ['status' => 'pass'],
         'empty_cell' => ['status' => 'todo'],
       ],
-      $num_form_validation_messages,
+      0,
     ];
 
     // #3: Contains correct header but no data.
@@ -252,7 +251,7 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
         'valid_headers' => ['status' => 'pass'],
         'empty_cell' => ['status' => 'todo'],
       ],
-      $num_form_validation_messages,
+      0,
     ];
 
     // #4: Contains incorrect header and one line of correct data.
@@ -271,7 +270,7 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
         ],
         'empty_cell' => ['status' => 'todo'],
       ],
-      $num_form_validation_messages,
+      0,
     ];
 
     // #5: Contains correct header but data row contains an empty cell.
@@ -290,7 +289,7 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
           'details' => 'The following line number and column header combinations were empty, but a value is required.',
         ],
       ],
-      $num_form_validation_messages,
+      0,
     ];
 
     // #6: Contains a germplasm name+type+scientific name combination that
@@ -311,7 +310,7 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
           'details' => 'The following germplasm names do not match any existing in this site. Please make sure you have entered the names exactly as they appear on the germplasm pages or contact your administrator to have them added if they do not yet exist.',
         ],
       ],
-      $num_form_validation_messages,
+      0,
     ];
 
     // #7: Contains a germplasm that does not exists in the
@@ -332,7 +331,27 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
           'details' => 'The following germplasm names do not match any existing in this site. Please make sure you have entered the names exactly as they appear on the germplasm pages or contact your administrator to have them added if they do not yet exist.',
         ],
       ],
-      $num_form_validation_messages,
+      0,
+    ];
+
+    // #8: Primary germplasm does not exist.
+    $scenarios[] = [
+      $invalid_primary_germplasm,
+      $valid_relationship_verb,
+      FALSE,
+      'relationship_importer_valid_input.tsv',
+      [],
+      1,
+    ];
+
+    // #9: Relationship verb does not exist.
+    $scenarios[] = [
+      $valid_primary_germplasm,
+      $invalid_relationship_verb,
+      FALSE,
+      'relationship_importer_valid_input.tsv',
+      [],
+      1,
     ];
 
     return $scenarios;

@@ -276,6 +276,7 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
     // Configure the valid delimitted file validator.
     $instance_delimited = $this->service_validatorPluginManager->createInstance('valid_delimited_file');
 
+    $this->getRequiredColumnsCount();
     $instance_delimited->setExpectedColumns($this->required_column_count, FALSE);
     $instance_delimited->setFileMimeType($file_mime_type);
     $validators['raw-row']['valid_delimited_file'] = $instance_delimited;
@@ -292,12 +293,11 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
     // exist (i.e. is TRUE) then the uniquename is optional; however, if we may
     // need to insert related germplasm then the uniquename is also required.
     $instance_empty_cell = $this->service_validatorPluginManager->createInstance('empty_cell');
-    if ($this->headers[3]['type'] == 'required') {
-      $indices = [0, 1, 2, 3];
-    }
-    else {
-      $indices = [0, 1, 2];
-    }
+
+    $indices = array_keys(array_filter($this->headers, function ($h) {
+      return $h['type'] == 'required';
+    }));
+
     $instance_empty_cell->setIndices($indices);
     $validators['data-row']['empty_cell'] = $instance_empty_cell;
 
