@@ -549,6 +549,30 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
       ],
     ];
 
+    // #8: Missing Scientific Name field.
+    $scenarios[] = [
+      'Missing Scientific Name field.',
+      $valid_primary_germplasm,
+      $valid_relationship_verb,
+      FALSE,
+      'relationship_importer_missing_organism.tsv',
+      [
+        'expected_message' => 'Scientific Name:  is not valid. Please provide a valid Scientific Name.',
+      ],
+    ];
+
+    // #9: Missing Type field.
+    $scenarios[] = [
+      'Missing Type field.',
+      $valid_primary_germplasm,
+      $valid_relationship_verb,
+      FALSE,
+      'relationship_importer_empty_cell.tsv',
+      [
+        'expected_message' => 'Type:  is not valid. Please provide a valid Type.',
+      ],
+    ];
+
     return $scenarios;
   }
 

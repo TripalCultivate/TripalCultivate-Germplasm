@@ -159,6 +159,8 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
    *         unique to the scenario that is expected to be in the render array.
    *   - an integer indicating the number of form validation messages we expect
    *     to see when the form is submitted.
+   *   - TRUE/FALSE indicating whether we expect the form to pass validation or
+   *     not. TRUE: if we expect the form to pass validation, FALSE otherwise.
    *     NOTE: These validation messages are produced by the form via Drupal and
    *     are not related to this module's use of validator plugins.
    */
@@ -196,6 +198,7 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
         'empty_cell' => ['status' => 'todo'],
       ],
       0,
+      FALSE,
     ];
 
     // #1: Header is improperly delimited, with proper data rows.
@@ -215,6 +218,7 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
         'empty_cell' => ['status' => 'todo'],
       ],
       0,
+      FALSE,
     ];
 
     // #2: 2nd row of file is improperly delimited.
@@ -236,6 +240,7 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
         'empty_cell' => ['status' => 'todo'],
       ],
       0,
+      FALSE,
     ];
 
     // #3: Contains correct header but no data.
@@ -252,6 +257,7 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
         'empty_cell' => ['status' => 'todo'],
       ],
       0,
+      FALSE,
     ];
 
     // #4: Contains incorrect header and one line of correct data.
@@ -271,6 +277,7 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
         'empty_cell' => ['status' => 'todo'],
       ],
       0,
+      FALSE,
     ];
 
     // #5: Contains correct header but data row contains an empty cell.
@@ -290,6 +297,7 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
         ],
       ],
       0,
+      FALSE,
     ];
 
     // #6: Contains a germplasm name+type+scientific name combination that
@@ -311,6 +319,7 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
         ],
       ],
       0,
+      FALSE,
     ];
 
     // #7: Contains a germplasm that does not exists in the
@@ -332,9 +341,30 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
         ],
       ],
       0,
+      FALSE,
     ];
 
-    // #8: Primary germplasm does not exist.
+    // #8: Missing organism (scientific name) field.
+    $scenarios[] = [
+      $valid_primary_germplasm,
+      $valid_relationship_verb,
+      FALSE,
+      'relationship_importer_missing_organism.tsv',
+      [
+        'valid_data_file' => ['status' => 'pass'],
+        'valid_delimited_file' => ['status' => 'pass'],
+        'valid_headers' => ['status' => 'pass'],
+        'empty_cell' => [
+          'title' => 'Required cells contain a value',
+          'status' => 'fail',
+          'details' => 'The following line number and column header combinations were empty, but a value is required.',
+        ],
+      ],
+      0,
+      FALSE,
+    ];
+
+    // #9: Primary germplasm does not exist.
     $scenarios[] = [
       $invalid_primary_germplasm,
       $valid_relationship_verb,
@@ -342,9 +372,10 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
       'relationship_importer_valid_input.tsv',
       [],
       1,
+      FALSE,
     ];
 
-    // #9: Relationship verb does not exist.
+    // #10: Relationship verb does not exist.
     $scenarios[] = [
       $valid_primary_germplasm,
       $invalid_relationship_verb,
@@ -352,6 +383,42 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
       'relationship_importer_valid_input.tsv',
       [],
       1,
+      FALSE,
+    ];
+
+    // #11: Invalid Organism (scientific name) field.
+    // @todo this test should be updated with expected failure once we have a
+    // validator for checking organism existence.
+    $scenarios[] = [
+      $valid_primary_germplasm,
+      $valid_relationship_verb,
+      FALSE,
+      'relationship_importer_organism_dne.tsv',
+      [
+        'valid_data_file' => ['status' => 'pass'],
+        'valid_delimited_file' => ['status' => 'pass'],
+        'valid_headers' => ['status' => 'pass'],
+        'empty_cell' => ['status' => 'pass'],
+      ],
+      0,
+      TRUE,
+    ];
+
+    // #12: Valid input when the toggle is on and uniquename does not exist.
+    $scenarios[] = [
+      $valid_primary_germplasm,
+      $valid_relationship_verb,
+      TRUE,
+      'relationship_importer_example.tsv',
+      [
+        'valid_data_file' => ['status' => 'pass'],
+        'valid_delimited_file' => ['status' => 'pass'],
+        'valid_headers' => ['status' => 'pass'],
+        'empty_cell' => ['status' => 'pass'],
+        'germplasm_name_exists' => ['status' => 'pass'],
+      ],
+      0,
+      TRUE,
     ];
 
     return $scenarios;
@@ -386,6 +453,9 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
    *   The number of form validation messages we expect to see when the form is
    *   submitted. NOTE: These validation messages are produced by the form via
    *   Drupal and are not related to this module's use of validator plugins.
+   * @param bool $should_pass_validation
+   *   TRUE/FALSE indicating whether we expect the form to pass validation or
+   *   not. TRUE: if we expect the form to pass validation, FALSE otherwise.
    *
    * @dataProvider provideFilesForValidation
    */
@@ -397,6 +467,7 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
     string $filename,
     array $expected_validator_results,
     int $expected_num_form_validation_errors,
+    bool $should_pass_validation,
   ) {
 
     // Create our organism and configure it.
@@ -538,11 +609,13 @@ class GermplasmRelationshipImporterFormValidateTest extends ChadoTestKernelBase 
     )
       ->fetchField();
 
-    $this->assertFalse(
+    $this->assertEquals(
+      $should_pass_validation ? 1 : FALSE,
       $tripal_jobs,
-      'A failed import due to validation error that did not submit should not create a job request.'
+      $should_pass_validation ?
+        "We expected a Tripal Job to have been created since the form passed validation, but none was found." :
+        "A failed import due to validation error that did not submit should not create a job request."
     );
-
   }
 
 }
