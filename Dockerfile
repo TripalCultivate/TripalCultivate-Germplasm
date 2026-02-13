@@ -1,7 +1,7 @@
 ARG drupalversion=11.3.x-dev
 ARG phpversion=8.5
 ARG postgresqlversion=18
-FROM knowpulse/tripalcultivate-base:drupal${drupalversion}-php${phpversion}-pgsql${postgresqlversion}
+FROM --platform=amd64 knowpulse/tripalcultivate-base:drupal${drupalversion}-php${phpversion}-pgsql${postgresqlversion}
 
 COPY . /var/www/drupal/web/modules/contrib/TripalCultivate-Germplasm
 WORKDIR /var/www/drupal/web/modules/contrib/TripalCultivate-Germplasm

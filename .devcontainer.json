@@ -8,7 +8,7 @@
       "postgresqlversion": "18"
     }
   },
-  "initializeCommand": "docker pull knowpulse/tripalcultivate-base:drupal11.x-dev-php8.5-pgsql18",
+  "initializeCommand": "docker pull knowpulse/tripalcultivate-base:drupal11.x-dev-php8.5-pgsql18 --platform linux/amd64",
   "workspaceMount": "source=${localWorkspaceFolder},target=/var/www/drupal/web/modules/contrib/TripalCultivate-Germplasm,type=bind",
   "workspaceFolder": "/var/www/drupal/web/modules/contrib/TripalCultivate-Germplasm",
   "customizations": {
