@@ -6,6 +6,7 @@ use Drupal\Core\Routing\RouteMatch;
 use Drupal\Core\Url;
 use Drupal\Tests\tripal_chado\Functional\ChadoTestBrowserBase;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Simple test to ensure that main page loads with module enabled.
@@ -15,6 +16,7 @@ use PHPUnit\Framework\Attributes\Group;
  */
 #[Group('TripalCultivate-Germplasm')]
 #[Group('Installation')]
+#[RunTestsInSeparateProcesses]
 class InstallTest extends ChadoTestBrowserBase {
 
   protected $defaultTheme = 'stark';
