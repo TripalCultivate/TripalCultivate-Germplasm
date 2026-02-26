@@ -6,10 +6,12 @@ use Drupal\Core\Url;
 use Drupal\Tests\tripal_chado\Kernel\ChadoTestKernelBase;
 use Drupal\Tests\trpcultivate_germplasm\Traits\GermplasmAccessionImporterTestTrait;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Tests the functionality of the Germplasm Accession Importer.
  */
+#[RunTestsInSeparateProcesses]
 class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
 
 	protected $defaultTheme = 'stark';

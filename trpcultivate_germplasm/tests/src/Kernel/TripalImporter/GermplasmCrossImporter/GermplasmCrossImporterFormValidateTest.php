@@ -10,6 +10,7 @@ use Drupal\tripal\Services\TripalLogger;
 use Drupal\tripal_chado\Database\ChadoConnection;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Tests the formValidate() functionality of the Cross Importer.
@@ -19,6 +20,7 @@ use PHPUnit\Framework\Attributes\Group;
 #[Group('tripal-importer')]
 #[Group('chado-importer')]
 #[Group('importer-germplasmcross')]
+#[RunTestsInSeparateProcesses]
 class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
 
   use UserCreationTrait;

@@ -11,6 +11,7 @@ use Drupal\tripal\Services\TripalLogger;
 use Drupal\tripal_chado\Controller\ChadoGenericAutocompleteController;
 use Drupal\tripal_chado\Controller\ChadoCVTermAutocompleteController;
 use Drupal\trpcultivate_germcollection\Plugin\TripalImporter\GermplasmRelationshipImporter;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Tests functionality of the run() method of Germplasm Relationship Importer.
@@ -18,6 +19,7 @@ use Drupal\trpcultivate_germcollection\Plugin\TripalImporter\GermplasmRelationsh
  * @group relationshipImporter
  */
 #[Group('relationshipImporter')]
+#[RunTestsInSeparateProcesses]
 class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
 
   use UserCreationTrait;
