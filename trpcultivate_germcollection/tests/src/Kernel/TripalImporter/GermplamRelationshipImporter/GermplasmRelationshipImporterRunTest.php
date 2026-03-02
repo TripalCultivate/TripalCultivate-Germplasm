@@ -80,7 +80,6 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
       'cardinality' => 1,
       'menu_path' => '',
       'callback' => '',
-      'callback_module' => '',
       'callback_path' => '',
     ],
   ];
@@ -167,6 +166,9 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
       $container->get('entity_type.manager'),
       $container->get('renderer'),
       $container->get('messenger'),
+      $container->get('tripal.logger'),
+      $container->get('tripal.fileretriever'),
+      $container->get('tripal.backend_publish'),
     );
 
     $this->module_path = $this->container->get('module_handler')

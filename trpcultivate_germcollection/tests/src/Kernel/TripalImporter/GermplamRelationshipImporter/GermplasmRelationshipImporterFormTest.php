@@ -83,7 +83,6 @@ class GermplasmRelationshipImporterFormTest extends ChadoTestKernelBase {
       'cardinality' => 1,
       'menu_path' => '',
       'callback' => '',
-      'callback_module' => '',
       'callback_path' => '',
     ],
   ];

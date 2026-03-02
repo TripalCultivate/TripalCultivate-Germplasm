@@ -90,7 +90,11 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
       'trpcultivate-germplasm-accession',
       $this->definitions,
       $this->connection,
-      $this->config_factory
+      $this->config_factory,
+      $container->get('messenger'),
+      $container->get('tripal.logger'),
+      $container->get('tripal.fileretriever'),
+      $container->get('tripal.backend_publish'),
     );
 
     $subtaxa_cvterm_id = $this->getCVtermID('TAXRANK', '0000023');

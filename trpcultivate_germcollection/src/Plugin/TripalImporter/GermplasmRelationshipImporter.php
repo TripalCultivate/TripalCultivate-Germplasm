@@ -3,11 +3,15 @@
 namespace Drupal\trpcultivate_germcollection\Plugin\TripalImporter;
 
 use Drupal\Core\Entity\EntityTypeManager;
-use Drupal\Core\Messenger\MessengerInterface;
+use Drupal\Core\Messenger\Messenger;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Render\Renderer;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\tripal\Services\TripalFileRetriever;
+use Drupal\tripal\Services\TripalLogger;
+use Drupal\tripal\TripalBackendPublish\PluginManager\TripalBackendPublishManager;
+use Drupal\tripal\TripalImporter\Attribute\TripalImporter;
 use Drupal\tripal_chado\Database\ChadoConnection;
 use Drupal\tripal_chado\Controller\ChadoCVTermAutocompleteController;
 use Drupal\tripal_chado\Controller\ChadoGenericAutocompleteController;
@@ -20,35 +24,8 @@ use Drupal\trpcultivate\Plugin\Validators\ValidHeaders;
 use Drupal\trpcultivate\Service\TripalCultivateFileTemplateService;
 use Drupal\trpcultivate\Service\ImportValidationHelper;
 use Drupal\trpcultivate\TripalCultivateValidator\TripalCultivateValidatorManager;
-use Drupal\trpcultivate\TripalImporter\Attribute\TripalImporter;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
-/**
- * This is a Germplasm Relationship Importer.
- *
- * @TripalImporter(
- *   id = "trpcultivate-germplasm-relationship-importer",
- *   label = @Translation("Tripal Cultivate: Relate Germplasm"),
- *   description = @Translation("Creates relationships between a single primary accession and related germplasm individuals (both new and existing)."),
- *   file_types = {"tsv", "txt"},
- *   upload_description = @Translation("Please provide a data file."),
- *   upload_title = @Translation("<strong>Related Germplasm*</strong>"),
- *   use_analysis = FALSE,
- *   require_analysis = FALSE,
- *   use_button = True,
- *   submit_disabled = FALSE,
- *   button_text = "Import",
- *   file_upload = TRUE,
- *   file_local = FALSE,
- *   file_remote = FALSE,
- *   file_required = TRUE,
- *   cardinality = 1,
- *   menu_path = "",
- *   callback = "",
- *   callback_module = "",
- *   callback_path = "",
- * )
- */
 #[TripalImporter(
   id: 'trpcultivate-germplasm-relationship-importer',
   label: new TranslatableMarkup('Tripal Cultivate: Relate Germplasm'),
@@ -68,7 +45,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
   cardinality: 1,
   menu_path: '',
   callback: '',
-  callback_module: '',
   callback_path: '',
 )]
 class GermplasmRelationshipImporter extends ChadoImporterBase implements ContainerFactoryPluginInterface {
@@ -85,7 +61,7 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
   /**
    * The Drupal Messenger Service.
    *
-   * @var \Drupal\Core\Messenger\MessengerInterface
+   * @var \Drupal\Core\Messenger\Messenger
    */
   protected $service_Messenger;
 
@@ -194,8 +170,14 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
    *   The entity type manager.
    * @param Drupal\Core\Render\Renderer $renderer
    *   The Drupal renderer service.
-   * @param \Drupal\Core\Messenger\MessengerInterface $messenger
+   * @param \Drupal\Core\Messenger\Messenger $messenger
    *   The Drupal messenger service.
+   * @param Drupal\tripal\Services\TripalLogger $logger
+   *   Tripal Logger service.
+   * @param Drupal\tripal\Services\TripalFileRetriever $fileretriever
+   *   Tripal File Retriever service.
+   * @param Drupal\tripal\TripalBackendPublish\PluginManager\TripalBackendPublishManager $publish_manager
+   *   Tripal Backend Publish plugin manager.
    */
   public function __construct(
     array $configuration,
@@ -206,9 +188,21 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
     TripalCultivateFileTemplateService $service_FileTemplate,
     EntityTypeManager $service_entityTypeManager,
     Renderer $renderer,
-    MessengerInterface $messenger,
+    Messenger $messenger,
+    TripalLogger $logger,
+    TripalFileRetriever $fileretriever,
+    TripalBackendPublishManager $publish_manager,
   ) {
-    parent::__construct($configuration, $plugin_id, $plugin_definition, $chado_connection);
+    parent::__construct(
+      $configuration,
+      $plugin_id,
+      $plugin_definition,
+      $chado_connection,
+      $messenger,
+      $logger,
+      $fileretriever,
+      $publish_manager,
+    );
 
     $this->service_validatorPluginManager = $service_validatorPluginManager;
     $this->service_FileTemplate = $service_FileTemplate;
@@ -233,6 +227,9 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
       $container->get('entity_type.manager'),
       $container->get('renderer'),
       $container->get('messenger'),
+      $container->get('tripal.logger'),
+      $container->get('tripal.fileretriever'),
+      $container->get('tripal.backend_publish'),
     );
   }
 

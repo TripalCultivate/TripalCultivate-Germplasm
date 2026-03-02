@@ -7,28 +7,13 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\tripal_chado\Database\ChadoConnection;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\Core\Messenger\Messenger;
+use Drupal\tripal\Services\TripalFileRetriever;
+use Drupal\tripal\Services\TripalLogger;
+use Drupal\tripal\TripalBackendPublish\PluginManager\TripalBackendPublishManager;
 use Drupal\tripal\TripalImporter\Attribute\TripalImporter;
 
-/**
- * Provides an importer for loading germplasm accessions from a tab-delimited
- * file.
- *
- * @TripalImporter(
- *   id = "trpcultivate-germplasm-accession",
- *   label = @Translation("Tripal Cultivate: Germplasm Accessions"),
- *   description = @Translation("Imports germplasm accessions into Chado with metadata meeting BrAPI standards."),
- *   file_types = {"tsv", "txt"},
- *   use_analysis = FALSE,
- *   require_analysis = FALSE,
- *   upload_title = "Germplasm Accession Import",
- *   button_text = "Import Germplasm Accessions",
- *   file_upload = True,
- *   file_load = True,
- *   file_remote = True,
- *   file_required = True,
- *   cardinality = 1
- * )
- */
+
 #[TripalImporter(
    id: 'trpcultivate-germplasm-accession',
    label: new TranslatableMarkup('Tripal Cultivate: Germplasm Accessions'),
@@ -98,7 +83,11 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       $plugin_id,
       $plugin_definition,
       $container->get('tripal_chado.database'),
-      $container->get('config.factory')
+      $container->get('config.factory'),
+      $container->get('messenger'),
+      $container->get('tripal.logger'),
+      $container->get('tripal.fileretriever'),
+      $container->get('tripal.backend_publish'),
     );
   }
 
@@ -119,8 +108,27 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
    * @param Drupal\tripal_chado\Database\ChadoConnection $connection
    * @param
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, ChadoConnection $connection, ConfigFactoryInterface $config_factory) {
-    parent::__construct($configuration, $plugin_id, $plugin_definition, $connection);
+  public function __construct(
+    array $configuration,
+    $plugin_id,
+    $plugin_definition,
+    ChadoConnection $connection,
+    ConfigFactoryInterface $config_factory,
+    Messenger $messenger,
+    TripalLogger $logger,
+    TripalFileRetriever $fileretriever,
+    TripalBackendPublishManager $publish_manager,
+  ) {
+    parent::__construct(
+      $configuration,
+      $plugin_id,
+      $plugin_definition,
+      $connection,
+      $messenger,
+      $logger,
+      $fileretriever,
+      $publish_manager,
+    );
 
     $this->config_factory = $config_factory;
   }

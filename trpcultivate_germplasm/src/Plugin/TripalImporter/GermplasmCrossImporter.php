@@ -3,11 +3,14 @@
 namespace Drupal\trpcultivate_germplasm\Plugin\TripalImporter;
 
 use Drupal\Core\Entity\EntityTypeManager;
-use Drupal\Core\Messenger\MessengerInterface;
+use Drupal\Core\Messenger\Messenger;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Render\Renderer;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\tripal\Services\TripalFileRetriever;
+use Drupal\tripal\Services\TripalLogger;
+use Drupal\tripal\TripalBackendPublish\PluginManager\TripalBackendPublishManager;
 use Drupal\tripal\TripalImporter\Attribute\TripalImporter;
 use Drupal\tripal_chado\ChadoBuddy\PluginManagers\ChadoBuddyPluginManager;
 use Drupal\tripal_chado\Controller\ChadoOrganismFormElementController;
@@ -26,34 +29,6 @@ use Drupal\trpcultivate\Service\TripalCultivateFileTemplateService;
 use Drupal\trpcultivate\Service\ImportValidationHelper;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
-/**
- * Tripal Cultivate Germplasm - Cross Importer.
- *
- * An importer for germplasm crosses developed in a breeding program.
- *
- * @TripalImporter(
- *   id = "trpcultivate-germplasm-cross-importer",
- *   label = @Translation("Tripal Cultivate: Germplasm Cross Importer"),
- *   description = @Translation("Creates germplasm cross pages associated with parental material through upload of a germplasm cross data file."),
- *   file_types = {"tsv"},
- *   upload_description = @Translation("Please provide a data file."),
- *   upload_title = @Translation("Germplasm Cross Data File*"),
- *   use_analysis = FALSE,
- *   require_analysis = FALSE,
- *   use_button = True,
- *   submit_disabled = FALSE,
- *   button_text = "Import",
- *   file_upload = TRUE,
- *   file_local = FALSE,
- *   file_remote = FALSE,
- *   file_required = TRUE,
- *   cardinality = 1,
- *   menu_path = "",
- *   callback = "",
- *   callback_module = "",
- *   callback_path = "",
- * )
- */
 #[TripalImporter(
    id: 'trpcultivate-germplasm-cross-importer',
    label: new TranslatableMarkup('Tripal Cultivate: Germplasm Cross Importer'),
@@ -205,9 +180,9 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
   /**
    * The Drupal Messenger Service.
    *
-   * @var \Drupal\Core\Messenger\MessengerInterface
+   * @var \Drupal\Core\Messenger\Messenger
    */
-  protected MessengerInterface $service_Messenger;
+  protected Messenger $service_Messenger;
 
   /**
    * Used to reference the validation result summary in the form.
@@ -256,7 +231,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    *   The entity type manager.
    * @param Drupal\Core\Render\Renderer $renderer
    *   The Drupal renderer service.
-   * @param \Drupal\Core\Messenger\MessengerInterface $messenger
+   * @param \Drupal\Core\Messenger\Messenger $messenger
    *   The Drupal messenger service.
    */
   public function __construct(
@@ -269,9 +244,21 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     TripalCultivateFileTemplateService $service_FileTemplate,
     EntityTypeManager $service_entityTypeManager,
     Renderer $renderer,
-    MessengerInterface $messenger,
+    Messenger $messenger,
+    TripalLogger $logger,
+    TripalFileRetriever $fileretriever,
+    TripalBackendPublishManager $publish_manager,
   ) {
-    parent::__construct($configuration, $plugin_id, $plugin_definition, $chado_connection);
+    parent::__construct(
+      $configuration,
+      $plugin_id,
+      $plugin_definition,
+      $chado_connection,
+      $messenger,
+      $logger,
+      $fileretriever,
+      $publish_manager,
+    );
     $this->chado_connection = $chado_connection;
     $this->buddy_manager = $buddy_manager;
     $this->cvterm_buddy = $this->buddy_manager->createInstance('chado_cvterm_buddy', []);
@@ -299,6 +286,9 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       $container->get('entity_type.manager'),
       $container->get('renderer'),
       $container->get('messenger'),
+      $container->get('tripal.logger'),
+      $container->get('tripal.fileretriever'),
+      $container->get('tripal.backend_publish'),
     );
   }
 
