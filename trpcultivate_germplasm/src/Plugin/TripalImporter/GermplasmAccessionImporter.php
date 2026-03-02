@@ -254,8 +254,8 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     $germplasm_config = $this->config_factory->get('trpcultivate_germplasm.settings');
     // Iterate through our cvterms
     // If it hasn't been set before, set it now
-    foreach($this->cvterms as $term){
-      if (!isset($this->cvterms[$term])){
+    foreach ($this->cvterms as $term => $value) {
+      if (!isset($value)) {
         $terms_string = 'terms.' . $term;
         $this->setCVterm($term, $germplasm_config->get($terms_string));
       }
