@@ -1202,7 +1202,7 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
       ],
     ];
 
-    return $this->service_Renderer->renderPlain($build);
+    return $this->service_Renderer->renderInIsolation($build);
   }
 
 }

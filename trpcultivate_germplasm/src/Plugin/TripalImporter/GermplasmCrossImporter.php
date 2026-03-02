@@ -963,7 +963,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       ],
     ];
 
-    return $this->service_Renderer->renderPlain($build);
+    return $this->service_Renderer->renderInIsolation($build);
   }
 
   /**
