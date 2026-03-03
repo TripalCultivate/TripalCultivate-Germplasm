@@ -17,6 +17,7 @@ use Drupal\tripal_chado\Controller\ChadoOrganismFormElementController;
 use Drupal\tripal_chado\Database\ChadoConnection;
 use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoCvtermBuddy;
 use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoPropertyBuddy;
+use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoOrganismBuddy;
 use Drupal\tripal_chado\TripalImporter\ChadoImporterBase;
 use Drupal\trpcultivate\Plugin\Validators\ValidDataFile;
 use Drupal\trpcultivate\Plugin\Validators\EmptyCell;
@@ -150,6 +151,13 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
   protected ChadoPropertyBuddy $property_buddy;
 
   /**
+   * An instance of the organism Chado Buddy.
+   *
+   * @var Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoOrganismBuddy
+   */
+  protected ChadoOrganismBuddy $organism_buddy;
+
+  /**
    * The TripalCultivate validator plugin manager.
    *
    * @var \Drupal\trpcultivate\TripalCultivateValidator\TripalCultivateValidatorManager
@@ -263,6 +271,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     $this->buddy_manager = $buddy_manager;
     $this->cvterm_buddy = $this->buddy_manager->createInstance('chado_cvterm_buddy', []);
     $this->property_buddy = $this->buddy_manager->createInstance('chado_property_buddy', []);
+    $this->organism_buddy = $this->buddy_manager->createInstance('chado_organism_buddy', []);
     $this->service_validatorPluginManager = $service_validatorPluginManager;
     $this->service_entityTypeManager = $service_entityTypeManager;
     $this->service_FileTemplate = $service_FileTemplate;
@@ -980,7 +989,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    */
   public function getGenusFromOrgId(int $organism_id) {
     // Lookup the organism ID and make sure its valid.
-    $organism_obj = chado_get_organism(['organism_id' => $organism_id]);
+    $organism_obj = $this->organism_buddy->getOrganism(['organism.organism_id' => $organism_id]);
     if ($organism_obj == NULL) {
       $error_message = "The organism ID $organism_id is not valid.";
       $this->logger->error($error_message);
@@ -988,7 +997,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     }
 
     // Return just the genus.
-    return $organism_obj->genus;
+    return $organism_obj[0]->getValue('organism.genus');
   }
 
 }
