@@ -42,6 +42,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
     'system',
     'user',
     'file',
+    'markup',
     'tripal',
     'tripal_chado',
     'tripal_layout',

@@ -37,6 +37,7 @@ class GermplasmRelationshipImporterFormTest extends ChadoTestKernelBase {
     'system',
     'user',
     'file',
+    'markup',
     'tripal',
     'tripal_chado',
     'tripal_layout',
