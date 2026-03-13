@@ -6,6 +6,7 @@ use Drupal\Core\Routing\RouteMatch;
 use Drupal\Core\Url;
 use Drupal\Tests\tripal_chado\Functional\ChadoTestBrowserBase;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Simple test to ensure that main page loads with module enabled.
@@ -15,8 +16,14 @@ use PHPUnit\Framework\Attributes\Group;
  */
 #[Group('TripalCultivate-Germplasm')]
 #[Group('Installation')]
+#[RunTestsInSeparateProcesses]
 class InstallTest extends ChadoTestBrowserBase {
 
+  /**
+   * Theme used in the test environment.
+   *
+   * @var string
+   */
   protected $defaultTheme = 'stark';
 
   /**
@@ -28,17 +35,22 @@ class InstallTest extends ChadoTestBrowserBase {
 
   /**
    * The name of your module in the .info.yml.
+   *
+   * @var string
    */
   protected static $module_name = 'Germplasm Collection';
 
   /**
    * The machine name of this module.
+   *
+   * @var string
    */
   protected static $module_machinename = 'trpcultivate_germcollection';
 
   /**
-   * A small excert from your help page.
-   * Do not cross newlines.
+   * A small excert from your help page. Do not cross newlines.
+   *
+   * @var string
    */
   protected static $help_text_excerpt = 'support for grouping germplasm into collections';
 

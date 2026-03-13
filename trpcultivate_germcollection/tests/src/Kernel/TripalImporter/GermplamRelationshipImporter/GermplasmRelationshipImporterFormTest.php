@@ -10,6 +10,7 @@ use Drupal\tripal\Services\TripalLogger;
 use Drupal\Tests\trpcultivate\Traits\TripalCultivateImporterTestTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tripal_chado\Controller\ChadoCVTermAutocompleteController;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Tests form + form-related functionality of Germplasm Relationship Importer.
@@ -21,6 +22,7 @@ use Drupal\tripal_chado\Controller\ChadoCVTermAutocompleteController;
 #[Group('tripal-importer')]
 #[Group('chado-importer')]
 #[Group('importer-germrelationship')]
+#[RunTestsInSeparateProcesses]
 class GermplasmRelationshipImporterFormTest extends ChadoTestKernelBase {
 
   use UserCreationTrait;
@@ -81,7 +83,6 @@ class GermplasmRelationshipImporterFormTest extends ChadoTestKernelBase {
       'cardinality' => 1,
       'menu_path' => '',
       'callback' => '',
-      'callback_module' => '',
       'callback_path' => '',
     ],
   ];

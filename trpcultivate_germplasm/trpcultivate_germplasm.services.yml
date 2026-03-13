@@ -1,0 +1,3 @@
+services:
+  trpcultivate_germplasm.hooks:
+    class: 'Drupal\trpcultivate_germplasm\Hook\TripalCultivateGermplasmHooks'
