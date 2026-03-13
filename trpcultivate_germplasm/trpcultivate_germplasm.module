@@ -5,23 +5,19 @@
  * Contains all hook implementations for this module.
  */
 
+use Drupal\Core\Hook\Attribute\LegacyHook;
 use Drupal\Core\Routing\RouteMatchInterface;
 
 /**
  * Implements hook_help().
+ *
+ * This legacy hook is only run for Drupal < 11, and is replaced by class
+ * Drupal\trpcultivate_germplasm\Hook\TripalCultivateGermplasmHooks in
+ * trpcultivate_germplasm/src/Hook/TripalCultivateGermplasmHooks.php.
  */
+#[LegacyHook]
 function trpcultivate_germplasm_help($route_name, RouteMatchInterface $route_match) {
-  switch ($route_name) {
-    // Provides the module overview in the help tab.
-    case 'help.page.trpcultivate_germplasm':
-      $output = '';
-      $output .= '<h3>' . t('About') . '</h3>';
-      $output .= '<p>' . t('This module provides specialized Tripal fields and importers for germplasm.') . '</p>';
-
-      return $output;
-
-    default:
-  }
+  return \Drupal::service('trpcultivate_germplasm.hooks')->help($route_name, $route_match);
 }
 
 /**

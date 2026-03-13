@@ -6,6 +6,8 @@ use Drupal\Tests\tripal_chado\Kernel\ChadoTestKernelBase;
 use Drupal\Tests\trpcultivate_germplasm\Traits\TripalMviewQueriesTestTrait;
 use Drupal\tripal_chado\Database\ChadoConnection;
 use Drupal\user\Entity\User;
+use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Tests terms added by trpcultivate_germplasm_install_terms() during install.
@@ -15,6 +17,7 @@ use Drupal\user\Entity\User;
  */
 #[Group('TripalCultivate-Germplasm')]
 #[Group('Installation')]
+#[RunTestsInSeparateProcesses]
 class GermplasmTermInstallTest extends ChadoTestKernelBase {
 
   /**

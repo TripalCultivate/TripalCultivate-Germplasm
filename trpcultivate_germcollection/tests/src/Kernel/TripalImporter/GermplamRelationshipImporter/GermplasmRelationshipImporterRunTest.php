@@ -11,6 +11,7 @@ use Drupal\tripal\Services\TripalLogger;
 use Drupal\tripal_chado\Controller\ChadoGenericAutocompleteController;
 use Drupal\tripal_chado\Controller\ChadoCVTermAutocompleteController;
 use Drupal\trpcultivate_germcollection\Plugin\TripalImporter\GermplasmRelationshipImporter;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Tests functionality of the run() method of Germplasm Relationship Importer.
@@ -18,6 +19,7 @@ use Drupal\trpcultivate_germcollection\Plugin\TripalImporter\GermplasmRelationsh
  * @group relationshipImporter
  */
 #[Group('relationshipImporter')]
+#[RunTestsInSeparateProcesses]
 class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
 
   use UserCreationTrait;
@@ -78,7 +80,6 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
       'cardinality' => 1,
       'menu_path' => '',
       'callback' => '',
-      'callback_module' => '',
       'callback_path' => '',
     ],
   ];
@@ -165,6 +166,9 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
       $container->get('entity_type.manager'),
       $container->get('renderer'),
       $container->get('messenger'),
+      $container->get('tripal.logger'),
+      $container->get('tripal.fileretriever'),
+      $container->get('tripal.backend_publish'),
     );
 
     $this->module_path = $this->container->get('module_handler')

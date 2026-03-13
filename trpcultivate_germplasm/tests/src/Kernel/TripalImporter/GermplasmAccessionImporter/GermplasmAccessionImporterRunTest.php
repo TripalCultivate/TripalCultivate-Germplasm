@@ -7,10 +7,12 @@ use Drupal\Tests\tripal_chado\Kernel\ChadoTestKernelBase;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\Tests\trpcultivate_germplasm\Traits\GermplasmAccessionImporterTestTrait;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Tests the functionality of the Germplasm Accession Importer.
  */
+#[RunTestsInSeparateProcesses]
 class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
 
 	protected $defaultTheme = 'stark';
@@ -100,7 +102,11 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
       'trpcultivate-germplasm-accession',
       $this->definitions,
       $this->connection,
-      $this->config_factory
+      $this->config_factory,
+      $container->get('messenger'),
+      $container->get('tripal.logger'),
+      $container->get('tripal.fileretriever'),
+      $container->get('tripal.backend_publish'),
     );
 
     $subtaxa_cvterm_id = $this->getCVtermID('TAXRANK', '0000023');
