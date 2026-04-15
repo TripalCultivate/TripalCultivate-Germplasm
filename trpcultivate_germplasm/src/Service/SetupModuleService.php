@@ -249,14 +249,14 @@ class SetupModuleService {
         $this->logger->notice("Importing " . $ontology['name']);
 
         $obo_importer->createImportJob(
-        [
-          'obo_id' => $obo_id,
-          'schema_name' => $schema_name,
-        ],
-        [
-          'file_path' => $ontology['path'],
-          'file_local' => $ontology['path'],
-        ]
+          [
+            'obo_id' => $obo_id,
+            'schema_name' => $schema_name,
+          ],
+          [
+            'file_path' => $ontology['path'],
+            'file_local' => $ontology['path'],
+          ]
         );
 
         $obo_importer->run();
