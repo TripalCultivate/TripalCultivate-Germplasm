@@ -209,14 +209,14 @@ class SetupModuleService {
     $obo_importer = $this->importer_manager->createInstance('chado_obo_loader');
 
     $ontologies = [
-    [
-      'name' => 'multicrop passport ontology',
-      'path' => '{trpcultivate_germplasm}/ontologies/mcpd_v2.1_151215.obo',
-    ],
-    [
-      'name' => 'Tripal Cultivate Germplasm Ontology',
-      'path' => '{trpcultivate_germplasm}/ontologies/TripalCultivateGermplasmOntology.v1.obo',
-    ],
+      [
+        'name' => 'multicrop passport ontology',
+        'path' => '{trpcultivate_germplasm}/ontologies/mcpd_v2.1_151215.obo',
+      ],
+      [
+        'name' => 'Tripal Cultivate Germplasm Ontology',
+        'path' => '{trpcultivate_germplasm}/ontologies/TripalCultivateGermplasmOntology.v1.obo',
+      ],
     ];
 
     // Iterate through each ontology and install them with the OBO Importer.
