@@ -8,12 +8,10 @@ services:
   trpcultivate_germplasm.setup_module:
     class: 'Drupal\trpcultivate_germplasm\Service\SetupModuleService'
     arguments: [
-      '@entity_type.manager',
       '@tripal_chado.database',
       '@database',
       '@tripal_chado.custom_tables',
       '@tripal_chado.terms_init',
-      '@tripal.tripalentitytype_collection',
       '@tripal.logger',
       '@tripal.importer',
     ]

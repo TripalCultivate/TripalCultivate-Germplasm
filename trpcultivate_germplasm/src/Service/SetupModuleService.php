@@ -3,11 +3,9 @@
 namespace Drupal\trpcultivate_germplasm\Service;
 
 use Drupal\Core\Database\Connection;
-use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\tripal_chado\Database\ChadoConnection;
 use Drupal\tripal_chado\Services\ChadoCustomTableManager;
 use Drupal\tripal_chado\Services\ChadoTermsInit;
-use Drupal\tripal\Services\TripalEntityTypeCollection;
 use Drupal\tripal\Services\TripalLogger;
 use Drupal\tripal\TripalImporter\PluginManagers\TripalImporterManager;
 
@@ -15,12 +13,6 @@ use Drupal\tripal\TripalImporter\PluginManagers\TripalImporterManager;
  * Service class for installing terms and ontologies.
  */
 class SetupModuleService {
-  /**
-   * The entity type manager.
-   *
-   * @var Drupal\Core\Entity\EntityTypeManagerInterface
-   */
-  protected EntityTypeManagerInterface $entityTypeManager;
 
   /**
    * The database connection for querying Chado.
@@ -51,13 +43,6 @@ class SetupModuleService {
   protected ChadoTermsInit $terms_init;
 
   /**
-   * The Tripal entity type collection.
-   *
-   * @var Drupal\tripal\Services\TripalEntityTypeCollection
-   */
-  protected TripalEntityTypeCollection $entityTypeCollection;
-
-  /**
    * The TripalLogger service.
    *
    * @var Drupal\tripal\Services\TripalLogger
@@ -74,8 +59,6 @@ class SetupModuleService {
   /**
    * Constructor for the service.
    *
-   * @param Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
-   *   The entity type manager.
    * @param Drupal\tripal_chado\Database\ChadoConnection $chado_connection
    *   The database connection for querying Chado.
    * @param Drupal\Core\Database\Connection $drupal_connection
@@ -84,29 +67,23 @@ class SetupModuleService {
    *   The Tripal Chado custom tables service.
    * @param Drupal\tripal_chado\Services\ChadoTermsInit $terms_init
    *   The Tripal Chado terms init service.
-   * @param Drupal\tripal\Services\TripalEntityTypeCollection $entityTypeCollection
-   *   The Tripal entity type collection.
    * @param Drupal\tripal\Services\TripalLogger $logger
    *   The TripalLogger service.
    * @param Drupal\tripal\TripalImporter\PluginManagers\TripalImporterManager $importer_manager
    *   The Tripal Importer manager.
    */
   public function __construct(
-    EntityTypeManagerInterface $entity_type_manager,
     ChadoConnection $chado_connection,
     Connection $drupal_connection,
     ChadoCustomTableManager $custom_tables,
     ChadoTermsInit $terms_init,
-    TripalEntityTypeCollection $entityTypeCollection,
     TripalLogger $logger,
     TripalImporterManager $importer_manager,
   ) {
-    $this->entityTypeManager = $entity_type_manager;
     $this->chado_connection = $chado_connection;
     $this->drupal_connection = $drupal_connection;
     $this->custom_tables = $custom_tables;
     $this->terms_init = $terms_init;
-    $this->entityTypeCollection = $entityTypeCollection;
     $this->logger = $logger;
     $this->importer_manager = $importer_manager;
   }
