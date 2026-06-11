@@ -1,4 +1,4 @@
-ARG drupalversion=11.3.x-dev
+ARG drupalversion=11.x
 ARG phpversion=8.5
 ARG postgresqlversion=18
 ARG buildplatform='linux/amd64'

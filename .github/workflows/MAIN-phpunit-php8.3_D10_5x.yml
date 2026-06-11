@@ -16,7 +16,7 @@ permissions: read-all
 
 jobs:
   running-tests:
-    name: 'PHP 8.3 - Drupal 10.5.x-dev - PostgreSQL 18'
+    name: 'PHP 8.3 - Drupal 10.5.x - PostgreSQL 18'
     runs-on: 'ubuntu-latest'
     steps:
       - name: 'Checkout Repository'
@@ -27,7 +27,7 @@ jobs:
           directory-name: 'trpcultivate_germplasm'
           modules: 'trpcultivate_germplasm, trpcultivate_germcollection'
           php-version: '8.3'
-          drupal-version: '10.5.x-dev'
+          drupal-version: '10.5.x'
           pgsql-version: '18'
           build-image: TRUE
           dockerfile: 'Dockerfile'
