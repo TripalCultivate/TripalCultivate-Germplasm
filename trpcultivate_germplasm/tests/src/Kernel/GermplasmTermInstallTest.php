@@ -10,7 +10,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests terms added by trpcultivate_germplasm_install_terms() during install.
+ * Tests terms added when setting up the module.
  *
  * @group TripalCultivate-Germplasm
  * @group Installation
@@ -111,13 +111,13 @@ class GermplasmTermInstallTest extends ChadoTestKernelBase {
   }
 
   /**
-   * Test trpcultivate_germplasm_install_terms() method.
+   * Test installTerms() method of the setupModuleService.
    */
   public function testInstallOntologyTerms() {
 
-    // Call our install method.
-    // @see trpcultivate_germplasm.module
-    trpcultivate_germplasm_install_terms();
+    // Call our installTerms method.
+    $setupService = \Drupal::service('trpcultivate_germplasm.setup_module');
+    $setupService->installTerms();
 
     // Test proper install of config type terms (YML):
     $config = \Drupal::service('config.factory')
