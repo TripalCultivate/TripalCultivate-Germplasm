@@ -215,6 +215,8 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
     // Set our default variables for genus.
     // Since we created Tripalus databasica organism in our setup, we know that
     // in this testing environment that the genus is databasica.
+    $valid_genus = 'Tripalus';
+
     $num_form_validation_messages = 0;
 
     $scenarios = [];
