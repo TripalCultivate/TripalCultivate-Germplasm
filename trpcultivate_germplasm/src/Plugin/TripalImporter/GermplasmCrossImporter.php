@@ -31,7 +31,7 @@ use Drupal\trpcultivate\Service\ImportValidationHelper;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- *
+ * Tripal Cultivate Germplasm - Cross Importer.
  */
 #[TripalImporter(
    id: 'trpcultivate-germplasm-cross-importer',
@@ -249,6 +249,12 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    *   The Drupal renderer service.
    * @param \Drupal\Core\Messenger\Messenger $messenger
    *   The Drupal messenger service.
+   * @param \Drupal\tripal\Services\TripalLogger $logger
+   *   Tripal Logger service.
+   * @param Drupal\tripal\Services\TripalFileRetriever $fileretriever
+   *   Tripal File Retriever service.
+   * @param Drupal\tripal\TripalBackendPublish\PluginManager\TripalBackendPublishManager $publish_manager
+   *   Tripal Backend Publish plugin manager.
    */
   public function __construct(
     array $configuration,
