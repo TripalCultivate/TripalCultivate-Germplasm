@@ -138,14 +138,23 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
       ->getModule('trpcultivate_germplasm')
       ->getPath();
 
-    // Insert our valid organism.
-    $organism_id = $this->chado_connection->insert('1:organism')
+    // Insert our valid organisms.
+    $organism_id_1 = $this->chado_connection->insert('1:organism')
       ->fields([
         'genus' => 'Tripalus',
         'species' => 'databasica',
       ])
       ->execute();
-    $this->assertIsNumeric($organism_id,
+    $this->assertIsNumeric($organism_id_1,
+      "We were not able to create an organism for testing.");
+
+    $organism_id_2 = $this->chado_connection->insert('1:organism')
+      ->fields([
+        'genus' => 'Lens',
+        'species' => 'ervoides',
+      ])
+      ->execute();
+    $this->assertIsNumeric($organism_id_2,
       "We were not able to create an organism for testing.");
 
     // Insert test germplasm for Maternal Parent and Paternal Parent columns.
@@ -154,7 +163,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
     // correct_header_invalid_season.tsv.
     $this->chado_connection->insert('1:stock')
       ->fields([
-        'organism_id' => $organism_id,
+        'organism_id' => $organism_id_1,
         'name' => '121S',
         'dbxref_id' => 1,
         'uniquename' => 'STOCK:121S',
@@ -166,7 +175,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
 
     $this->chado_connection->insert('1:stock')
       ->fields([
-        'organism_id' => $organism_id,
+        'organism_id' => $organism_id_1,
         'name' => '122S',
         'dbxref_id' => 1,
         'uniquename' => 'STOCK:122S',
@@ -206,10 +215,6 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
     // Set our default variables for genus.
     // Since we created Tripalus databasica organism in our setup, we know that
     // in this testing environment that the genus is databasica.
-    $valid_genus = 'Tripalus';
-    // $invalid_organism = 'INVALID';
-    // Set our number of expected validation messages to 0, since only the
-    // 'genus_exists' validator should cause this number to change.
     $num_form_validation_messages = 0;
 
     $scenarios = [];
@@ -369,6 +374,27 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
           'status' => 'fail',
           'details' => 'The following germplasm names do not match any existing in this site. Please make sure you have entered the names exactly as they appear on the germplasm pages or contact your administrator to have them added if they do not yet exist.',
         ],
+      ],
+      $num_form_validation_messages,
+    ];
+
+    // #8: Provides a non-existent organism by genus+species combination
+    // even though the genus and the species exist separately.
+    $scenarios[] = [
+      $valid_genus,
+      'correct_header_nonexistent_organism.tsv',
+      [
+        'valid_data_file' => ['status' => 'pass'],
+        'valid_delimited_file' => ['status' => 'pass'],
+        'valid_header' => ['status' => 'pass'],
+        'empty_cell' => ['status' => 'pass'],
+        'valid_organism' => [
+          'title' => 'Organism(s) exist(s) in the database',
+          'status' => 'fail',
+          'details' => 'The following organisms do not match any existing in this site. Please ensure that the genus selected and each species listed in your input file combine to form a valid scientific name. Contact your administrator to have the organism(s) added if they do not yet exist.',
+        ],
+        'valid_season' => ['status' => 'pass'],
+        'germplasm_name_exists' => ['status' => 'pass'],
       ],
       $num_form_validation_messages,
     ];
