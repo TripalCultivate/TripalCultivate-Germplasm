@@ -874,13 +874,16 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     if (array_key_exists($validator_name, $failures)) {
       if (!empty($failures[$validator_name])) {
         $messages[$validator_name]['status'] = 'fail';
+        $tokens = [
+          'case-missing-organism' => 'The following organisms do not match any existing in this site. Please ensure that the genus selected and each species listed in your input file combine to form a valid scientific name. Contact your administrator to have the organism(s) added if they do not yet exist.',
+        ];
         $metadata = [
           'input_type' => 'data-row',
           'column_headers' => [
             4 => 'Scientific Name',
           ],
         ];
-        $messages[$validator_name]['details'] = ValidOrganism::processListWithDescribedTable($failures[$validator_name], $metadata);
+        $messages[$validator_name]['details'] = ValidOrganism::processListWithDescribedTable($failures[$validator_name], $metadata, $tokens);
       }
       else {
         $messages[$validator_name]['status'] = 'pass';
