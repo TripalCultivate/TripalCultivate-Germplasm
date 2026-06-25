@@ -459,7 +459,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     $all_genus = $genus_query->execute()->fetchAllKeyed(0, 0);
 
     // If there is only one genus, it should be the default.
-    $default_genus = 0;
+    $default_genus = '';
     if ($all_genus && count($all_genus) == 1) {
       $default_genus = array_keys($all_genus)[0];
     }
@@ -469,6 +469,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       '#type' => 'select',
       '#title' => 'Genus',
       '#description' => $this->t('The genus of the germplasm being imported.'),
+      '#empty_value' => '',
       '#empty_option' => '- Select -',
       '#options' => $all_genus,
       '#default_value' => $default_genus,
@@ -743,12 +744,6 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     // only change to one of 'pass' or 'fail' if the $failures[] array is
     // defined for that validator, indicating that validation did take place.
     $messages = [
-      // ----------------------------- METADATA --------------------------------
-      'valid_organism' => [
-        'title' => 'Organism(s) exist(s) in the database',
-        'status' => 'todo',
-        'details' => '',
-      ],
       // ------------------------------- FILE ----------------------------------
       'valid_data_file' => [
         'title' => 'File is valid and not empty',
@@ -770,6 +765,11 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       // ----------------------------- DATA ROW --------------------------------
       'empty_cell' => [
         'title' => 'Required cells contain a value',
+        'status' => 'todo',
+        'details' => '',
+      ],
+      'valid_organism' => [
+        'title' => 'Organism(s) exist(s) in the database',
         'status' => 'todo',
         'details' => '',
       ],
