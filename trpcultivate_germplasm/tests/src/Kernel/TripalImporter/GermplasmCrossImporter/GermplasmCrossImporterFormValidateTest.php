@@ -333,7 +333,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
           'status' => 'fail',
           'details' => 'The following line number and column header combinations were empty, but a value is required.',
         ],
-        'valid_organism' => ['status' => 'fail'],
+        'valid_organism' => ['status' => 'pass'],
         'valid_season' => ['status' => 'pass'],
         'germplasm_name_exists' => ['status' => 'pass'],
       ],
@@ -549,6 +549,80 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
       $tripal_jobs,
       'A failed import due to validation error that did not submit should not create a job request.'
     );
+  }
+
+  /**
+   * Provides test files for validation with exceptions.
+   *
+   * @return array
+   *   Each scenario is an array with the following:
+   *   - The genus that gets selected in the dropdown of the form.
+   *   - The filename of the test file used for this scenario.
+   *   - The expected exception message when the selected genus is not valid.
+   */
+  public static function provideFilesForValidationWithExceptions() {
+    return [
+      'no_genus_selected' => [
+        'input_genus' => '',
+        'input_file' => 'correct_header_no_data.tsv',
+        'expected_exception' => 'Cannot retrieve an array of organism IDs as one has not been set by either the setOrganismID() or setGenus() method.',
+      ],
+      'nonexistent_genus_selected' => [
+        'input_genus' => 'NonexistentGenus',
+        'input_file' => 'correct_header_no_data.tsv',
+        'expected_exception' => 'Cannot retrieve an array of organism IDs as one has not been set by either the setOrganismID() or setGenus() method.',
+      ],
+    ];
+  }
+
+  /**
+   * Tests form validation when the selected genus is not valid.
+   *
+   * @param string $input_genus
+   *   The genus that is submitted with the form.
+   * @param string $input_file
+   *   The name of the file being tested.
+   * @param string $expected_exception
+   *   The expected exception message when the selected genus is not valid.
+   *
+   * @dataProvider provideFilesForValidationWithExceptions
+   */
+  #[DataProvider('provideFilesForValidationWithExceptions')]
+  public function testCrossFormValidationWithExceptions(string $input_genus, string $input_file, string $expected_exception) {
+    $formBuilder = \Drupal::formBuilder();
+    $form_id = 'Drupal\tripal\Form\TripalImporterForm';
+    $plugin_id = 'trpcultivate-germplasm-cross-importer';
+
+    // Create a file to upload.
+    $file = $this->createTestFile([
+      'filename' => $input_file,
+      'content' => [
+        'file' => $input_file,
+        'fixturepath' => $this->module_path . '/tests/src/Fixtures/CrossImporterFiles/',
+      ],
+    ]);
+
+    // Setup the form_state.
+    $form_state = new FormState();
+    $form_state->addBuildInfo('args', [$plugin_id]);
+
+    // Submit our genus.
+    $form_state->setValue('genus', $input_genus);
+
+    // Submit our file.
+    $form_state->setValue('file_upload', $file->id());
+
+    // Catch the exception thrown when no genus is selected.
+    try {
+      $formBuilder->submitForm($form_id, $form_state);
+    }
+    catch (\Exception $e) {
+      $this->assertStringContainsString(
+        $expected_exception,
+        $e->getMessage(),
+        'We expected an exception to be thrown when no genus is selected.'
+      );
+    }
   }
 
 }
