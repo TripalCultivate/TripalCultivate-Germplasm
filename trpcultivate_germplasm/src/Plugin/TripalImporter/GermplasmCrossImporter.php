@@ -95,7 +95,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     ],
     [
       'name' => 'Species',
-      'description' => 'The species of the germplasm cross being imported.',
+      'description' => 'The species of the germplasm being imported.',
       'type' => 'required',
     ],
     [
@@ -886,6 +886,8 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
         $metadata = [
           'input_type' => 'data-row',
           'column_headers' => [
+            // "Scientific Name" here refers to the combination of the
+            // form field 'Genus' and the value in column 'Species'.
             4 => 'Scientific Name',
           ],
         ];
