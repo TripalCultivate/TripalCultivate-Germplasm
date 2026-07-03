@@ -95,7 +95,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     ],
     [
       'name' => 'Species',
-      'description' => 'The species of the germplasm being imported.',
+      'description' => 'The species of the germplasm cross being imported.',
       'type' => 'required',
     ],
     [
