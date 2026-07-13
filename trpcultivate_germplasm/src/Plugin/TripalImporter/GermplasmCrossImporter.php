@@ -13,7 +13,6 @@ use Drupal\tripal\Services\TripalLogger;
 use Drupal\tripal\TripalBackendPublish\PluginManager\TripalBackendPublishManager;
 use Drupal\tripal\TripalImporter\Attribute\TripalImporter;
 use Drupal\tripal_chado\ChadoBuddy\PluginManagers\ChadoBuddyPluginManager;
-use Drupal\tripal_chado\Controller\ChadoOrganismFormElementController;
 use Drupal\tripal_chado\Database\ChadoConnection;
 use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoCvtermBuddy;
 use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoPropertyBuddy;
@@ -25,11 +24,15 @@ use Drupal\trpcultivate\Plugin\Validators\GermplasmNameExists;
 use Drupal\trpcultivate\Plugin\Validators\ValidDelimitedFile;
 use Drupal\trpcultivate\Plugin\Validators\ValidHeaders;
 use Drupal\trpcultivate\Plugin\Validators\ValueInList;
+use Drupal\trpcultivate\Plugin\Validators\ValidOrganism;
 use Drupal\trpcultivate\TripalCultivateValidator\TripalCultivateValidatorManager;
 use Drupal\trpcultivate\Service\TripalCultivateFileTemplateService;
 use Drupal\trpcultivate\Service\ImportValidationHelper;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
+/**
+ * Tripal Cultivate Germplasm - Cross Importer.
+ */
 #[TripalImporter(
    id: 'trpcultivate-germplasm-cross-importer',
    label: new TranslatableMarkup('Tripal Cultivate: Germplasm Cross Importer'),
@@ -88,6 +91,11 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     [
       'name' => 'Unique Name',
       'description' => 'A unique identifier for this cross. This can be the same as Cross Number, if desired.',
+      'type' => 'required',
+    ],
+    [
+      'name' => 'Species',
+      'description' => 'The species of the germplasm being imported.',
       'type' => 'required',
     ],
     [
@@ -241,6 +249,12 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    *   The Drupal renderer service.
    * @param \Drupal\Core\Messenger\Messenger $messenger
    *   The Drupal messenger service.
+   * @param \Drupal\tripal\Services\TripalLogger $logger
+   *   Tripal Logger service.
+   * @param Drupal\tripal\Services\TripalFileRetriever $fileretriever
+   *   Tripal File Retriever service.
+   * @param Drupal\tripal\TripalBackendPublish\PluginManager\TripalBackendPublishManager $publish_manager
+   *   Tripal Backend Publish plugin manager.
    */
   public function __construct(
     array $configuration,
@@ -332,9 +346,6 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     }
 
     // -----------------------------------------------------
-    // Metadata
-    // - Future organism validator goes here
-    // -----------------------------------------------------
     // File level
     // - File exists and is the expected type
     $instance = $this->service_validatorPluginManager->createInstance('valid_data_file');
@@ -375,19 +386,29 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
 
     // -----------------------------------------------------
     // Data Row Level
-    // - All data row cells in columns 0-6 are not empty
+    // - All data row cells in columns 0-7 are not empty
     $instance = $this->service_validatorPluginManager->createInstance('empty_cell');
     $indices = [
       $header_index['Year'],
       $header_index['Season'],
       $header_index['Cross Number'],
       $header_index['Unique Name'],
+      $header_index['Species'],
       $header_index['Maternal Parent'],
       $header_index['Paternal Parent'],
       $header_index['Cross Type'],
     ];
     $instance->setIndices($indices);
     $validators['data-row']['empty_cell'] = $instance;
+
+    // - Organism exists in the database.
+    $instance = $this->service_validatorPluginManager->createInstance('valid_organism');
+    $indices = [
+      $header_index['Species'],
+    ];
+    $instance->setInputType('data-row');
+    $instance->setIndices($indices);
+    $validators['data-row']['valid_organism'] = $instance;
 
     // - The column 'Season' is one of: Winter, Spring, Summer, Fall
     $instance = $this->service_validatorPluginManager->createInstance('value_in_list');
@@ -405,9 +426,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       $header_index['Paternal Parent'],
     ];
     $instance->setIndices($indices);
-    $cross_organism_id = $form_values['organism'];
-    $cross_genus = $this->getGenusFromOrgId($cross_organism_id);
-    $instance->setGenus($cross_genus);
+    $instance->setGenus($form_values['genus']);
     $validators['data-row']['germplasm_name_exists'] = $instance;
     return $validators;
   }
@@ -436,24 +455,30 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       ];
     }
 
-    // Field Organism:
+    // Field Genus:
     // Prepare select options with only active organisms.
-    $all_organisms = ChadoOrganismFormElementController::getSelectOptions([]);
+    // Select the entire genus field and make sure it is sorted and distinct.
+    $genus_query = $this->chado_connection->select('1:organism', 'o')
+      ->fields('o', ['genus'])
+      ->orderBy('genus')
+      ->distinct();
+    $all_genus = $genus_query->execute()->fetchAllKeyed(0, 0);
 
-    // If there is only one organism, it should be the default.
-    $default_organism = 0;
-    if ($all_organisms && count($all_organisms) == 1) {
-      $default_organism = array_keys($all_organisms)[0];
+    // If there is only one genus, it should be the default.
+    $default_genus = '';
+    if ($all_genus && count($all_genus) == 1) {
+      $default_genus = array_keys($all_genus)[0];
     }
 
-    // Field organism.
-    $form['organism'] = [
+    // Field genus.
+    $form['genus'] = [
       '#type' => 'select',
-      '#title' => 'Organism',
-      '#description' => $this->t('The species of the germplasm being imported. If your file contains multiple species, please separate the crosses into one file per species.'),
+      '#title' => 'Genus',
+      '#description' => $this->t('The genus of the germplasm being imported.'),
+      '#empty_value' => '',
       '#empty_option' => '- Select -',
-      '#options' => $all_organisms,
-      '#default_value' => $default_organism,
+      '#options' => $all_genus,
+      '#default_value' => $default_genus,
       '#weight' => -99,
       '#required' => TRUE,
     ];
@@ -483,6 +508,12 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
 
     $form_values = $form_state->getValues();
 
+    $header_index = [];
+    $headers = $this->headers;
+    foreach ($headers as $i => $column_details) {
+      $header_index[$column_details['name']] = $i;
+    }
+
     $file_id = $form_values['file_upload'];
 
     // Load our file object.
@@ -507,26 +538,6 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     // The value (level 1 for non row-level validators, level 2 for row-level
     // validators) is the validation results array returned by the validator.
     $failures = [];
-
-    // @todo Add this back once we have validation for organism
-    // ************************************************************************
-    // Metadata Validation
-    // ************************************************************************
-    /*
-    foreach ($validators['metadata'] as $validator_name => $validator) {
-      // Set failures for this validator name to an empty array to signal that
-      // this validator has been run.
-      $failures[$validator_name] = [];
-      // Validate metadata input value.
-      $result = $validator->validateMetadata($form_values);
-
-      // Check if validation failed and save the results if it did.
-      if (array_key_exists('valid', $result) && $result['valid'] === FALSE) {
-        $failed_validator = TRUE;
-        $failures[$validator_name] = $result;
-      }
-    }
-    */
 
     // Check if any previous validators failed before moving on to the next
     // input-type validation.
@@ -648,6 +659,10 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
             if (!array_key_exists($validator_name, $failures)) {
               $failures[$validator_name] = [];
             }
+
+            if ($validator_name == 'valid_organism') {
+              $data_row[$header_index['Species']] = $form_values['genus'] . ' ' . $data_row[$header_index['Species']];
+            }
             $result = $validator->validateRow($data_row);
             // Check if validation failed.
             if (array_key_exists('valid', $result) && $result['valid'] === FALSE) {
@@ -735,7 +750,6 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     // only change to one of 'pass' or 'fail' if the $failures[] array is
     // defined for that validator, indicating that validation did take place.
     $messages = [
-      // ----------------------------- METADATA --------------------------------
       // ------------------------------- FILE ----------------------------------
       'valid_data_file' => [
         'title' => 'File is valid and not empty',
@@ -757,6 +771,11 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       // ----------------------------- DATA ROW --------------------------------
       'empty_cell' => [
         'title' => 'Required cells contain a value',
+        'status' => 'todo',
+        'details' => '',
+      ],
+      'valid_organism' => [
+        'title' => 'Organism(s) exist(s) in the database',
         'status' => 'todo',
         'details' => '',
       ],
@@ -856,6 +875,29 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       // Otherwise, leave status as 'todo' since 1+ raw rows failed.
     }
 
+    // Valid Organism.
+    $validator_name = 'valid_organism';
+    if (array_key_exists($validator_name, $failures)) {
+      if (!empty($failures[$validator_name])) {
+        $messages[$validator_name]['status'] = 'fail';
+        $tokens = [
+          'case-missing-organism' => 'The following organisms do not match any existing in this site. Please ensure that the genus selected and each species listed in your input file combine to form a valid scientific name. Contact your administrator to have the organism(s) added if they do not yet exist.',
+        ];
+        $metadata = [
+          'input_type' => 'data-row',
+          'column_headers' => [
+            // "Scientific Name" here refers to the combination of the
+            // form field 'Genus' and the value in column 'Species'.
+            4 => 'Scientific Name',
+          ],
+        ];
+        $messages[$validator_name]['details'] = ValidOrganism::processListWithDescribedTable($failures[$validator_name], $metadata, $tokens);
+      }
+      else {
+        $messages[$validator_name]['status'] = 'pass';
+      }
+    }
+
     // Valid Season using the ValueInList validator.
     $validator_name = 'valid_season';
     if (array_key_exists($validator_name, $failures)) {
@@ -883,9 +925,9 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
         $metadata = [
           'column_headers' => [
             // Maternal Parent.
-            4 => $header_names[4],
-            // Paternal Parent.
             5 => $header_names[5],
+            // Paternal Parent.
+            6 => $header_names[6],
           ],
         ];
         $messages[$validator_name]['details'] = GermplasmNameExists::processListWithDescribedTable($failures[$validator_name], $metadata);
@@ -973,31 +1015,6 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     ];
 
     return $this->service_Renderer->renderInIsolation($build);
-  }
-
-  /**
-   * Given an organism ID, returns the genus as a string.
-   *
-   * @param int $organism_id
-   *   The organism_id of the desired organism in chado.organism.
-   *
-   * @return string
-   *   The genus of the organism.
-   *
-   * @throws \Exception
-   *   - if organism_id is not in chado.
-   */
-  public function getGenusFromOrgId(int $organism_id) {
-    // Lookup the organism ID and make sure its valid.
-    $organism_obj = $this->organism_buddy->getOrganism(['organism.organism_id' => $organism_id]);
-    if ($organism_obj == NULL) {
-      $error_message = "The organism ID $organism_id is not valid.";
-      $this->logger->error($error_message);
-      throw new \Exception($error_message);
-    }
-
-    // Return just the genus.
-    return $organism_obj[0]->getValue('organism.genus');
   }
 
 }
