@@ -6,7 +6,6 @@ on:
   push:
     branches:
       - 4.x
-      - g5.45-updateTestingGrid
   schedule:
     # Run at 2am every night.
     - cron: '0 2 * * *'
