@@ -29,7 +29,10 @@ use Drupal\trpcultivate\TripalCultivateValidator\TripalCultivateValidatorManager
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
+ * Tripal Cultivate Germplasm - Relationship Importer.
  *
+ * An importer to relate a group of germplasm to an existing germplasm using the
+ * stock_relationship table.
  */
 #[TripalImporter(
   id: 'trpcultivate-germplasm-relationship-importer',
