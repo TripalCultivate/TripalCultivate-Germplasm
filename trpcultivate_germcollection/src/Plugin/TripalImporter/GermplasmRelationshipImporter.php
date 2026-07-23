@@ -12,9 +12,11 @@ use Drupal\tripal\Services\TripalFileRetriever;
 use Drupal\tripal\Services\TripalLogger;
 use Drupal\tripal\TripalBackendPublish\PluginManager\TripalBackendPublishManager;
 use Drupal\tripal\TripalImporter\Attribute\TripalImporter;
+use Drupal\tripal_chado\ChadoBuddy\PluginManagers\ChadoBuddyPluginManager;
 use Drupal\tripal_chado\Database\ChadoConnection;
 use Drupal\tripal_chado\Controller\ChadoCVTermAutocompleteController;
 use Drupal\tripal_chado\Controller\ChadoGenericAutocompleteController;
+use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoOrganismBuddy;
 use Drupal\tripal_chado\TripalImporter\ChadoImporterBase;
 use Drupal\trpcultivate\Plugin\Validators\EmptyCell;
 use Drupal\trpcultivate\Plugin\Validators\GermplasmNameExists;
@@ -26,6 +28,9 @@ use Drupal\trpcultivate\Service\ImportValidationHelper;
 use Drupal\trpcultivate\TripalCultivateValidator\TripalCultivateValidatorManager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
+/**
+ *
+ */
 #[TripalImporter(
   id: 'trpcultivate-germplasm-relationship-importer',
   label: new TranslatableMarkup('Tripal Cultivate: Relate Germplasm'),
@@ -101,6 +106,20 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
   protected ChadoConnection $chado_connection;
 
   /**
+   * The Chado Buddy service manager.
+   *
+   * @var Drupal\tripal_chado\ChadoBuddy\PluginManagers\ChadoBuddyPluginManager
+   */
+  protected ChadoBuddyPluginManager $buddy_manager;
+
+  /**
+   * An instance of the organism Chado Buddy.
+   *
+   * @var Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoOrganismBuddy
+   */
+  protected ChadoOrganismBuddy $organism_buddy;
+
+  /**
    * Headers required by this importer.
    *
    * @var array
@@ -162,6 +181,8 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
    *   The plugin implementation definition.
    * @param Drupal\tripal_chado\Database\ChadoConnection $chado_connection
    *   The connection to the Chado database.
+   * @param Drupal\tripal_chado\ChadoBuddy\PluginManagers\ChadoBuddyPluginManager $buddy_manager
+   *   The ChadoBuddy plugin manager.
    * @param Drupal\trpcultivate\TripalCultivateValidator\TripalCultivateValidatorManager $service_validatorPluginManager
    *   The TripalCultivate validator plugin manager.
    * @param Drupal\trpcultivate\Service\TripalCultivateFileTemplateService $service_FileTemplate
@@ -184,6 +205,7 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
     string $plugin_id,
     mixed $plugin_definition,
     ChadoConnection $chado_connection,
+    ChadoBuddyPluginManager $buddy_manager,
     TripalCultivateValidatorManager $service_validatorPluginManager,
     TripalCultivateFileTemplateService $service_FileTemplate,
     EntityTypeManager $service_entityTypeManager,
@@ -211,6 +233,8 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
     $this->service_Messenger = $messenger;
     // Chado database.
     $this->chado_connection = $chado_connection;
+    $this->buddy_manager = $buddy_manager;
+    $this->organism_buddy = $this->buddy_manager->createInstance('chado_organism_buddy', []);
   }
 
   /**
@@ -222,6 +246,7 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
       $plugin_id,
       $plugin_definition,
       $container->get('tripal_chado.database'),
+      $container->get('tripal_chado.chado_buddy'),
       $container->get('plugin.manager.trpcultivate_validator'),
       $container->get('trpcultivate.template_generator'),
       $container->get('entity_type.manager'),
@@ -1134,9 +1159,9 @@ class GermplasmRelationshipImporter extends ChadoImporterBase implements Contain
         $scientific_name = $values['genus'] . ' ' . $values['species'];
 
         $organism_id = 0;
-        $organism_id_array = chado_get_organism_id_from_scientific_name($scientific_name);
-        if (array_key_exists(0, $organism_id_array)) {
-          $organism_id = $organism_id_array[0];
+        $organism_records = $this->organism_buddy->getOrganismFromScientificName($scientific_name);
+        if (array_key_exists(0, $organism_records)) {
+          $organism_id = $organism_records[0]->getValue('organism.organism_id');
         }
       }
       $this->organism_ids[$organism] = $organism_id;
