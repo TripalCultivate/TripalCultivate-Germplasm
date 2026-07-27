@@ -7,6 +7,7 @@ use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\Tests\trpcultivate\Traits\TripalCultivateImporterTestTrait;
 use PHPUnit\Framework\Attributes\Group;
 use Drupal\tripal_chado\Database\ChadoConnection;
+use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoOrganismBuddy;
 use Drupal\tripal\Services\TripalLogger;
 use Drupal\tripal_chado\Controller\ChadoGenericAutocompleteController;
 use Drupal\tripal_chado\Controller\ChadoCVTermAutocompleteController;
@@ -47,6 +48,13 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
    * @var \Drupal\tripal_chado\Database\ChadoConnection
    */
   protected ChadoConnection $chado_connection;
+
+  /**
+   * An instance of the organism Chado Buddy.
+   *
+   * @var Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoOrganismBuddy
+   */
+  protected ChadoOrganismBuddy $organism_buddy;
 
   /**
    * Germplasm Relationship Importer plugin instance.
@@ -144,6 +152,10 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
       ])
       ->execute();
 
+    $buddy_manager = $container->get('tripal_chado.chado_buddy');
+
+    $this->organism_buddy = $buddy_manager->createInstance('chado_organism_buddy', []);
+
     $type_id = ChadoCVTermAutocompleteController::getCVtermId('cultivar (EFO:0005136)');
 
     $stock_id = $this->chado_connection->insert('1:stock')
@@ -161,6 +173,7 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
       'trpcultivate-germplasm-relationship-importer',
       $this->definitions,
       $this->chado_connection,
+      $buddy_manager,
       $container->get('plugin.manager.trpcultivate_validator'),
       $container->get('trpcultivate.template_generator'),
       $container->get('entity_type.manager'),
@@ -379,7 +392,7 @@ class GermplasmRelationshipImporterRunTest extends ChadoTestKernelBase {
         );
         // Check if the organism is inserted correctly.
         $this->assertEquals(
-          $stock_organism = chado_get_organism_id_from_scientific_name($expected_stock['organism'])[0],
+          $stock_organism = $this->organism_buddy->getOrganismFromScientificName($expected_stock['organism'])[0]->getValue('organism.organism_id'),
           $stock_query[$index]->organism_id,
           'We expected the inserted stock to have an organism id of ' . $stock_organism . ', but it was ' . $stock_query[$index]->organism_id . '.',
         );

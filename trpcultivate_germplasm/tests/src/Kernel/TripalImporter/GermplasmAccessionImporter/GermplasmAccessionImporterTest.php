@@ -90,6 +90,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
       'trpcultivate-germplasm-accession',
       $this->definitions,
       $this->connection,
+      $container->get('tripal_chado.chado_buddy'),
       $this->config_factory,
       $container->get('messenger'),
       $container->get('tripal.logger'),

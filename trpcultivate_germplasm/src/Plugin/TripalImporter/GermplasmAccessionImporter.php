@@ -12,7 +12,8 @@ use Drupal\tripal\Services\TripalFileRetriever;
 use Drupal\tripal\Services\TripalLogger;
 use Drupal\tripal\TripalBackendPublish\PluginManager\TripalBackendPublishManager;
 use Drupal\tripal\TripalImporter\Attribute\TripalImporter;
-
+use Drupal\tripal_chado\ChadoBuddy\PluginManagers\ChadoBuddyPluginManager;
+use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoOrganismBuddy;
 
 #[TripalImporter(
    id: 'trpcultivate-germplasm-accession',
@@ -43,6 +44,20 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
    * @var \Drupal\Core\Config\ConfigFactoryInterface
    */
   protected $config_factory;
+
+  /**
+   * The Chado Buddy service manager.
+   *
+   * @var Drupal\tripal_chado\ChadoBuddy\PluginManagers\ChadoBuddyPluginManager
+   */
+  protected ChadoBuddyPluginManager $buddy_manager;
+
+  /**
+   * An instance of the organism Chado Buddy.
+   *
+   * @var Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoOrganismBuddy
+   */
+  protected ChadoOrganismBuddy $organism_buddy;
 
   /**
    * An associative array of cvterms as the key and the cvterm_id as the value.
@@ -83,6 +98,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       $plugin_id,
       $plugin_definition,
       $container->get('tripal_chado.database'),
+      $container->get('tripal_chado.chado_buddy'),
       $container->get('config.factory'),
       $container->get('messenger'),
       $container->get('tripal.logger'),
@@ -106,6 +122,8 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
    * @param string $plugin_id
    * @param mixed $plugin_definition
    * @param Drupal\tripal_chado\Database\ChadoConnection $connection
+   * @param Drupal\tripal_chado\ChadoBuddy\PluginManagers\ChadoBuddyPluginManager $buddy_manager
+   *   The ChadoBuddy plugin manager.
    * @param
    */
   public function __construct(
@@ -113,6 +131,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     $plugin_id,
     $plugin_definition,
     ChadoConnection $connection,
+    ChadoBuddyPluginManager $buddy_manager,
     ConfigFactoryInterface $config_factory,
     Messenger $messenger,
     TripalLogger $logger,
@@ -131,6 +150,8 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     );
 
     $this->config_factory = $config_factory;
+    $this->buddy_manager = $buddy_manager;
+    $this->organism_buddy = $this->buddy_manager->createInstance('chado_organism_buddy', []);
   }
 
   /**
@@ -427,7 +448,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     if ($germplasm_subtaxa) {
       $organism_name = $organism_name . ' ' . $germplasm_subtaxa;
     }
-    $organism_array = chado_get_organism_id_from_scientific_name($organism_name);
+    $organism_array = $this->organism_buddy->getOrganismFromScientificName($organism_name);
 
     if (!$organism_array) {
       $this->logger->error("Could not find an organism \"@organism_name\" in the database.", ['@organism_name' => $organism_name]);
@@ -442,7 +463,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       return false;
     }
 
-    return $organism_array[0];
+    return $organism_array[0]->getValue('organism.organism_id');
   }
 
   /**
