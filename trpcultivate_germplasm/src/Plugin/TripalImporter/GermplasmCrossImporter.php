@@ -89,11 +89,6 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       'type' => 'required',
     ],
     [
-      'name' => 'Unique Name',
-      'description' => 'A unique identifier for this cross. This can be the same as Cross Number, if desired.',
-      'type' => 'required',
-    ],
-    [
       'name' => 'Species',
       'description' => 'The species of the germplasm being imported.',
       'type' => 'required',
@@ -112,21 +107,6 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       'name' => 'Cross Type',
       'description' => 'The type of cross (e.g. single, double, triple).',
       'type' => 'required',
-    ],
-    [
-      'name' => 'Seed Type',
-      'description' => 'Either the market class or the seed coat colour of the seed resulting from this cross.',
-      'type' => 'optional',
-    ],
-    [
-      'name' => 'Cotyledon Colour',
-      'description' => 'The cotyledon colour of the seed resulting from this cross.',
-      'type' => 'optional',
-    ],
-    [
-      'name' => 'Comment',
-      'description' => 'A free-text comment about this cross.',
-      'type' => 'optional',
     ],
   ];
 
@@ -392,7 +372,6 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       $header_index['Year'],
       $header_index['Season'],
       $header_index['Cross Number'],
-      $header_index['Unique Name'],
       $header_index['Species'],
       $header_index['Maternal Parent'],
       $header_index['Paternal Parent'],

@@ -374,14 +374,10 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
       'Year',
       'Season',
       'Cross Number',
-      'Unique Name',
       'Species',
       'Maternal Parent',
       'Paternal Parent',
       'Cross Type',
-      'Seed Type',
-      'Cotyledon Colour',
-      'Comment',
     ];
 
     // Pull all the headers in the rendered description.
