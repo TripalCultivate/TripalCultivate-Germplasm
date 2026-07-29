@@ -867,7 +867,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
           'column_headers' => [
             // "Scientific Name" here refers to the combination of the
             // form field 'Genus' and the value in column 'Species'.
-            4 => 'Scientific Name',
+            3 => 'Scientific Name',
           ],
         ];
         $messages[$validator_name]['details'] = ValidOrganism::processListWithDescribedTable($failures[$validator_name], $metadata, $tokens);
@@ -904,9 +904,9 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
         $metadata = [
           'column_headers' => [
             // Maternal Parent.
-            5 => $header_names[5],
+            4 => $header_names[4],
             // Paternal Parent.
-            6 => $header_names[6],
+            5 => $header_names[5],
           ],
         ];
         $messages[$validator_name]['details'] = GermplasmNameExists::processListWithDescribedTable($failures[$validator_name], $metadata);
