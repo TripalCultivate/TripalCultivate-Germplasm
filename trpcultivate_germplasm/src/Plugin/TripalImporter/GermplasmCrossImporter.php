@@ -462,6 +462,25 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       '#required' => TRUE,
     ];
 
+    /*$programs_query = $this->chado_connection->select('1:dbprop', 'dbp')
+      ->fields('dbp', ['db_id'])
+      ->orderBy('name');
+    $all_programs = $programs_query->execute()->fetchAllKeyed(0, 1);
+
+    // Field Program ID.
+    $form['program_id'] = [
+      '#type' => 'select',
+      '#title' => 'Program ID',
+      '#description' => $this->t('The program ID of the germplasm being imported.'),
+      '#empty_value' => '',
+      '#empty_option' => '- Select -',
+      '#options' => $all_programs,
+      '#default_value' => '',
+      '#weight' => -98,
+      '#required' => TRUE,
+    ];
+    */
+
     // This importer does not support using file sources from existing field.
     // #access: (bool) Whether the element is accessible or not; when FALSE,
     // the element is not rendered and the user submitted value is not taken
