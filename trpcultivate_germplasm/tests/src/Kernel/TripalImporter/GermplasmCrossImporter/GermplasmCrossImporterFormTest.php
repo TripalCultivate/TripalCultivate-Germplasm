@@ -289,23 +289,17 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
     }
 
     // Use a CVterm ChadoBuddy to get the cvterm_id for inserting Program IDs.
-    /*
     $buddy_service = \Drupal::service('tripal_chado.chado_buddy');
     $cvterm_buddy = $buddy_service->createInstance('chado_cvterm_buddy', []);
-    $cv_record = $cvterm_buddy->insertCv([
-    'cv.name' => 'refs',
+    $cvterm_record = $cvterm_buddy->getCvterm([
+      'cv.name' => 'rdfs',
+      'cvterm.name' => 'type',
     ]);
-    $cvterm_record = $cvterm_buddy->insertCvterm([
-    'cvterm.name' => 'type',
-    'buddy_record' => $cv_record,
-    ]);
-    $cvterm_id = $cvterm_record->getValue('cvterm_id');
+    $cvterm_id = $cvterm_record[0]->getValue('cvterm.cvterm_id');
     $this->assertIsNumeric($cvterm_id,
     'We were not able to get the cvterm_id we need for creating Program ID dbprop records.');
-     */
 
     // Insert any Program IDs if available.
-    $cvterm_id = '1';
     if ($programs['programs']) {
       foreach ($programs['programs'] as $program) {
         // Create the db record for this Program ID.
