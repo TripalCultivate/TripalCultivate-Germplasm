@@ -462,9 +462,9 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       '#required' => TRUE,
     ];
 
-    /*$programs_query = $this->chado_connection->select('1:dbprop', 'dbp')
+    $programs_query = $this->chado_connection->select('1:dbprop', 'dbp')
       ->fields('dbp', ['db_id'])
-      ->orderBy('name');
+      ->orderBy('value');
     $all_programs = $programs_query->execute()->fetchAllKeyed(0, 1);
 
     // Field Program ID.
@@ -479,7 +479,6 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       '#weight' => -98,
       '#required' => TRUE,
     ];
-    */
 
     // This importer does not support using file sources from existing field.
     // #access: (bool) Whether the element is accessible or not; when FALSE,

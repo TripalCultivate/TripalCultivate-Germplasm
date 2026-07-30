@@ -288,19 +288,24 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
       }
     }
 
-    /*
     // Use a CVterm ChadoBuddy to get the cvterm_id for inserting Program IDs.
+    /*
     $buddy_service = \Drupal::service('tripal_chado.chado_buddy');
     $cvterm_buddy = $buddy_service->createInstance('chado_cvterm_buddy', []);
+    $cv_record = $cvterm_buddy->insertCv([
+    'cv.name' => 'refs',
+    ]);
     $cvterm_record = $cvterm_buddy->insertCvterm([
-      'cv.name' => 'refs',
-      'cvterm.name' => 'type',
+    'cvterm.name' => 'type',
+    'buddy_record' => $cv_record,
     ]);
     $cvterm_id = $cvterm_record->getValue('cvterm_id');
     $this->assertIsNumeric($cvterm_id,
-      'We were not able to get the cvterm_id we need for creating Program ID dbprop records.');
+    'We were not able to get the cvterm_id we need for creating Program ID dbprop records.');
+     */
 
     // Insert any Program IDs if available.
+    $cvterm_id = '1';
     if ($programs['programs']) {
       foreach ($programs['programs'] as $program) {
         // Create the db record for this Program ID.
@@ -321,7 +326,6 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
           'We were not able to create the dbprop record for program "' . $program['name'] . '" for testing.');
       }
     }
-    */
 
     // Build the form using the Drupal form builder.
     $form = \Drupal::formBuilder()->getForm(
@@ -388,6 +392,20 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
     // Check the select list's default value.
     $this->assertEquals($genus['default'], $form['genus']['#default_value'],
       $genus['message']);
+
+    // Check the Program ID form element.
+    $this->assertArrayHasKey('program_id', $form,
+      "We expect there to be an program_id form element but there is not.");
+    $this->assertEquals('select', $form['program_id']['#type'],
+      "We expect the program_id element in the form to be a select list.");
+    // Check that the select list contains all of our program IDs.
+    foreach ($programs['programs'] as $program) {
+      $this->assertArrayHasKey($program['name'], $form['program_id']['#options'],
+        "We expect the program_id select list to contain the program" . $program['name'] . ".");
+    }
+    // Check the select list's default value.
+    $this->assertEquals($programs['default'], $form['program_id']['#default_value'],
+      $programs['message']);
   }
 
   /**
