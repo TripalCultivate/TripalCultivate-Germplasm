@@ -462,9 +462,12 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       '#required' => TRUE,
     ];
 
-    $programs_query = $this->chado_connection->select('1:dbprop', 'dbp')
-      ->fields('dbp', ['db_id'])
-      ->orderBy('value');
+    $programs_query = $this->chado_connection->select('1:db', 'db')
+      ->distinct()
+      ->fields('db', ['db_id', 'name']);
+    $programs_query->join('1:dbprop', 'dbp', 'db.db_id = dbp.db_id');
+    $programs_query->condition('dbp.value', 'Program ID', '=');
+    $programs_query->orderBy('name');
     $all_programs = $programs_query->execute()->fetchAllKeyed(0, 1);
 
     // Field Program ID.

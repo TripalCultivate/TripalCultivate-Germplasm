@@ -421,6 +421,36 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
     $this->assertIsNumeric($organism_id,
       "We were not able to create an organism for testing.");
 
+    // Use a CVterm ChadoBuddy to get the cvterm_id for inserting Program IDs.
+    $buddy_service = \Drupal::service('tripal_chado.chado_buddy');
+    $cvterm_buddy = $buddy_service->createInstance('chado_cvterm_buddy', []);
+    $cvterm_record = $cvterm_buddy->getCvterm([
+      'cv.name' => 'rdfs',
+      'cvterm.name' => 'type',
+    ]);
+    $cvterm_id = $cvterm_record[0]->getValue('cvterm.cvterm_id');
+    $this->assertIsNumeric($cvterm_id,
+    'We were not able to get the cvterm_id we need for creating Program ID dbprop records.');
+
+    $program_name = 'Test Program';
+    $program_id = $this->chado_connection->insert('1:db')
+      ->fields([
+        'name' => $program_name,
+      ])
+      ->execute();
+    // Create the dbprop record and link it to the db record.
+    $dbprop_id = $this->chado_connection->insert('1:dbprop')
+      ->fields([
+        'db_id' => $program_id,
+        'type_id' => $cvterm_id,
+        'value' => 'Program ID',
+      ])
+      ->execute();
+    $this->assertIsNumeric($program_id,
+          'We were not able to create the program "' . $program_name . '" in the db table for testing.');
+    $this->assertIsNumeric($dbprop_id,
+          'We were not able to create the dbprop record for program "' . $program_name . '" for testing.');
+
     // Create a file to upload.
     $file = $this->createTestFile([
       'filename' => 'crosses_simple.tsv',
@@ -434,6 +464,7 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
     $form_state = new FormState();
     $form_state->addBuildInfo('args', [$plugin_id]);
     $form_state->setValue('genus', $genus);
+    $form_state->setValue('program_id', $program_id);
     $form_state->setValue('file_upload', $file->id());
 
     // Now try validation!
