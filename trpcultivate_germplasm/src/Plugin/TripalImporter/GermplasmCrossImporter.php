@@ -471,6 +471,17 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
 
     $all_programs = $programs_query->execute()->fetchAllKeyed(0, 0);
 
+    // If there is only one program, it should be the default.
+    $default_program = '';
+    if ($all_programs && count($all_programs) == 1) {
+      $default_program = array_keys($all_programs)[0];
+    }
+    // If there are no programs, let the user know that one or more needs to be
+    // added to the database before importing germplasm cross data.
+    if (!$all_programs) {
+      $this->service_Messenger->addError($this->t('No Program IDs were found in the database. Please contact your administrator to add your Program ID to the database before importing germplasm cross data.'));
+    }
+
     // Field Program ID.
     $form['program_id'] = [
       '#type' => 'select',
@@ -479,7 +490,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       '#empty_value' => '',
       '#empty_option' => '- Select -',
       '#options' => $all_programs,
-      '#default_value' => '',
+      '#default_value' => $default_program,
       '#weight' => -98,
       '#required' => TRUE,
     ];

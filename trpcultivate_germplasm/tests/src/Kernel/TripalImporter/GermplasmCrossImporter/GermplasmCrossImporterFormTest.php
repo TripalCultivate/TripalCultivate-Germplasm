@@ -177,7 +177,7 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
   public static function provideValuesForForm() {
     $scenarios = [];
 
-    // #0: No organisms & program IDs exist in the database.
+    // #0: No organisms or program IDs exist in the database.
     $scenarios[] = [
       [
         'organisms' => [],
@@ -191,7 +191,7 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
       ],
     ];
 
-    // #1: 1 valid organism
+    // #1: 1 valid organism + 1 valid program ID
     $scenarios[] = [
       [
         'organisms' => [
@@ -204,14 +204,17 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
         'message' => 'We expect the genus element in the form to default to Tripalus as it is the genus of the organism we created.',
       ],
       [
-        'programs' => [],
-        'default' => '',
-        'message' => 'We expect the program element in the form to default to empty option
-        since no programs are available.',
+        'programs' => [
+          [
+            'name' => 'Program 1',
+          ],
+        ],
+        'default' => 'Program 1',
+        'message' => 'We expect the program element in the form to default to Program 1 as it is the only program available.',
       ],
     ];
 
-    // #2: 3 valid organisms
+    // #2: 3 valid organisms + 3 valid Programs.
     $scenarios[] = [
       [
         'organisms' => [
@@ -234,10 +237,21 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
         'message' => 'We expect the genus element in the form to default to empty option since more than one organism is available.',
       ],
       [
-        'programs' => [],
+        'programs' => [
+          [
+            'name' => 'Program 1',
+          ],
+          [
+            'name' => 'Program 2',
+          ],
+          [
+            'name' => 'Program 3',
+          ],
+        ],
+        // Since there is more than one program, the default option is expected
+        // to be the -Select- text, therefore empty value.
         'default' => '',
-        'message' => 'We expect the program element in the form to default to empty option
-        since no programs are available.',
+        'message' => 'We expect the program element in the form to default to empty option since more than one program is available.',
       ],
     ];
 
@@ -265,9 +279,9 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
    *     contains the program name to create the form field dropdown. Each
    *     program array has the following keys:
    *     - 'name': A string of the program "code" to insert.
-   *   - The program name expected to be shown to the user by default.
-   *   - The string message to be passed into assertEquals when evaluating
-   *     the default program ID name.
+   *   - 'default': The program name expected to be shown by default.
+   *   - 'message': The string message to be passed into assertEquals when
+   *     evaluating the default program ID name.
    *
    * @dataProvider provideValuesForForm
    */
@@ -400,6 +414,16 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
     // Check the select list's default value.
     $this->assertEquals($programs['default'], $form['program_id']['#default_value'],
       $programs['message']);
+
+    // If there are no programs to select from, we expect an error message to be
+    // displayed at the top of the form.
+    if (!$programs['programs']) {
+      $errors = \Drupal::messenger()->messagesByType('error');
+      $this->assertCount(1, $errors,
+        "We expect there to be an error message about no Program IDs being available.");
+      $this->assertStringContainsString('No Program IDs were found in the database', $errors[0],
+        "We expect the error message to contain a warning about no Program IDs being available.");
+    }
   }
 
   /**

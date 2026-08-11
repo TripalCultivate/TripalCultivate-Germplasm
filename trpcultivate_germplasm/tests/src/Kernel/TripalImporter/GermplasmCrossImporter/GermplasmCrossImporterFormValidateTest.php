@@ -584,6 +584,15 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
       'The import form should set the default value of genus to the genus entered if the form was not submitted due to validation error.'
     );
 
+    // Assert that the default value of program ID field is the one that was
+    // entered/selected, indicating that on form validate error, the form was
+    // not submitted and reloaded with the genus value as default.
+    $this->assertEquals(
+      $form_state->getValue('program_id'),
+      $submitted_program,
+      'The import form should set the default value of program ID to the program ID entered if the form was not submitted due to validation error.'
+    );
+
     // If the form was not submitted due to validation error, check to ensure
     // that no Tripal Job was created in the process.
     $tripal_jobs = $this->chado_connection->query(
@@ -603,6 +612,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
    * @return array
    *   Each scenario is an array with the following:
    *   - The genus that gets selected in the dropdown of the form.
+   *   - The Program ID that gets selected in the dropdown of the form.
    *   - The filename of the test file used for this scenario.
    *   - The expected exception message when the selected genus is not valid.
    */
@@ -610,11 +620,13 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
     return [
       'no_genus_selected' => [
         'input_genus' => '',
+        'input_program' => 'Test Program',
         'input_file' => 'correct_header_no_data.tsv',
         'expected_exception' => 'Cannot retrieve an array of organism IDs as one has not been set by either the setOrganismID() or setGenus() method.',
       ],
       'nonexistent_genus_selected' => [
         'input_genus' => 'NonexistentGenus',
+        'input_program' => 'Test Program',
         'input_file' => 'correct_header_no_data.tsv',
         'expected_exception' => 'Cannot retrieve an array of organism IDs as one has not been set by either the setOrganismID() or setGenus() method.',
       ],
@@ -626,6 +638,8 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
    *
    * @param string $input_genus
    *   The genus that is submitted with the form.
+   * @param string $input_program
+   *   The Program ID that is submitted with the form.
    * @param string $input_file
    *   The name of the file being tested.
    * @param string $expected_exception
@@ -634,7 +648,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
    * @dataProvider provideFilesForValidationWithExceptions
    */
   #[DataProvider('provideFilesForValidationWithExceptions')]
-  public function testCrossFormValidationWithExceptions(string $input_genus, string $input_file, string $expected_exception) {
+  public function testCrossFormValidationWithExceptions(string $input_genus, string $input_program, string $input_file, string $expected_exception) {
     $formBuilder = \Drupal::formBuilder();
     $form_id = 'Drupal\tripal\Form\TripalImporterForm';
     $plugin_id = 'trpcultivate-germplasm-cross-importer';
@@ -654,6 +668,9 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
 
     // Submit our genus.
     $form_state->setValue('genus', $input_genus);
+
+    // Submit our program ID.
+    $form_state->setValue('program_id', $input_program);
 
     // Submit our file.
     $form_state->setValue('file_upload', $file->id());
