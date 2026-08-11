@@ -125,7 +125,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
   protected ChadoBuddyPluginManager $buddy_manager;
 
   /**
-   * The Chado Buddy cvterm.
+   * An instance of the cvterm Chado Buddy.
    *
    * @var \Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoCvtermBuddy
    */
@@ -407,6 +407,20 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     $instance->setIndices($indices);
     $instance->setGenus($form_values['genus']);
     $validators['data-row']['germplasm_name_exists'] = $instance;
+
+    /*
+    // - Cross Type is a valid cross type in the database.
+    $instance = $this->service_validatorPluginManager->createInstance('value_in_list');
+    $instance->setIndices([$header_index['Cross Type']]);
+    $valid_cross_types = $this->cvterm_buddy->getCvterm([
+      'cvterm.name' => 'additionalType',
+      'cv.name' => 'schema',
+      'cv.accession' => 'additionalType',
+    ]);
+    $instance->setValidValues($valid_cross_types);
+    $validators['data-row']['valid_cross_type'] = $instance;
+    */
+
     return $validators;
   }
 
