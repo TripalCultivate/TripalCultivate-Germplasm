@@ -464,7 +464,7 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
     $form_state = new FormState();
     $form_state->addBuildInfo('args', [$plugin_id]);
     $form_state->setValue('genus', $genus);
-    $form_state->setValue('program_id', $program_id);
+    $form_state->setValue('program_id', $program_name);
     $form_state->setValue('file_upload', $file->id());
 
     // Now try validation!
