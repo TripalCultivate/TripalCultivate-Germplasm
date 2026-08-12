@@ -191,7 +191,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
     // 121S and 122S appear as the value of both Maternal Germplasm and Paternal
     // Germplasm column-row combinations in the file:
     // correct_header_invalid_season.tsv.
-    $this->chado_connection->insert('1:stock')
+    $maternal_stock_id = $this->chado_connection->insert('1:stock')
       ->fields([
         'organism_id' => $organism_id_1,
         'name' => '121S',
@@ -203,7 +203,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
       ])
       ->execute();
 
-    $this->chado_connection->insert('1:stock')
+    $paternal_stock_id = $this->chado_connection->insert('1:stock')
       ->fields([
         'organism_id' => $organism_id_1,
         'name' => '122S',
@@ -212,6 +212,28 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
         'description' => '',
         'type_id' => 1,
         'is_obsolete' => 'f',
+      ])
+      ->execute();
+
+    // Insert a cross type for the Maternal and Paternal parents.
+    $additionalType_cvterm = $cvterm_buddy->getCvterm([
+      'cvterm.name' => 'additionalType',
+      'cv.name' => 'schema',
+      'dbxref.accession' => 'additionalType',
+    ]);
+    $additionalType_cvterm_id = $additionalType_cvterm[0]->getValue('cvterm.cvterm_id');
+    $this->chado_connection->insert('1:stockprop')
+      ->fields([
+        'stock_id' => $maternal_stock_id,
+        'type_id' => $additionalType_cvterm_id,
+        'value' => 'single',
+      ])
+      ->execute();
+    $this->chado_connection->insert('1:stockprop')
+      ->fields([
+        'stock_id' => $paternal_stock_id,
+        'type_id' => $additionalType_cvterm_id,
+        'value' => 'single',
       ])
       ->execute();
   }
@@ -270,6 +292,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
         'valid_organism' => ['status' => 'todo'],
         'valid_season' => ['status' => 'todo'],
         'germplasm_name_exists' => ['status' => 'todo'],
+        'valid_cross_type' => ['status' => 'todo'],
       ],
       $num_form_validation_messages,
     ];
@@ -291,6 +314,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
         'valid_organism' => ['status' => 'todo'],
         'valid_season' => ['status' => 'todo'],
         'germplasm_name_exists' => ['status' => 'todo'],
+        'valid_cross_type' => ['status' => 'todo'],
       ],
       $num_form_validation_messages,
     ];
@@ -314,6 +338,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
         'valid_organism' => ['status' => 'todo'],
         'valid_season' => ['status' => 'todo'],
         'germplasm_name_exists' => ['status' => 'todo'],
+        'valid_cross_type' => ['status' => 'todo'],
       ],
       $num_form_validation_messages,
     ];
@@ -332,6 +357,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
         'valid_organism' => ['status' => 'todo'],
         'valid_season' => ['status' => 'todo'],
         'germplasm_name_exists' => ['status' => 'todo'],
+        'valid_cross_type' => ['status' => 'todo'],
       ],
       $num_form_validation_messages,
     ];
@@ -353,6 +379,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
         'valid_organism' => ['status' => 'todo'],
         'valid_season' => ['status' => 'todo'],
         'germplasm_name_exists' => ['status' => 'todo'],
+        'valid_cross_type' => ['status' => 'todo'],
       ],
       $num_form_validation_messages,
     ];
@@ -374,6 +401,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
         'valid_organism' => ['status' => 'pass'],
         'valid_season' => ['status' => 'pass'],
         'germplasm_name_exists' => ['status' => 'pass'],
+        'valid_cross_type' => ['status' => 'pass'],
       ],
       $num_form_validation_messages,
     ];
@@ -395,11 +423,12 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
           'details' => 'The following line number and column combinations did not contain one of the following allowed values: "Winter", "Spring", "Summer", "Fall". Note that values should be case sensitive. <strong>If any cell in the table below is empty, then the value given in the file for that cell was one of the allowed values.</strong>',
         ],
         'germplasm_name_exists' => ['status' => 'pass'],
+        'valid_cross_type' => ['status' => 'pass'],
       ],
       $num_form_validation_messages,
     ];
 
-    // #7: Contains a non-existant maternal parent on row 3
+    // #7: Contains a non-existant maternal parent on row 3.
     $scenarios[] = [
       $valid_genus,
       $valid_program,
@@ -416,6 +445,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
           'status' => 'fail',
           'details' => 'The following germplasm names do not match any existing in this site. Please make sure you have entered the names exactly as they appear on the germplasm pages or contact your administrator to have them added if they do not yet exist.',
         ],
+        'valid_cross_type' => ['status' => 'pass'],
       ],
       $num_form_validation_messages,
     ];
@@ -438,9 +468,33 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
         ],
         'valid_season' => ['status' => 'pass'],
         'germplasm_name_exists' => ['status' => 'pass'],
+        'valid_cross_type' => ['status' => 'pass'],
       ],
       $num_form_validation_messages,
     ];
+
+    // #9: Contains correct header and one line containing an invalid crosstype.
+    $scenarios[] = [
+      $valid_genus,
+      $valid_program,
+      'correct_header_invalid_cross_type.tsv',
+      [
+        'valid_data_file' => ['status' => 'pass'],
+        'valid_delimited_file' => ['status' => 'pass'],
+        'valid_header' => ['status' => 'pass'],
+        'empty_cell' => ['status' => 'pass'],
+        'valid_organism' => ['status' => 'pass'],
+        'valid_season' => ['status' => 'pass'],
+        'germplasm_name_exists' => ['status' => 'pass'],
+        'valid_cross_type' => [
+          'title' => 'Values in column "Cross Type" are valid',
+          'status' => 'fail',
+          'details' => 'The following line number and column combinations did not contain one of the following allowed values: "single". Note that values should be case sensitive. <strong>If any cell in the table below is empty, then the value given in the file for that cell was one of the allowed values.</strong>',
+        ],
+      ],
+      $num_form_validation_messages,
+    ];
+
     return $scenarios;
   }
 
