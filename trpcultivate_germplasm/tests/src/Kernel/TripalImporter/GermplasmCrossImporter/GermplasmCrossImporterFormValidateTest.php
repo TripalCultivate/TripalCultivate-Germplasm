@@ -64,10 +64,6 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
   protected ChadoConnection $chado_connection;
 
   /**
-   *
-   */
-
-  /**
    * A default listing of annotations associated with our importer.
    *
    * @var array
@@ -172,22 +168,23 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
     $this->assertIsNumeric($cvterm_id,
     'We were not able to get the cvterm_id we need for creating Program ID dbprop records.');
 
+    // Use a dbxref buddy to get the db_id for inserting Program IDs.
     $program_name = 'Test Program';
-    $program_id = $this->chado_connection->insert('1:db')
-      ->fields([
-        'name' => $program_name,
-      ])
-      ->execute();
+    $dbxref_buddy = $buddy_service->createInstance('chado_dbxref_buddy', []);
+    $program_record = $dbxref_buddy->insertDb([
+      'db.name' => $program_name,
+    ]);
+    $program_record_id = $program_record->getValue('db.db_id');
+    $this->assertIsNumeric($program_record_id,
+      'We were not able to create the program "' . $program_name . '" in the db table for testing.');
     // Create the dbprop record and link it to the db record.
     $dbprop_id = $this->chado_connection->insert('1:dbprop')
       ->fields([
-        'db_id' => $program_id,
+        'db_id' => $program_record_id,
         'type_id' => $cvterm_id,
         'value' => 'Program ID',
       ])
       ->execute();
-    $this->assertIsNumeric($program_id,
-          'We were not able to create the program "' . $program_name . '" in the db table for testing.');
     $this->assertIsNumeric($dbprop_id,
           'We were not able to create the dbprop record for program "' . $program_name . '" for testing.');
 
@@ -195,29 +192,26 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
     // 121S and 122S appear as the value of both Maternal Germplasm and Paternal
     // Germplasm column-row combinations in the file:
     // correct_header_invalid_season.tsv.
-    $maternal_stock_id = $this->chado_connection->insert('1:stock')
-      ->fields([
-        'organism_id' => $organism_id_1,
-        'name' => '121S',
-        'dbxref_id' => 1,
-        'uniquename' => 'STOCK:121S',
-        'description' => '',
-        'type_id' => 1,
-        'is_obsolete' => 'f',
-      ])
-      ->execute();
+    $stock_buddy = $buddy_service->createInstance('chado_stock_buddy', []);
+    $maternal_stock = $stock_buddy->insertStock([
+      'stock.organism_id' => $organism_id_1,
+      'stock.name' => '121S',
+      'stock.dbxref_id' => 1,
+      'stock.uniquename' => 'STOCK:121S',
+      'stock.description' => '',
+      'stock.type_id' => 1,
+      'stock.is_obsolete' => 'f',
+    ]);
 
-    $paternal_stock_id = $this->chado_connection->insert('1:stock')
-      ->fields([
-        'organism_id' => $organism_id_1,
-        'name' => '122S',
-        'dbxref_id' => 1,
-        'uniquename' => 'STOCK:122S',
-        'description' => '',
-        'type_id' => 1,
-        'is_obsolete' => 'f',
-      ])
-      ->execute();
+    $paternal_stock = $stock_buddy->insertStock([
+      'stock.organism_id' => $organism_id_1,
+      'stock.name' => '122S',
+      'stock.dbxref_id' => 1,
+      'stock.uniquename' => 'STOCK:122S',
+      'stock.description' => '',
+      'stock.type_id' => 1,
+      'stock.is_obsolete' => 'f',
+    ]);
 
     // Insert a cross type for the Maternal and Paternal parents.
     $additionalType_cvterm = $cvterm_buddy->getCvterm([
@@ -228,14 +222,14 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
     $additionalType_cvterm_id = $additionalType_cvterm[0]->getValue('cvterm.cvterm_id');
     $this->chado_connection->insert('1:stockprop')
       ->fields([
-        'stock_id' => $maternal_stock_id,
+        'stock_id' => $maternal_stock->getValue('stock.stock_id'),
         'type_id' => $additionalType_cvterm_id,
         'value' => 'single',
       ])
       ->execute();
     $this->chado_connection->insert('1:stockprop')
       ->fields([
-        'stock_id' => $paternal_stock_id,
+        'stock_id' => $paternal_stock->getValue('stock.stock_id'),
         'type_id' => $additionalType_cvterm_id,
         'value' => 'single',
       ])
