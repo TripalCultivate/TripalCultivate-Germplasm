@@ -9,6 +9,7 @@ use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tripal\Services\TripalLogger;
 use Drupal\tripal_chado\Database\ChadoConnection;
 use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoCvtermBuddy;
+use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoDbxrefBuddy;
 use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoPropertyBuddy;
 use Drupal\user\Entity\User;
 use PHPUnit\Framework\Attributes\Group;
@@ -64,6 +65,13 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
    * @var \Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoCvtermBuddy
    */
   protected ChadoCvtermBuddy $cvterm_buddy;
+
+  /**
+   * An instance of the ChadoDbxrefBuddy.
+   *
+   * @var \Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoDbxrefBuddy
+   */
+  protected ChadoDbxrefBuddy $dbxref_buddy;
 
   /**
    * An instance of the ChadoPropertyBuddy.
@@ -146,6 +154,12 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
     $this->module_path = $this->container->get('module_handler')
       ->getModule('trpcultivate_germplasm')
       ->getPath();
+
+    // Setup our ChadoBuddies.
+    $buddy_service = \Drupal::service('tripal_chado.chado_buddy');
+    $this->cvterm_buddy = $buddy_service->createInstance('chado_cvterm_buddy', []);
+    $this->dbxref_buddy = $buddy_service->createInstance('chado_dbxref_buddy', []);
+    $this->property_buddy = $buddy_service->createInstance('chado_property_buddy', []);
   }
 
   /**
@@ -303,9 +317,7 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
     }
 
     // Use a CVterm ChadoBuddy to get the cvterm_id for inserting Program IDs.
-    $buddy_service = \Drupal::service('tripal_chado.chado_buddy');
-    $cvterm_buddy = $buddy_service->createInstance('chado_cvterm_buddy', []);
-    $cvterm_record = $cvterm_buddy->getCvterm([
+    $cvterm_record = $this->cvterm_buddy->getCvterm([
       'cv.name' => 'rdfs',
       'cvterm.name' => 'type',
     ]);
@@ -317,20 +329,18 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
     if ($programs['programs']) {
       foreach ($programs['programs'] as $program) {
         // Create the db record for this Program ID.
-        $program_id = $this->chado_connection->insert('1:db')
-          ->fields($program)
-          ->execute();
-        // Create the dbprop record and link it to the db record.
-        $dbprop_id = $this->chado_connection->insert('1:dbprop')
-          ->fields([
-            'db_id' => $program_id,
-            'type_id' => $cvterm_id,
-            'value' => 'Program ID',
-          ])
-          ->execute();
-        $this->assertIsNumeric($program_id,
+        $program_record = $this->dbxref_buddy->insertDb([
+          'db.name' => $program['name'],
+        ]);
+        $program_record_id = $program_record->getValue('db.db_id');
+        $this->assertIsNumeric($program_record_id,
           'We were not able to create the program "' . $program['name'] . '" in the db table for testing.');
-        $this->assertIsNumeric($dbprop_id,
+        // Create the dbprop record and link it to the db record.
+        $dbprop_id = $this->property_buddy->insertProperty('db', $program_record_id, [
+          'dbprop.type_id' => $cvterm_id,
+          'dbprop.value' => 'Program ID',
+        ]);
+        $this->assertIsNumeric($dbprop_id->getValue('dbprop.dbprop_id'),
           'We were not able to create the dbprop record for program "' . $program['name'] . '" for testing.');
       }
     }
@@ -409,7 +419,7 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
     // Check that the select list contains all of our program IDs.
     foreach ($programs['programs'] as $program) {
       $this->assertArrayHasKey($program['name'], $form['program_id']['#options'],
-        "We expect the program_id select list to contain the program" . $program['name'] . ".");
+        "We expect the program_id select list to contain the program " . $program['name'] . ".");
     }
     // Check the select list's default value.
     $this->assertEquals($programs['default'], $form['program_id']['#default_value'],

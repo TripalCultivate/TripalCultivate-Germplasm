@@ -64,6 +64,10 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
   protected ChadoConnection $chado_connection;
 
   /**
+   *
+   */
+
+  /**
    * A default listing of annotations associated with our importer.
    *
    * @var array
