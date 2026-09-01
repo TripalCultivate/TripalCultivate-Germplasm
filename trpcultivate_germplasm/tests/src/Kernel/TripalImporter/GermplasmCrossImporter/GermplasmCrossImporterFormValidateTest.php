@@ -157,31 +157,81 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
     $this->assertIsNumeric($organism_id_2,
       "We were not able to create an organism for testing.");
 
+    // Use a CVterm ChadoBuddy to get the cvterm_id for inserting Program IDs.
+    $buddy_service = \Drupal::service('tripal_chado.chado_buddy');
+    $cvterm_buddy = $buddy_service->createInstance('chado_cvterm_buddy', []);
+    $cvterm_record = $cvterm_buddy->getCvterm([
+      'cv.name' => 'rdfs',
+      'cvterm.name' => 'type',
+    ]);
+    $cvterm_id = $cvterm_record[0]->getValue('cvterm.cvterm_id');
+    $this->assertIsNumeric($cvterm_id,
+    'We were not able to get the cvterm_id we need for creating Program ID dbprop records.');
+
+    // Use a dbxref buddy to get the db_id for inserting Program IDs.
+    $program_name = 'Test Program';
+    $dbxref_buddy = $buddy_service->createInstance('chado_dbxref_buddy', []);
+    $program_record = $dbxref_buddy->insertDb([
+      'db.name' => $program_name,
+    ]);
+    $program_record_id = $program_record->getValue('db.db_id');
+    $this->assertIsNumeric($program_record_id,
+      'We were not able to create the program "' . $program_name . '" in the db table for testing.');
+    // Create the dbprop record and link it to the db record.
+    $dbprop_id = $this->chado_connection->insert('1:dbprop')
+      ->fields([
+        'db_id' => $program_record_id,
+        'type_id' => $cvterm_id,
+        'value' => 'Program ID',
+      ])
+      ->execute();
+    $this->assertIsNumeric($dbprop_id,
+          'We were not able to create the dbprop record for program "' . $program_name . '" for testing.');
+
     // Insert test germplasm for Maternal Parent and Paternal Parent columns.
     // 121S and 122S appear as the value of both Maternal Germplasm and Paternal
     // Germplasm column-row combinations in the file:
     // correct_header_invalid_season.tsv.
-    $this->chado_connection->insert('1:stock')
+    $stock_buddy = $buddy_service->createInstance('chado_stock_buddy', []);
+    $maternal_stock = $stock_buddy->insertStock([
+      'stock.organism_id' => $organism_id_1,
+      'stock.name' => '121S',
+      'stock.dbxref_id' => 1,
+      'stock.uniquename' => 'STOCK:121S',
+      'stock.description' => '',
+      'stock.type_id' => 1,
+      'stock.is_obsolete' => 'f',
+    ]);
+
+    $paternal_stock = $stock_buddy->insertStock([
+      'stock.organism_id' => $organism_id_1,
+      'stock.name' => '122S',
+      'stock.dbxref_id' => 1,
+      'stock.uniquename' => 'STOCK:122S',
+      'stock.description' => '',
+      'stock.type_id' => 1,
+      'stock.is_obsolete' => 'f',
+    ]);
+
+    // Insert a cross type for the Maternal and Paternal parents.
+    $additionalType_cvterm = $cvterm_buddy->getCvterm([
+      'cvterm.name' => 'additionalType',
+      'cv.name' => 'schema',
+      'dbxref.accession' => 'additionalType',
+    ]);
+    $additionalType_cvterm_id = $additionalType_cvterm[0]->getValue('cvterm.cvterm_id');
+    $this->chado_connection->insert('1:stockprop')
       ->fields([
-        'organism_id' => $organism_id_1,
-        'name' => '121S',
-        'dbxref_id' => 1,
-        'uniquename' => 'STOCK:121S',
-        'description' => '',
-        'type_id' => 1,
-        'is_obsolete' => 'f',
+        'stock_id' => $maternal_stock->getValue('stock.stock_id'),
+        'type_id' => $additionalType_cvterm_id,
+        'value' => 'single',
       ])
       ->execute();
-
-    $this->chado_connection->insert('1:stock')
+    $this->chado_connection->insert('1:stockprop')
       ->fields([
-        'organism_id' => $organism_id_1,
-        'name' => '122S',
-        'dbxref_id' => 1,
-        'uniquename' => 'STOCK:122S',
-        'description' => '',
-        'type_id' => 1,
-        'is_obsolete' => 'f',
+        'stock_id' => $paternal_stock->getValue('stock.stock_id'),
+        'type_id' => $additionalType_cvterm_id,
+        'value' => 'single',
       ])
       ->execute();
   }
@@ -192,6 +242,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
    * @return array
    *   Each scenario is an array with the following:
    *   - The genus that gets selected in the dropdown of the form
+   *   - The Program ID that gets selected in the dropdown of the form
    *   - The filename of the test file used for this scenario (test files are
    *     located in: tests/src/Fixtures/CrossImporterFiles/)
    *   - An array indicating the expected validation results:
@@ -212,10 +263,11 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
    */
   public static function provideFilesForValidation() {
 
-    // Set our default variables for genus.
-    // Since we created Tripalus databasica organism in our setup, we know that
-    // in this testing environment that the genus is databasica.
+    // Set our default variables for genus and program.
+    // Both of these value have been added in our setup, so we know they should
+    // be available.
     $valid_genus = 'Tripalus';
+    $valid_program = 'Test Program';
 
     $num_form_validation_messages = 0;
 
@@ -224,6 +276,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
     // #0: File is empty.
     $scenarios[] = [
       $valid_genus,
+      $valid_program,
       'empty_file.tsv',
       [
         'valid_data_file' => [
@@ -237,6 +290,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
         'valid_organism' => ['status' => 'todo'],
         'valid_season' => ['status' => 'todo'],
         'germplasm_name_exists' => ['status' => 'todo'],
+        'valid_cross_type' => ['status' => 'todo'],
       ],
       $num_form_validation_messages,
     ];
@@ -244,6 +298,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
     // #1: Header is improperly delimited, with proper data rows.
     $scenarios[] = [
       $valid_genus,
+      $valid_program,
       'improperly_delimited_header_with_data.tsv',
       [
         'valid_data_file' => ['status' => 'pass'],
@@ -257,6 +312,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
         'valid_organism' => ['status' => 'todo'],
         'valid_season' => ['status' => 'todo'],
         'germplasm_name_exists' => ['status' => 'todo'],
+        'valid_cross_type' => ['status' => 'todo'],
       ],
       $num_form_validation_messages,
     ];
@@ -264,13 +320,14 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
     // #2: 2nd row of file is improperly delimited.
     $scenarios[] = [
       $valid_genus,
+      $valid_program,
       'correct_header_improperly_delimited_data_row.tsv',
       [
         'valid_data_file' => ['status' => 'pass'],
         'valid_delimited_file' => [
           'title' => 'Lines are properly delimited',
           'status' => 'fail',
-          'details' => 'This importer requires a minimum number of 8 columns for each line. The following lines do not contain the expected number of columns.',
+          'details' => 'This importer requires a minimum number of 7 columns for each line. The following lines do not contain the expected number of columns.',
         ],
         // Since the header row has the correct number of columns, validation
         // for valid_header is expected to pass.
@@ -279,6 +336,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
         'valid_organism' => ['status' => 'todo'],
         'valid_season' => ['status' => 'todo'],
         'germplasm_name_exists' => ['status' => 'todo'],
+        'valid_cross_type' => ['status' => 'todo'],
       ],
       $num_form_validation_messages,
     ];
@@ -287,6 +345,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
     // Never reaches the validators for data-row since file content is empty.
     $scenarios[] = [
       $valid_genus,
+      $valid_program,
       'correct_header_no_data.tsv',
       [
         'valid_data_file' => ['status' => 'pass'],
@@ -296,6 +355,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
         'valid_organism' => ['status' => 'todo'],
         'valid_season' => ['status' => 'todo'],
         'germplasm_name_exists' => ['status' => 'todo'],
+        'valid_cross_type' => ['status' => 'todo'],
       ],
       $num_form_validation_messages,
     ];
@@ -303,6 +363,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
     // #4: Contains incorrect header and one line of correct data.
     $scenarios[] = [
       $valid_genus,
+      $valid_program,
       'incorrect_header_with_data.tsv',
       [
         'valid_data_file' => ['status' => 'pass'],
@@ -316,6 +377,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
         'valid_organism' => ['status' => 'todo'],
         'valid_season' => ['status' => 'todo'],
         'germplasm_name_exists' => ['status' => 'todo'],
+        'valid_cross_type' => ['status' => 'todo'],
       ],
       $num_form_validation_messages,
     ];
@@ -323,6 +385,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
     // #5: Contains correct header + 1 line with empty Cross Number/Unique Name.
     $scenarios[] = [
       $valid_genus,
+      $valid_program,
       'correct_header_emptycell_crossnumber.tsv',
       [
         'valid_data_file' => ['status' => 'pass'],
@@ -336,6 +399,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
         'valid_organism' => ['status' => 'pass'],
         'valid_season' => ['status' => 'pass'],
         'germplasm_name_exists' => ['status' => 'pass'],
+        'valid_cross_type' => ['status' => 'pass'],
       ],
       $num_form_validation_messages,
     ];
@@ -343,6 +407,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
     // #6: Contains correct header and one line containing an invalid season.
     $scenarios[] = [
       $valid_genus,
+      $valid_program,
       'correct_header_invalid_season.tsv',
       [
         'valid_data_file' => ['status' => 'pass'],
@@ -356,13 +421,15 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
           'details' => 'The following line number and column combinations did not contain one of the following allowed values: "Winter", "Spring", "Summer", "Fall". Note that values should be case sensitive. <strong>If any cell in the table below is empty, then the value given in the file for that cell was one of the allowed values.</strong>',
         ],
         'germplasm_name_exists' => ['status' => 'pass'],
+        'valid_cross_type' => ['status' => 'pass'],
       ],
       $num_form_validation_messages,
     ];
 
-    // #7: Contains a non-existant maternal parent on row 3
+    // #7: Contains a non-existant maternal parent on row 3.
     $scenarios[] = [
       $valid_genus,
+      $valid_program,
       'correct_header_nonexistent_maternal_parent.tsv',
       [
         'valid_data_file' => ['status' => 'pass'],
@@ -376,6 +443,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
           'status' => 'fail',
           'details' => 'The following germplasm names do not match any existing in this site. Please make sure you have entered the names exactly as they appear on the germplasm pages or contact your administrator to have them added if they do not yet exist.',
         ],
+        'valid_cross_type' => ['status' => 'pass'],
       ],
       $num_form_validation_messages,
     ];
@@ -384,6 +452,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
     // even though the genus and the species exist separately.
     $scenarios[] = [
       $valid_genus,
+      $valid_program,
       'correct_header_nonexistent_organism.tsv',
       [
         'valid_data_file' => ['status' => 'pass'],
@@ -397,9 +466,33 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
         ],
         'valid_season' => ['status' => 'pass'],
         'germplasm_name_exists' => ['status' => 'pass'],
+        'valid_cross_type' => ['status' => 'pass'],
       ],
       $num_form_validation_messages,
     ];
+
+    // #9: Contains correct header and one line containing an invalid crosstype.
+    $scenarios[] = [
+      $valid_genus,
+      $valid_program,
+      'correct_header_invalid_cross_type.tsv',
+      [
+        'valid_data_file' => ['status' => 'pass'],
+        'valid_delimited_file' => ['status' => 'pass'],
+        'valid_header' => ['status' => 'pass'],
+        'empty_cell' => ['status' => 'pass'],
+        'valid_organism' => ['status' => 'pass'],
+        'valid_season' => ['status' => 'pass'],
+        'germplasm_name_exists' => ['status' => 'pass'],
+        'valid_cross_type' => [
+          'title' => 'Values in column "Cross Type" are valid',
+          'status' => 'fail',
+          'details' => 'The following line number and column combinations did not contain one of the following allowed values: "single". Note that values should be case sensitive. <strong>If any cell in the table below is empty, then the value given in the file for that cell was one of the allowed values.</strong>',
+        ],
+      ],
+      $num_form_validation_messages,
+    ];
+
     return $scenarios;
   }
 
@@ -408,6 +501,8 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
    *
    * @param string $submitted_genus
    *   The genus that is submitted with the form.
+   * @param string $submitted_program
+   *   The Program ID that is submitted with the form.
    * @param string $filename
    *   The name of the file being tested. (Test files are located in
    *   tests/src/Fixtures/CrossImporterFiles/)
@@ -431,7 +526,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
    * @dataProvider provideFilesForValidation
    */
   #[DataProvider('provideFilesForValidation')]
-  public function testCrossFormValidation(string $submitted_genus, string $filename, array $expected_validator_results, int $expected_num_form_validation_errors) {
+  public function testCrossFormValidation(string $submitted_genus, string $submitted_program, string $filename, array $expected_validator_results, int $expected_num_form_validation_errors) {
 
     $formBuilder = \Drupal::formBuilder();
     $form_id = 'Drupal\tripal\Form\TripalImporterForm';
@@ -452,6 +547,9 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
 
     // Submit our genus.
     $form_state->setValue('genus', $submitted_genus);
+
+    // Submit our program ID.
+    $form_state->setValue('program_id', $submitted_program);
 
     // Submit our file.
     $form_state->setValue('file_upload', $file->id());
@@ -538,6 +636,15 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
       'The import form should set the default value of genus to the genus entered if the form was not submitted due to validation error.'
     );
 
+    // Assert that the default value of program ID field is the one that was
+    // entered/selected, indicating that on form validate error, the form was
+    // not submitted and reloaded with the genus value as default.
+    $this->assertEquals(
+      $form_state->getValue('program_id'),
+      $submitted_program,
+      'The import form should set the default value of program ID to the program ID entered if the form was not submitted due to validation error.'
+    );
+
     // If the form was not submitted due to validation error, check to ensure
     // that no Tripal Job was created in the process.
     $tripal_jobs = $this->chado_connection->query(
@@ -557,6 +664,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
    * @return array
    *   Each scenario is an array with the following:
    *   - The genus that gets selected in the dropdown of the form.
+   *   - The Program ID that gets selected in the dropdown of the form.
    *   - The filename of the test file used for this scenario.
    *   - The expected exception message when the selected genus is not valid.
    */
@@ -564,11 +672,13 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
     return [
       'no_genus_selected' => [
         'input_genus' => '',
+        'input_program' => 'Test Program',
         'input_file' => 'correct_header_no_data.tsv',
         'expected_exception' => 'Cannot retrieve an array of organism IDs as one has not been set by either the setOrganismID() or setGenus() method.',
       ],
       'nonexistent_genus_selected' => [
         'input_genus' => 'NonexistentGenus',
+        'input_program' => 'Test Program',
         'input_file' => 'correct_header_no_data.tsv',
         'expected_exception' => 'Cannot retrieve an array of organism IDs as one has not been set by either the setOrganismID() or setGenus() method.',
       ],
@@ -580,6 +690,8 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
    *
    * @param string $input_genus
    *   The genus that is submitted with the form.
+   * @param string $input_program
+   *   The Program ID that is submitted with the form.
    * @param string $input_file
    *   The name of the file being tested.
    * @param string $expected_exception
@@ -588,7 +700,7 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
    * @dataProvider provideFilesForValidationWithExceptions
    */
   #[DataProvider('provideFilesForValidationWithExceptions')]
-  public function testCrossFormValidationWithExceptions(string $input_genus, string $input_file, string $expected_exception) {
+  public function testCrossFormValidationWithExceptions(string $input_genus, string $input_program, string $input_file, string $expected_exception) {
     $formBuilder = \Drupal::formBuilder();
     $form_id = 'Drupal\tripal\Form\TripalImporterForm';
     $plugin_id = 'trpcultivate-germplasm-cross-importer';
@@ -608,6 +720,9 @@ class GermplasmCrossImporterFormValidateTest extends ChadoTestKernelBase {
 
     // Submit our genus.
     $form_state->setValue('genus', $input_genus);
+
+    // Submit our program ID.
+    $form_state->setValue('program_id', $input_program);
 
     // Submit our file.
     $form_state->setValue('file_upload', $file->id());

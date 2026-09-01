@@ -89,11 +89,6 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       'type' => 'required',
     ],
     [
-      'name' => 'Unique Name',
-      'description' => 'A unique identifier for this cross. This can be the same as Cross Number, if desired.',
-      'type' => 'required',
-    ],
-    [
       'name' => 'Species',
       'description' => 'The species of the germplasm being imported.',
       'type' => 'required',
@@ -113,21 +108,6 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       'description' => 'The type of cross (e.g. single, double, triple).',
       'type' => 'required',
     ],
-    [
-      'name' => 'Seed Type',
-      'description' => 'Either the market class or the seed coat colour of the seed resulting from this cross.',
-      'type' => 'optional',
-    ],
-    [
-      'name' => 'Cotyledon Colour',
-      'description' => 'The cotyledon colour of the seed resulting from this cross.',
-      'type' => 'optional',
-    ],
-    [
-      'name' => 'Comment',
-      'description' => 'A free-text comment about this cross.',
-      'type' => 'optional',
-    ],
   ];
 
   /**
@@ -145,7 +125,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
   protected ChadoBuddyPluginManager $buddy_manager;
 
   /**
-   * The Chado Buddy cvterm.
+   * An instance of the cvterm Chado Buddy.
    *
    * @var \Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoCvtermBuddy
    */
@@ -225,6 +205,13 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     'Summer',
     'Fall',
   ];
+
+  /**
+   * Stores the valid values for the 'Cross Types' column.
+   *
+   * @var array
+   */
+  protected array $valid_cross_types = [];
 
   /**
    * Constructs the cross importer.
@@ -392,7 +379,6 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       $header_index['Year'],
       $header_index['Season'],
       $header_index['Cross Number'],
-      $header_index['Unique Name'],
       $header_index['Species'],
       $header_index['Maternal Parent'],
       $header_index['Paternal Parent'],
@@ -428,6 +414,38 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     $instance->setIndices($indices);
     $instance->setGenus($form_values['genus']);
     $validators['data-row']['germplasm_name_exists'] = $instance;
+
+    // - Cross Type is a valid cross type in the database.
+    $instance = $this->service_validatorPluginManager->createInstance('value_in_list');
+    $instance->setIndices([$header_index['Cross Type']]);
+    // Grab the cvterm ID for 'additionalType'.
+    $additionalType_cvterm = $this->cvterm_buddy->getCvterm([
+      'cvterm.name' => 'additionalType',
+      'cv.name' => 'schema',
+      'dbxref.accession' => 'additionalType',
+    ]);
+    if (empty($additionalType_cvterm)) {
+      $this->service_Messenger->addError($this->t('The cvterm "additionalType" could not be found in the database. Please check with your administrator to ensure cross types of type "additionalType" are present in the database before importing germplasm cross data.'));
+    }
+
+    $additionalType_cvterm_id = $additionalType_cvterm[0]->getValue('cvterm.cvterm_id');
+    // Grab all the valid cross types from the stockprop table. Germplasm
+    // cross types such as "single" and "double" are stored in the stockprop
+    // table with the type "additionalType".
+    $valid_cross_types_query = $this->chado_connection->select('1:stockprop', 'sp')
+      ->fields('sp', ['value'])
+      ->condition('sp.type_id', $additionalType_cvterm_id, '=')
+      ->distinct();
+    $valid_cross_types = $valid_cross_types_query->execute()->fetchCol();
+    if (!$valid_cross_types) {
+      $this->service_Messenger->addError($this->t('No cross types were found in the database. Please contact your administrator to add cross types to the database before importing germplasm cross data.'));
+    }
+    else {
+      $this->valid_cross_types = $valid_cross_types;
+      $instance->setValidValues($this->valid_cross_types);
+      $validators['data-row']['valid_cross_type'] = $instance;
+    }
+
     return $validators;
   }
 
@@ -480,6 +498,39 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       '#options' => $all_genus,
       '#default_value' => $default_genus,
       '#weight' => -99,
+      '#required' => TRUE,
+    ];
+
+    $programs_query = $this->chado_connection->select('1:db', 'db')
+      ->fields('db', ['name']);
+    $programs_query->join('1:dbprop', 'dbp', 'db.db_id = dbp.db_id');
+    $programs_query->condition('dbp.value', 'Program ID', '=');
+    $programs_query->orderBy('db.name')
+      ->distinct();
+
+    $all_programs = $programs_query->execute()->fetchCol();
+
+    // If there is only one program, it should be the default.
+    $default_program = '';
+    if (count($all_programs) == 1) {
+      $default_program = $all_programs[0];
+    }
+    // If there are no programs, let the user know that one or more needs to be
+    // added to the database before importing germplasm cross data.
+    if (!$all_programs) {
+      $this->service_Messenger->addError($this->t('No Program IDs were found in the database. Please contact your administrator to add your Program ID to the database before importing germplasm cross data.'));
+    }
+
+    // Field Program ID.
+    $form['program_id'] = [
+      '#type' => 'select',
+      '#title' => 'Program ID',
+      '#description' => $this->t('The program ID of the germplasm being imported.'),
+      '#empty_value' => '',
+      '#empty_option' => '- Select -',
+      '#options' => array_combine($all_programs, $all_programs),
+      '#default_value' => $default_program,
+      '#weight' => -98,
       '#required' => TRUE,
     ];
 
@@ -789,6 +840,11 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
         'status' => 'todo',
         'details' => '',
       ],
+      'valid_cross_type' => [
+        'title' => 'Values in column "Cross Type" are valid',
+        'status' => 'todo',
+        'details' => '',
+      ],
     ];
 
     $header_names = array_column($this->headers, 'name');
@@ -888,7 +944,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
           'column_headers' => [
             // "Scientific Name" here refers to the combination of the
             // form field 'Genus' and the value in column 'Species'.
-            4 => 'Scientific Name',
+            3 => 'Scientific Name',
           ],
         ];
         $messages[$validator_name]['details'] = ValidOrganism::processListWithDescribedTable($failures[$validator_name], $metadata, $tokens);
@@ -925,9 +981,9 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
         $metadata = [
           'column_headers' => [
             // Maternal Parent.
-            5 => $header_names[5],
+            4 => $header_names[4],
             // Paternal Parent.
-            6 => $header_names[6],
+            5 => $header_names[5],
           ],
         ];
         $messages[$validator_name]['details'] = GermplasmNameExists::processListWithDescribedTable($failures[$validator_name], $metadata);
@@ -937,6 +993,26 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
         $messages[$validator_name]['status'] = 'pass';
       }
       // Otherwise, leave status as 'todo' since 1+ raw rows failed.
+    }
+
+    // Valid Cross Type.
+    $validator_name = 'valid_cross_type';
+    if (array_key_exists($validator_name, $failures)) {
+      if (!empty($failures[$validator_name])) {
+        $messages[$validator_name]['status'] = 'fail';
+        $metadata = [
+          'expected_values' => $this->valid_cross_types,
+          'column_headers' => [
+            // Cross Type.
+            6 => $header_names[6],
+          ],
+        ];
+        $messages[$validator_name]['details'] = ValueInList::processListWithDescribedTable($failures[$validator_name], $metadata);
+      }
+      // Only pass if raw row validation didn't fail.
+      elseif (!$raw_row_failed) {
+        $messages[$validator_name]['status'] = 'pass';
+      }
     }
 
     return $messages;
