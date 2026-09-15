@@ -1017,6 +1017,42 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    */
   public function run() {
 
+    // Get values provided by user in the form.
+    $genus = $this->arguments['run_args']['genus'];
+    $program_id = $this->arguments['run_args']['program_id'];
+    $file_id = $this->arguments['files'][0]['fid'];
+    // Load file object.
+    $file = $this->service_entityTypeManager->getStorage('file')->load($file_id);
+    // Get the mime type which is used to validate the file and split the rows.
+    $file_mime_type = $file->getMimeType();
+
+    // Headers.
+    // Only the header names are needed, so pull them out into a new array.
+    $headers = array_column($this->headers, 'name');
+    $headers_count = count($headers);
+
+    // Open and read file in this uri.
+    if ($file) {
+      $file_uri = $file->getFileUri();
+      $handle = fopen($file_uri, 'r');
+
+      if ($handle) {
+        // Line counter.
+        $line_no = 0;
+
+        while ($cur_line = fgets($handle)) {
+          if ($line_no > 0 && !empty(trim($cur_line))) {
+            // Line split into individual data point.
+            $data_row = ImportValidationHelper::splitRowIntoColumns($cur_line, $file_mime_type);
+          }
+          // Next line.
+          $line_no++;
+        }
+      }
+    }
+
+    // Close the file.
+    fclose($handle);
   }
 
   /**
