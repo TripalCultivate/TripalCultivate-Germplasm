@@ -8,6 +8,8 @@ use Drupal\Tests\trpcultivate\Traits\TripalCultivateImporterTestTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tripal\Services\TripalLogger;
 use Drupal\tripal_chado\Database\ChadoConnection;
+use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoCvtermBuddy;
+use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoDbxrefBuddy;
 use Drupal\user\Entity\User;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -55,6 +57,20 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
    * @var \Drupal\tripal_chado\Database\ChadoConnection
    */
   protected ChadoConnection $chado_connection;
+
+  /**
+   * An instance of the ChadoCvtermBuddy.
+   *
+   * @var \Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoCvtermBuddy
+   */
+  protected ChadoCvtermBuddy $cvterm_buddy;
+
+  /**
+   * An instance of the ChadoDbxrefBuddy.
+   *
+   * @var \Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoDbxrefBuddy
+   */
+  protected ChadoDbxrefBuddy $dbxref_buddy;
 
   /**
    * A default listing of annotations associated with our importer.
@@ -130,64 +146,118 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
     $this->module_path = $this->container->get('module_handler')
       ->getModule('trpcultivate_germplasm')
       ->getPath();
+
+    // Setup our ChadoBuddies.
+    $buddy_service = \Drupal::service('tripal_chado.chado_buddy');
+    $this->cvterm_buddy = $buddy_service->createInstance('chado_cvterm_buddy', []);
+    $this->dbxref_buddy = $buddy_service->createInstance('chado_dbxref_buddy', []);
   }
 
   /**
-   * Data Provider: provides genus and the expected default genus.
+   * Data Provider: provides values to test the Cross Importer form's dropdowns.
    *
    * @return array
    *   Each scenario is an array with the following:
-   *   - A nested array of organisms to insert into the database, contains the
-   *   genus to create the form field dropdown. Each organism array
-   *   has the following keys:
-   *     - 'genus': A string of the genus to insert.
-   *     - 'species': A string of the species to insert.
-   *   - The genus that is expected to be shown to the user by default.
-   *   - The string message to be passed into assertEquals when evaluating the
-   *     default genus.
+   *   - A nested array with information to test the "genus" form field, with
+   *     the following keys:
+   *     - 'organisms': A nested array of organisms to insert into the database,
+   *       contains the genus to create the form field dropdown. Each organism
+   *       array has the following keys:
+   *       - 'genus': A string of the genus to insert.
+   *       - 'species': A string of the species to insert.
+   *     - 'default': The genus expected to be shown to the user by default.
+   *     - 'message': The string message to be passed into assertEquals when
+   *       evaluating the default genus.
+   *   - A nested array with information to test the "program" form field, with
+   *     the following keys:
+   *     - 'programs': A nested array of Program IDs to insert into the
+   *       database, contains the program name to create the form field
+   *       dropdown. Each program array has the following keys:
+   *       - 'name': A string of the program "code" to insert.
+   *     - 'default': The program name expected to be shown to the user by
+   *       default.
+   *     - 'message': The string message to be passed into assertEquals when
+   *       evaluating the default program name.
    */
-  public static function provideGenusForForm() {
+  public static function provideValuesForForm() {
     $scenarios = [];
 
-    // #0: No organisms exist in the database.
-    $scenarios[] = [
-      [],
-      '',
-      'We expect the genus element in the form to default to empty option since no organisms are available.',
-    ];
-
-    // #1: 1 valid organism
+    // #0: No organisms or program IDs exist in the database.
     $scenarios[] = [
       [
-        [
-          'genus' => 'Tripalus',
-          'species' => 'databasica',
-        ],
+        'organisms' => [],
+        'default' => '',
+        'message' => 'We expect the genus element in the form to default to empty option since no organisms are available.',
       ],
-      'Tripalus',
-      'We expect the genus element in the form to default to Tripalus as it is the genus of the organism we created.',
+      [
+        'programs' => [],
+        'default' => '',
+        'message' => 'We expect the program element in the form to default to empty option since no programs are available.',
+      ],
     ];
 
-    // #2: 3 valid organisms
+    // #1: 1 valid organism + 1 valid program ID
     $scenarios[] = [
       [
-        [
-          'genus' => 'Tripalus',
-          'species' => 'databasica',
+        'organisms' => [
+          [
+            'genus' => 'Tripalus',
+            'species' => 'databasica',
+          ],
         ],
-        [
-          'genus' => 'Tripalus',
-          'species' => 'chadoii',
-        ],
-        [
-          'genus' => 'Lorem',
-          'species' => 'ipsum',
-        ],
+        'default' => 'Tripalus',
+        'message' => 'We expect the genus element in the form to default to Tripalus as it is the genus of the organism we created.',
       ],
-      // Since there is more than one organism, the default option is expected
-      // to be the -Select- text, therefore empty value.
-      '',
-      'We expect the genus element in the form to default to empty option since more than one organism is available.',
+      [
+        'programs' => [
+          [
+            'name' => 'Program 1',
+          ],
+        ],
+        'default' => 'Program 1',
+        'message' => 'We expect the program element in the form to default to Program 1 as it is the only program available.',
+      ],
+    ];
+
+    // #2: 3 valid organisms + 3 valid Programs.
+    $scenarios[] = [
+      [
+        'organisms' => [
+          [
+            'genus' => 'Tripalus',
+            'species' => 'databasica',
+          ],
+          [
+            'genus' => 'Tripalus',
+            'species' => 'chadoii',
+          ],
+          [
+            'genus' => 'Lorem',
+            'species' => 'ipsum',
+          ],
+        ],
+        // Since there is more than one organism, the default option is expected
+        // to be the -Select- text, therefore empty value.
+        'default' => '',
+        'message' => 'We expect the genus element in the form to default to empty option since more than one organism is available.',
+      ],
+      [
+        'programs' => [
+          [
+            'name' => 'Program 1',
+          ],
+          [
+            'name' => 'Program 2',
+          ],
+          [
+            'name' => 'Program 3',
+          ],
+        ],
+        // Since there is more than one program, the default option is expected
+        // to be the -Select- text, therefore empty value.
+        'default' => '',
+        'message' => 'We expect the program element in the form to default to empty option since more than one program is available.',
+      ],
     ];
 
     return $scenarios;
@@ -196,34 +266,76 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
   /**
    * Tests building the importer form with a variable number of organisms.
    *
-   * @param array $organisms
-   *   A nested array of organisms to insert into the database, contains the
-   *   genus to create the form field dropdown. Each organism array
+   * @param array $genus
+   *   A nested array with information to test the "genus" form field, with the
+   *   following keys:
+   *   - 'organisms': A nested array of organisms to insert into the database,
+   *   contains the genus to create the form field dropdown. Each organism array
    *   has the following keys:
-   *   - 'genus': A string of the genus to insert.
-   *   - 'species': A string of the species to insert.
-   * @param string $default_genus
-   *   The genus that is expected to be shown to the user by default.
-   * @param string $assert_organism_field_message
-   *   The string message to be passed into assertEquals when evaluating the
-   *   default genus.
+   *     - 'genus': A string of the genus to insert.
+   *     - 'species': A string of the species to insert.
+   *   - 'default': The genus expected to be shown to the user by default.
+   *   - 'message': The string message to be passed into assertEquals when
+   *     evaluating the default genus.
+   * @param array $programs
+   *   A nested array with information to test the "Program IDs" form field,
+   *   with the following keys:
+   *   - 'programs': A nested array of Program IDs to insert into the database,
+   *     contains the program name to create the form field dropdown. Each
+   *     program array has the following keys:
+   *     - 'name': A string of the program "code" to insert.
+   *   - 'default': The program name expected to be shown by default.
+   *   - 'message': The string message to be passed into assertEquals when
+   *     evaluating the default program ID name.
    *
-   * @dataProvider provideGenusForForm
+   * @dataProvider provideValuesForForm
    */
-  #[DataProvider('provideGenusForForm')]
-  public function testCrossImporterForm(array $organisms, string $default_genus, string $assert_organism_field_message) {
+  #[DataProvider('provideValuesForForm')]
+  public function testCrossImporterForm(array $genus, array $programs) {
 
     $plugin_id = 'trpcultivate-germplasm-cross-importer';
     $importer_label = 'Tripal Cultivate: Germplasm Cross Importer';
 
     // Insert any organisms if available.
-    if ($organisms) {
-      foreach ($organisms as $organism) {
+    if ($genus['organisms']) {
+      foreach ($genus['organisms'] as $organism) {
         $organism_id = $this->chado_connection->insert('1:organism')
           ->fields($organism)
           ->execute();
         $this->assertIsNumeric($organism_id,
         'We were not able to create the organism "' . $organism['genus'] . $organism['species'] . '" for testing.');
+      }
+    }
+
+    // Use a CVterm ChadoBuddy to get the cvterm_id for inserting Program IDs.
+    $cvterm_record = $this->cvterm_buddy->getCvterm([
+      'cv.name' => 'rdfs',
+      'cvterm.name' => 'type',
+    ]);
+    $cvterm_id = $cvterm_record[0]->getValue('cvterm.cvterm_id');
+    $this->assertIsNumeric($cvterm_id,
+    'We were not able to get the cvterm_id we need for creating Program ID dbprop records.');
+
+    // Insert any Program IDs if available.
+    if ($programs['programs']) {
+      foreach ($programs['programs'] as $program) {
+        // Create the db record for this Program ID.
+        $program_record = $this->dbxref_buddy->insertDb([
+          'db.name' => $program['name'],
+        ]);
+        $program_record_id = $program_record->getValue('db.db_id');
+        $this->assertIsNumeric($program_record_id,
+          'We were not able to create the program "' . $program['name'] . '" in the db table for testing.');
+        // Create the dbprop record and link it to the db record.
+        $dbprop_id = $this->chado_connection->insert('1:dbprop')
+          ->fields([
+            'db_id' => $program_record_id,
+            'type_id' => $cvterm_id,
+            'value' => 'Program ID',
+          ])
+          ->execute();
+        $this->assertIsNumeric($dbprop_id,
+          'We were not able to create the dbprop record for program "' . $program['name'] . '" for testing.');
       }
     }
 
@@ -285,13 +397,37 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
     $this->assertEquals('select', $form['genus']['#type'],
       "We expect the genus element in the form to be a select list.");
     // Check that the select list contains all of our genus.
-    foreach ($organisms as $organism) {
+    foreach ($genus['organisms'] as $organism) {
       $this->assertArrayHasKey($organism['genus'], $form['genus']['#options'],
         "We expect the genus select list to contain the genus" . $organism['genus'] . ".");
     }
     // Check the select list's default value.
-    $this->assertEquals($default_genus, $form['genus']['#default_value'],
-      $assert_organism_field_message);
+    $this->assertEquals($genus['default'], $form['genus']['#default_value'],
+      $genus['message']);
+
+    // Check the Program ID form element.
+    $this->assertArrayHasKey('program_id', $form,
+      "We expect there to be an program_id form element but there is not.");
+    $this->assertEquals('select', $form['program_id']['#type'],
+      "We expect the program_id element in the form to be a select list.");
+    // Check that the select list contains all of our program IDs.
+    foreach ($programs['programs'] as $program) {
+      $this->assertArrayHasKey($program['name'], $form['program_id']['#options'],
+        "We expect the program_id select list to contain the program " . $program['name'] . ".");
+    }
+    // Check the select list's default value.
+    $this->assertEquals($programs['default'], $form['program_id']['#default_value'],
+      $programs['message']);
+
+    // If there are no programs to select from, we expect an error message to be
+    // displayed at the top of the form.
+    if (!$programs['programs']) {
+      $errors = \Drupal::messenger()->messagesByType('error');
+      $this->assertCount(1, $errors,
+        "We expect there to be an error message about no Program IDs being available.");
+      $this->assertStringContainsString('No Program IDs were found in the database', $errors[0],
+        "We expect the error message to contain a warning about no Program IDs being available.");
+    }
   }
 
   /**
@@ -313,6 +449,36 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
     $this->assertIsNumeric($organism_id,
       "We were not able to create an organism for testing.");
 
+    // Use a CVterm ChadoBuddy to get the cvterm_id for inserting Program IDs.
+    $buddy_service = \Drupal::service('tripal_chado.chado_buddy');
+    $cvterm_buddy = $buddy_service->createInstance('chado_cvterm_buddy', []);
+    $cvterm_record = $cvterm_buddy->getCvterm([
+      'cv.name' => 'rdfs',
+      'cvterm.name' => 'type',
+    ]);
+    $cvterm_id = $cvterm_record[0]->getValue('cvterm.cvterm_id');
+    $this->assertIsNumeric($cvterm_id,
+    'We were not able to get the cvterm_id we need for creating Program ID dbprop records.');
+
+    $program_name = 'Test Program';
+    $program_id = $this->chado_connection->insert('1:db')
+      ->fields([
+        'name' => $program_name,
+      ])
+      ->execute();
+    // Create the dbprop record and link it to the db record.
+    $dbprop_id = $this->chado_connection->insert('1:dbprop')
+      ->fields([
+        'db_id' => $program_id,
+        'type_id' => $cvterm_id,
+        'value' => 'Program ID',
+      ])
+      ->execute();
+    $this->assertIsNumeric($program_id,
+          'We were not able to create the program "' . $program_name . '" in the db table for testing.');
+    $this->assertIsNumeric($dbprop_id,
+          'We were not able to create the dbprop record for program "' . $program_name . '" for testing.');
+
     // Create a file to upload.
     $file = $this->createTestFile([
       'filename' => 'crosses_simple.tsv',
@@ -326,6 +492,7 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
     $form_state = new FormState();
     $form_state->addBuildInfo('args', [$plugin_id]);
     $form_state->setValue('genus', $genus);
+    $form_state->setValue('program_id', $program_name);
     $form_state->setValue('file_upload', $file->id());
 
     // Now try validation!
@@ -374,14 +541,10 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
       'Year',
       'Season',
       'Cross Number',
-      'Unique Name',
       'Species',
       'Maternal Parent',
       'Paternal Parent',
       'Cross Type',
-      'Seed Type',
-      'Cotyledon Colour',
-      'Comment',
     ];
 
     // Pull all the headers in the rendered description.
