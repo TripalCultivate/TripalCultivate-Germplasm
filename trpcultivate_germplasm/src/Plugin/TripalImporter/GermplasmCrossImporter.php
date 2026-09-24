@@ -1042,8 +1042,32 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
 
         while ($cur_line = fgets($handle)) {
           if ($line_no > 0 && !empty(trim($cur_line))) {
-            // Line split into individual data point.
+            // Split line.
             $data_row = ImportValidationHelper::splitRowIntoColumns($cur_line, $file_mime_type);
+
+            // Grab the required columns.
+            $year = $data_row[0];
+            $season = $data_row[1];
+            $cross_number = $data_row[2];
+            $species = $data_row[3];
+            $maternal_parent = $data_row[4];
+            $paternal_parent = $data_row[5];
+            $cross_type = $data_row[6];
+
+            // @todo If we have more than 7 columns, these will be treated as
+            // extra stock properties in the future.
+            $extra_props = [];
+            if ($headers_count > 7) {
+              $extra_props = array_slice($data_row, 7);
+            }
+
+            // 1. Validate our cross and insert into the database.
+            $cross_id = $this->insertCross($cross_number, $genus, $species);
+            // 2. Validate the parents and insert the relationships.
+            $this->relateCrossParents($cross_id, $genus, $species, $maternal_parent, $paternal_parent);
+            // 3. Insert all cross properties (year, season, cross type,
+            //    program_id + any additional columns).
+            $this->insertCrossProps($cross_id, $year, $season, $cross_type, $program_id, $extra_props);
           }
           // Next line.
           $line_no++;
@@ -1053,6 +1077,52 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
 
     // Close the file.
     fclose($handle);
+  }
+
+  /**
+   * Inserts a new cross into the database and returns the stock_id.
+   *
+   * Validates that the cross does not already exist in the database before
+   * inserting. If it does, an error is thrown.
+   *
+   * @param string $cross_number
+   *   The name of the cross to insert.
+   * @param string $genus
+   *   The genus of the cross.
+   * @param string $species
+   *   The species of the cross.
+   *
+   * @throws \Exception
+   *   - If the cross already exists in the database.
+   *
+   * @return int
+   *   The stock_id of the inserted cross.
+   */
+  public function insertCross($cross_number, $genus, $species) {
+
+    $buddy_service = \Drupal::service('tripal_chado.chado_buddy');
+    $cvterm_buddy = $buddy_service->createInstance('chado_cvterm_buddy', []);
+
+    // Grab our cvterm for germplasm cross as a stock type.
+    $cross_cvterm = $cvterm_buddy->getCvterm([
+      'db.name' => 'PBO',
+      'dbxref.accession' => '0000065',
+      'cvterm.name' => 'progeny',
+    ]);
+
+    // Check if the cross already exists in the database.
+    $cross_id = $this->stock_buddy->getStock([
+      'stock.uniquename' => $cross_number,
+      'stock.type_id' => $cross_cvterm[0]->getValue('cvterm_id'),
+      'organism.genus' => $genus,
+      'organism.species' => $species,
+    ]);
+
+    if ($cross_id) {
+      throw new \Exception('Cross Number ' . $cross_number . ' already exists in the database. Please check your input file and try again.');
+    }
+
+    return $cross_id;
   }
 
   /**
