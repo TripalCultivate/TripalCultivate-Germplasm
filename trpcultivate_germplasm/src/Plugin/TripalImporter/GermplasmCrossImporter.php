@@ -17,6 +17,7 @@ use Drupal\tripal_chado\Database\ChadoConnection;
 use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoCvtermBuddy;
 use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoPropertyBuddy;
 use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoOrganismBuddy;
+use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoStockBuddy;
 use Drupal\tripal_chado\TripalImporter\ChadoImporterBase;
 use Drupal\trpcultivate\Plugin\Validators\ValidDataFile;
 use Drupal\trpcultivate\Plugin\Validators\EmptyCell;
@@ -146,6 +147,13 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
   protected ChadoOrganismBuddy $organism_buddy;
 
   /**
+   * An instance of the stock Chado Buddy.
+   *
+   * @var Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoStockBuddy
+   */
+  protected ChadoStockBuddy $stock_buddy;
+
+  /**
    * The TripalCultivate validator plugin manager.
    *
    * @var \Drupal\trpcultivate\TripalCultivateValidator\TripalCultivateValidatorManager
@@ -273,6 +281,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     $this->cvterm_buddy = $this->buddy_manager->createInstance('chado_cvterm_buddy', []);
     $this->property_buddy = $this->buddy_manager->createInstance('chado_property_buddy', []);
     $this->organism_buddy = $this->buddy_manager->createInstance('chado_organism_buddy', []);
+    $this->stock_buddy = $this->buddy_manager->createInstance('chado_stock_buddy', []);
     $this->service_validatorPluginManager = $service_validatorPluginManager;
     $this->service_entityTypeManager = $service_entityTypeManager;
     $this->service_FileTemplate = $service_FileTemplate;
@@ -1113,6 +1122,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     $cvterm_buddy = $buddy_service->createInstance('chado_cvterm_buddy', []);
 
     // Grab our cvterm for germplasm cross as a stock type.
+    // @todo Do we want this to be configurable in the future?
     $cross_cvterm = $cvterm_buddy->getCvterm([
       'db.name' => 'PBO',
       'dbxref.accession' => '0000065',
@@ -1149,7 +1159,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     ];
 
     $relate_maternal = $this->stock_buddy->relateStock($cross_values, $maternal_parent_values, $maternal_relationship_values);
-    if($relate_maternal == 2) {
+    if ($relate_maternal == 2) {
       throw new \Exception('ERROR: The relationship between maternal parent ' . $maternal_parent . ' and cross ' . $cross_number . ' already exists in the database, but the cross was only just inserted!');
     }
 
@@ -1167,7 +1177,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     ];
 
     $relate_paternal = $this->stock_buddy->relateStock($cross_values, $paternal_parent_values, $paternal_relationship_values);
-    if($relate_paternal == 2) {
+    if ($relate_paternal == 2) {
       throw new \Exception('ERROR: The relationship between paternal parent ' . $paternal_parent . ' and cross ' . $cross_number . ' already exists in the database, but the cross was only just inserted!');
     }
 
