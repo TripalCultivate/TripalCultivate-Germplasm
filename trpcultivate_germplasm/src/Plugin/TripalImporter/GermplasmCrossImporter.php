@@ -1081,8 +1081,9 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
   /**
    * Inserts a new cross into the database and returns the stock_id.
    *
-   * Validates that the cross does not already exist in the database before
-   * inserting. If it does, an error is thrown.
+   * Only inserts a cross if it does not already exist in the database (in which
+   * case, an error is thrown). Also creates the relationships between the cross
+   * and its parents.
    *
    * @param string $cross_number
    *   The name of the cross to insert.
@@ -1090,15 +1091,23 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    *   The genus of the cross.
    * @param string $species
    *   The species of the cross.
+   * @param string $maternal_parent
+   *   The name of the maternal parent of this cross.
+   * @param string $paternal_parent
+   *   The name of the paternal parent of this cross.
    *
    * @throws \Exception
    *   - If the cross already exists in the database.
    *   - If the cross could not be inserted.
+   *   - If the maternal or paternal parent does not exist in the database.
+   *   - If the maternal or paternal parent has multiple records in the
+   *     database.
+   *   - If a stock_relationship record already exists.
    *
    * @return int
    *   The stock_id of the inserted cross.
    */
-  public function insertCross($cross_number, $genus, $species) {
+  public function insertAndRelateCross($cross_number, $genus, $species, $maternal_parent, $paternal_parent) {
 
     $buddy_service = \Drupal::service('tripal_chado.chado_buddy');
     $cvterm_buddy = $buddy_service->createInstance('chado_cvterm_buddy', []);
@@ -1121,71 +1130,48 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     $cross_buddy = $this->stock_buddy->insertStock();
 
     if (count($cross_buddy) == 0) {
-      throw new \Exception('Unable to insert a cross with these values:\n' . print_r($values, TRUE));
+      throw new \Exception('ERROR: Unable to insert a cross with these values:\n' . print_r($values, TRUE));
     }
 
-    // @todo insert the parent relationships here.
-
-    return $cross_buddy->getValue('stock_id');
-  }
-
-  /**
-   * Relates a germplasm cross' parents to it.
-   *
-   * Relationships are created in the stock_relationship table to relate each
-   * of a cross' parents to itself.
-   *
-   * @param int $cross_id
-   *   The stock_id of the cross that was inserted.
-   * @param string $genus
-   *   The genus of the cross.
-   * @param string $species
-   *   The species of the cross.
-   * @param string $maternal_parent
-   *   The name of the maternal parent of this cross.
-   * @param string $paternal_parent
-   *   The name of the paternal parent of this cross.
-   *
-   * @throws \Exception
-   *   - If the maternal or paternal parent does not exist in the database.
-   *   - If the maternal or paternal parent has multiple records in the
-   *     database.
-   *
-   *   - If more than one stock_relationship record already exists.
-   *
-   */
-  public function relateCrossParents($cross_id, $genus, $species, $maternal_parent, $paternal_parent) {
-    // Validate that both parental crosses exist.
-    // We're ignoring stock.type_id in this lookup, since different stock types
-    // could be used as parents in a breeding cross (ex: a variety).
-    $maternal_cross_buddies = $this->stock_buddy->getStock([
+    // Relate the maternal parent to this cross.
+    // Note: We are not querying the parents with a type_id since they can be of
+    // other types than their progeny (ex. variety).
+    $maternal_parent_values = [
       'stock.uniquename' => $maternal_parent,
       'organism.genus' => $genus,
       'organism.species' => $species,
-    ]);
-    $maternal_count = count($maternal_cross_buddies);
-    if ($maternal_count == 0) {
-      throw new \Exception('Maternal Parent "' . $maternal_parent . '" of genus "' . $genus . '" and species "' . $species . '" does not exist in the database.');
-    }
-    else if ($maternal_count > 1) {
-      throw new \Exception('Maternal Parent "' . $maternal_parent . '" of genus "' . $genus . '" and species "' . $species . '" has multiple records in the database.');
+    ];
+
+    $maternal_relationship_values = [
+      'cvterm.name' => 'is_maternal_parent_of',
+      'cv.name' => 'stock_relationship',
+      'dbxref.accession' => 'is_maternal_parent_of',
+    ];
+
+    $relate_maternal = $this->stock_buddy->relateStock($cross_values, $maternal_parent_values, $maternal_relationship_values);
+    if($relate_maternal == 2) {
+      throw new \Exception('ERROR: The relationship between maternal parent ' . $maternal_parent . ' and cross ' . $cross_number . ' already exists in the database, but the cross was only just inserted!');
     }
 
-    $paternal_cross_buddies = $this->stock_buddy->getStock([
+    // Relate the paternal parent to this cross.
+    $paternal_parent_values = [
       'stock.uniquename' => $paternal_parent,
       'organism.genus' => $genus,
       'organism.species' => $species,
-    ]);
-    $paternal_count = count($paternal_cross_buddies);
-    if ($paternal_count == 0) {
-      throw new \Exception('Paternal Parent "' . $paternal_parent . '" of genus "' . $genus . '" and species "' . $species . '" does not exist in the database.');
-    }
-    else if ($paternal_count > 1) {
-      throw new \Exception('Paternal Parent "' . $paternal_parent . '" of genus "' . $genus . '" and species "' . $species . '" has multiple records in the database.');
+    ];
+
+    $paternal_relationship_values = [
+      'cvterm.name' => 'is_paternal_parent_of',
+      'cv.name' => 'stock_relationship',
+      'dbxref.accession' => 'is_paternal_parent_of',
+    ];
+
+    $relate_paternal = $this->stock_buddy->relateStock($cross_values, $paternal_parent_values, $paternal_relationship_values);
+    if($relate_paternal == 2) {
+      throw new \Exception('ERROR: The relationship between paternal parent ' . $paternal_parent . ' and cross ' . $cross_number . ' already exists in the database, but the cross was only just inserted!');
     }
 
-    $this->stock_buddy->relateStock()
-
+    return $cross_buddy->getValue('stock_id');
   }
 
   /**
