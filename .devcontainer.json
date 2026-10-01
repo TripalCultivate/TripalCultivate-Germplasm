@@ -3,7 +3,7 @@
   "build": {
     "dockerfile": "Dockerfile",
     "args": {
-      "drupalversion": "11.x-dev",
+      "drupalversion": "11.4.x",
       "phpversion": "8.5",
       "postgresqlversion": "18"
     }
