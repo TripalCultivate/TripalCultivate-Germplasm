@@ -1074,7 +1074,15 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       ->generateFile($importer_id, $column_headers, $file_extensions);
 
     // Additional notes to the headers.
-    $notes = $this->t('The order of the above columns is important and your file must include a header!');
+    $notes = [
+      '#theme' => 'item_list',
+      '#items' => [
+        $this->t('Your file includes a header row.'),
+        $this->t('The order/spelling of your columns matches the above list.'),
+        $this->t('For all required columns, each row contains a value.'),
+      ],
+      '#attributes' => ['class' => ['importer-notes-list']],
+    ];
 
     // Render the header and notes/lists in a template and use the file link as
     // the value to href attribute of the link to download a template file.
