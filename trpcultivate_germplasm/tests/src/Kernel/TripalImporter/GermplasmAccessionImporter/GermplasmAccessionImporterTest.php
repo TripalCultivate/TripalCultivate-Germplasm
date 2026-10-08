@@ -99,16 +99,16 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     );
 
     $subtaxa_cvterm_id = $this->getCVtermID('TAXRANK', '0000023');
-    $this->importer->setCVterm('accession', 9);
-    $this->importer->setCVterm('subtaxa', $subtaxa_cvterm_id);
-    $this->importer->setCVterm('institute_code', 10);
-    $this->importer->setCVterm('institute_name', 11);
-    $this->importer->setCVterm('country_of_origin_code',12);
-    $this->importer->setCVterm('biological_status_of_accession_code', 13);
-    $this->importer->setCVterm('breeding_method_DbId', 14);
-    $this->importer->setCVterm('pedigree', 15);
-    $this->importer->setCVterm('synonym', 16);
-    $this->importer->setCVterm('stock_relationship_type_synonym', 17);
+    $this->importer->setCvterm('accession', 9);
+    $this->importer->setCvterm('subtaxa', $subtaxa_cvterm_id);
+    $this->importer->setCvterm('institute_code', 10);
+    $this->importer->setCvterm('institute_name', 11);
+    $this->importer->setCvterm('country_of_origin_code',12);
+    $this->importer->setCvterm('biological_status_of_accession_code', 13);
+    $this->importer->setCvterm('breeding_method_DbId', 14);
+    $this->importer->setCvterm('pedigree', 15);
+    $this->importer->setCvterm('synonym', 16);
+    $this->importer->setCvterm('stock_relationship_type_synonym', 17);
 
     $this->createStockSynonymTable();
   }
@@ -163,12 +163,12 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
 	}
 
   /**
-   * Tests focusing on the Germplasm Accession Importer getOrganismID() function
+   * Tests focusing on the Germplasm Accession Importer getOrganismId() function
    *
    * @group germ_accession_importer
    */
   #[Group('germ_accession_importer')]
-  public function testGermplasmAccessionImporterGetOrganismID() {
+  public function testGermplasmAccessionImporterGetOrganismId() {
 
     // Insert an organism
     $subtaxa_cvterm_id = $this->getCVtermID('TAXRANK', '0000023');
@@ -182,12 +182,12 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
       ])
       ->execute();
 
-    $grabbed_organism_id = $this->importer->getOrganismID('Tripalus', 'databasica', 'subspecies chadoii');
+    $grabbed_organism_id = $this->importer->getOrganismId('Tripalus', 'databasica', 'subspecies chadoii');
     $this->assertEquals($grabbed_organism_id, $organism_id, "The organism ID grabbed by the importer does not match the one that was inserted into the database.");
 
     // Try an organism that does not currently exist
     ob_start();
-    $non_existent_organism_id = $this->importer->getOrganismID('Nullus', 'organismus', '');
+    $non_existent_organism_id = $this->importer->getOrganismId('Nullus', 'organismus', '');
     $printed_output = ob_get_clean();
     $this->assertEquals('Could not find an organism "Nullus organismus" in the database.', $printed_output,
       "Did not get the expected error message when testing for a non-existant organism.");
@@ -196,12 +196,12 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
   }
 
   /**
-   * Tests focusing on the Germplasm Accession Importer getStockID() function
+   * Tests focusing on the Germplasm Accession Importer getStockId() function
    *
    * @group germ_accession_importer
    */
   #[Group('germ_accession_importer')]
-  public function testGermplasmAccessionImporterGetStockID() {
+  public function testGermplasmAccessionImporterGetStockId() {
 
     // Insert an organism
     $subtaxa_cvterm_id = $this->getCVtermID('TAXRANK', '0000023');
@@ -226,12 +226,12 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
       ->execute();
 
     // Test that the stock just inserted gets selected
-    $grabbed_stock_id = $this->importer->getStockID('stock1', 'TEST:1', $organism_id);
+    $grabbed_stock_id = $this->importer->getStockId('stock1', 'TEST:1', $organism_id);
     $this->assertEquals($grabbed_stock_id, $stock_id, "The stock ID grabbed by the importer does not match the one that was inserted into the database.");
 
     // Test that a stock not in the database successfully gets inserted
     ob_start();
-    $created_stock_id = $this->importer->getStockID('stock2', 'TEST:2', $organism_id);
+    $created_stock_id = $this->importer->getStockId('stock2', 'TEST:2', $organism_id);
     $printed_output = ob_get_clean();
     $this->assertEquals('Inserting "stock2".', $printed_output,
       "Did not get the expected notice message when inserting a new stock.");
@@ -243,13 +243,13 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
       ->condition('uniquename', 'TEST:2', '=')
       ->condition('type_id', 9, '=');
     $stock2_record = $stock2_query->execute()->fetchAll();
-    $this->assertEquals($created_stock_id, $stock2_record[0]->stock_id, "The stock ID inserted for \"stock2\" does not match the stock ID returned by getStockID().");
+    $this->assertEquals($created_stock_id, $stock2_record[0]->stock_id, "The stock ID inserted for \"stock2\" does not match the stock ID returned by getStockId().");
 
     // No test for if the insert fails, since most likely will get a complaint from Chado
 
     // Test for a stock name + organism that already exists but has a different accession
     ob_start();
-    $grabbed_dup_stock_name = $this->importer->getStockID('stock1', 'TEST:1000', $organism_id);
+    $grabbed_dup_stock_name = $this->importer->getStockId('stock1', 'TEST:1000', $organism_id);
     $printed_output = ob_get_clean();
     $this->assertEquals('A stock already exists for "stock1" but with an accession of "TEST:1" which does not match the input file.', $printed_output,
       "Did not get the expected error message when testing for duplicate stock names.");
@@ -265,18 +265,18 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
       ->execute();
 
     ob_start();
-    $grabbed_dup_stock_id = $this->importer->getStockID('stock1', 'TEST:1', $organism_id);
+    $grabbed_dup_stock_id = $this->importer->getStockId('stock1', 'TEST:1', $organism_id);
     $printed_output = ob_get_clean();
     $this->assertStringContainsString('Found more than one stock ID for "stock1"', $printed_output, "Did not get the expected error message when testing for duplicate stock IDs.");
   }
 
   /**
-   * Tests focusing on the Germplasm Accession Importer getDbxrefID() function
+   * Tests focusing on the Germplasm Accession Importer getDbxrefId() function
    *
    * @group germ_accession_importer
    */
   #[Group('germ_accession_importer')]
-  public function testGermplasmAccessionImporterGetDbxrefID() {
+  public function testGermplasmAccessionImporterGetDbxrefId() {
 
     // Insert an organism
     $subtaxa_cvterm_id = $this->getCVtermID('TAXRANK', '0000023');
@@ -304,7 +304,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
 
     // Attempt to call the function before inserting an external database
     ob_start();
-    $non_existing_external_db = $this->importer->getDbxrefID('PRETEND', $stock_id, $accession);
+    $non_existing_external_db = $this->importer->getDbxrefId('PRETEND', $stock_id, $accession);
     $printed_output = ob_get_clean();
     $this->assertEquals('Unable to find "PRETEND" in chado.db.', $printed_output,
       "Did not get the expected error message when looking up an external database that does not yet exist.");
@@ -326,7 +326,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
 
     // ----------------------------- ROUND 1 -------------------------------
     // Call the function and check that dbxref is inserted and stock updated
-    $round_one_dbxref = $this->importer->getDbxrefID('Test DB', $stock_id, $accession);
+    $round_one_dbxref = $this->importer->getDbxrefId('Test DB', $stock_id, $accession);
 
     // Check that the dbxref was inserted successfully
     $r1_dbx_query = $this->connection->select('1:dbxref', 'dbx')
@@ -349,7 +349,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     // Call the function again and check that the results are still the same
     // The purpose of this test is to trigger the elseif statements for both
     // the dbxref check and stock.dbxref_id
-    $round_two_dbxref = $this->importer->getDbxrefID('Test DB', $stock_id, $accession);
+    $round_two_dbxref = $this->importer->getDbxrefId('Test DB', $stock_id, $accession);
 
     // Check that the dbxref was selected successfully
     $r2_dbx_query = $this->connection->select('1:dbxref', 'dbx')
@@ -384,7 +384,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
       ->execute();
 
     ob_start();
-    $multiple_dbxref_accessions = $this->importer->getDbxrefID($second_db_name, $stock_id, $accession);
+    $multiple_dbxref_accessions = $this->importer->getDbxrefId($second_db_name, $stock_id, $accession);
     $printed_output = ob_get_clean();
     $this->assertEquals('There is already a primary dbxref_id for stock ID "1" that does not match the external database and accession provided in the file (Second Test DB:TEST:1).', $printed_output,
       "Did not get the expected error message when inserting a dbxref with an existing accession with a different db.");
@@ -625,7 +625,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
       ->fields('sr', ['subject_id', 'object_id'])
       ->condition('sr.subject_id', $stock_id_of_synonym, '=')
       ->condition('sr.object_id', $stock_id, '=')
-      ->condition('sr.type_id', $this->importer->getCVterm('stock_relationship_type_synonym', '='))
+      ->condition('sr.type_id', $this->importer->getCvterm('stock_relationship_type_synonym', '='))
       ->countQuery()->execute()->fetchField();
 
     $this->assertEquals($stock1_stock_relationship_synonym2_count, 1, "Did not count the expected single stock_relationship between stock1 and its 2nd synonym, s1_2.");
