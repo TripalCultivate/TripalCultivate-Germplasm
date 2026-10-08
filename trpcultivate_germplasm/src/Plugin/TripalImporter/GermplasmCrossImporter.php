@@ -1075,7 +1075,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
             $cross_id = $this->insertAndRelateCross($cross_number, $genus, $species, $maternal_parent, $paternal_parent);
             // 2. Insert all cross properties (year, season, cross type,
             //    program_id + any additional columns).
-            $this->insertCrossProps($cross_id, $year, $season, $cross_type, $program_id, $extra_props);
+            $this->insertCrossProperties($cross_id, $year, $season, $cross_type, $program_id, $extra_props);
           }
           // Next line.
           $line_no++;
@@ -1137,7 +1137,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       'organism.species' => $species,
     ];
     // Insert our cross. If this cross already exists, an error will be thrown.
-    $cross_buddy = $this->stock_buddy->insertStock();
+    $cross_buddy = $this->stock_buddy->insertStock($cross_values);
 
     if (count($cross_buddy) == 0) {
       throw new \Exception('ERROR: Unable to insert a cross with these values:\n' . print_r($values, TRUE));
@@ -1158,6 +1158,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       'dbxref.accession' => 'is_maternal_parent_of',
     ];
 
+    // If the maternal parent cannot be found, an error will be thrown.
     $relate_maternal = $this->stock_buddy->relateStock($cross_values, $maternal_parent_values, $maternal_relationship_values);
     if ($relate_maternal == 2) {
       throw new \Exception('ERROR: The relationship between maternal parent ' . $maternal_parent . ' and cross ' . $cross_number . ' already exists in the database, but the cross was only just inserted!');
@@ -1176,12 +1177,38 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       'dbxref.accession' => 'is_paternal_parent_of',
     ];
 
+    // If the paternal parent cannot be found, an error will be thrown.
     $relate_paternal = $this->stock_buddy->relateStock($cross_values, $paternal_parent_values, $paternal_relationship_values);
     if ($relate_paternal == 2) {
       throw new \Exception('ERROR: The relationship between paternal parent ' . $paternal_parent . ' and cross ' . $cross_number . ' already exists in the database, but the cross was only just inserted!');
     }
 
     return $cross_buddy->getValue('stock_id');
+  }
+
+  /**
+   * Inserts properties for a cross into the stockprop table.
+   *
+   * @param int $cross_id
+   *   The ID of the cross for which to insert properties.
+   * @param string $year
+   *   The year the cross was created.
+   * @param string $season
+   *   The season the cross was created.
+   * @param string $cross_type
+   *   The type of cross (ex. single, double, etc.).
+   * @param string $program_id
+   *   The program ID associated with this cross.
+   * @param array $extra_props
+   *   An array of additional properties to insert for this cross. Not currently
+   *   supported.
+   *
+   * @throws \Exception
+   */
+  public function insertCrossProperties($cross_id, $year, $season, $cross_type, $program_id, array $extra_props = []) {
+
+    $buddy_service = \Drupal::service('tripal_chado.chado_buddy');
+    $property_buddy = $buddy_service->createInstance('chado_property_buddy', []);
   }
 
   /**

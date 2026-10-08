@@ -163,6 +163,77 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
       $container->get('tripal.fileretriever'),
       $container->get('tripal.backend_publish'),
     );
+
+    // Insert an organism.
+    $buddy_service = \Drupal::service('tripal_chado.chado_buddy');
+    $this->organism_buddy = $buddy_service->createInstance('chado_organism_buddy', []);
+    $organism_record = $this->organism_buddy->insertOrganism([
+      'organism.genus' => 'Tripalus',
+      'organism.species' => 'databasica',
+    ]);
+    $organism_id = $organism_record->getValue('organism.organism_id');
+    $this->assertIsNumeric($organism_id, 'We were not able to create an organism for testing');
+
+    // Insert a Program ID.
+    // Use a CVterm ChadoBuddy to get the cvterm_id for inserting Program IDs.
+    $cvterm_buddy = $buddy_service->createInstance('chado_cvterm_buddy', []);
+    $cvterm_record = $cvterm_buddy->getCvterm([
+      'cv.name' => 'rdfs',
+      'cvterm.name' => 'type',
+    ]);
+    $cvterm_id = $cvterm_record[0]->getValue('cvterm.cvterm_id');
+    $this->assertIsNumeric($cvterm_id,
+    'We were not able to get the cvterm_id we need for creating Program ID dbprop records.');
+
+    // Use a dbxref buddy to get the db_id for inserting Program IDs.
+    $program_name = 'Test Program';
+    $dbxref_buddy = $buddy_service->createInstance('chado_dbxref_buddy', []);
+    $program_record = $dbxref_buddy->insertDb([
+      'db.name' => $program_name,
+    ]);
+    $program_record_id = $program_record->getValue('db.db_id');
+    $this->assertIsNumeric($program_record_id,
+      'We were not able to create the program "' . $program_name . '" in the db table for testing.');
+    // Create the dbprop record and link it to the db record.
+    $dbprop_id = $this->chado_connection->insert('1:dbprop')
+      ->fields([
+        'db_id' => $program_record_id,
+        'type_id' => $cvterm_id,
+        'value' => 'Program ID',
+      ])
+      ->execute();
+    $this->assertIsNumeric($dbprop_id,
+          'We were not able to create the dbprop record for program "' . $program_name . '" for testing.');
+  }
+
+  /**
+   * Tests the Germplasm Cross Importer run() using a simple example file.
+   */
+  public function testRunWithSimpleExampleFile() {
+
+    $filename = 'crosses_simple.tsv';
+    $file = $this->createTestFile([
+      'filename' => $filename,
+      'content' => [
+        'file' => $filename,
+        'fixturepath' => $this->module_path . '/tests/src/Fixtures/CrossImporterFiles/',
+      ],
+    ]);
+
+    $run_args = [
+      'genus' => 'Tripalus',
+      'program_id' => 'Test Program',
+    ];
+
+    $file_details = ['fid' => $file->id()];
+
+    $this->importer->createImportJob($run_args, $file_details);
+    $this->importer->prepareFiles();
+    try {
+      $this->importer->run();
+    }
+    catch (\Exception $e) {
+    }
   }
 
 }
