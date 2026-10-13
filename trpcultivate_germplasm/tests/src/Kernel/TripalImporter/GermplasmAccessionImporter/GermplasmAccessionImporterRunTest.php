@@ -2,7 +2,8 @@
 
 namespace Drupal\Tests\trpcultivate_germplasm\Kernel\TripalImporter;
 
-use Drupal\Core\Url;
+use Drupal\trpcultivate_germplasm\Plugin\TripalImporter\GermplasmAccessionImporter;
+use Drupal\tripal\Services\TripalLogger;
 use Drupal\Tests\tripal_chado\Kernel\ChadoTestKernelBase;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\Tests\trpcultivate_germplasm\Traits\GermplasmAccessionImporterTestTrait;
@@ -15,21 +16,63 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 #[RunTestsInSeparateProcesses]
 class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
 
-	protected $defaultTheme = 'stark';
-
-	protected static $modules = ['system', 'user', 'file', 'tripal', 'tripal_chado', 'trpcultivate_germplasm'];
-
   use UserCreationTrait;
   use GermplasmAccessionImporterTestTrait;
 
+  /**
+   * Theme used in the test environment.
+   *
+   * @var string
+   */
+  protected $defaultTheme = 'stark';
+
+  /**
+   * Modules to enable for the test.
+   *
+   * @var array
+   */
+  protected static $modules = [
+    'system',
+    'user',
+    'file',
+    'tripal',
+    'tripal_chado',
+    'trpcultivate_germplasm',
+  ];
+
+  /**
+   * The Germplasm Accession Importer plugin.
+   *
+   * @var \Drupal\trpcultivate_germplasm\Plugin\TripalImporter\GermplasmAccessionImporter
+   */
   protected $importer;
 
+  /**
+   * The config factory service.
+   *
+   * @var \Drupal\Core\Config\ConfigFactoryInterface
+   */
   protected $config_factory;
 
+  /**
+   * The database connection to the test Chado schema.
+   *
+   * @var \Drupal\Core\Database\Connection
+   */
   protected $connection;
 
+  /**
+   * The logger service.
+   *
+   * @var \Drupal\tripal\Services\TripalLogger
+   */
   protected $logger;
 
+  /**
+   * The importer definitions.
+   *
+   * @var array
+   */
   protected $definitions = [
     'test-germplasm-accession' => [
       'id' => 'trpcultivate-germplasm-accession',
@@ -41,18 +84,22 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
       'upload_title' => 'Germplasm Accession Import',
       'upload_description' => 'This should not be visible!',
       'button_text' => 'Import Germplasm Accessions',
-      'file_upload' => True,
-      'file_load' => True,
-      'file_remote' => True,
-      'file_required' => True,
+      'file_upload' => TRUE,
+      'file_load' => TRUE,
+      'file_remote' => TRUE,
+      'file_required' => TRUE,
       'cardinality' => 1,
     ],
   ];
 
-  // Make the organism ID accessible by all the functions
+  /**
+   * Make the organism ID accessible by all the functions.
+   *
+   * @var int
+   */
   public $organism_id;
 
-	/**
+  /**
    * {@inheritdoc}
    */
   protected function setUp(): void {
@@ -61,8 +108,8 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     // Ensure we see all logging in tests.
     \Drupal::state()->set('is_a_test_environment', TRUE);
 
-		// Open connection to Chado
-		$this->connection = $this->getTestSchema(ChadoTestKernelBase::PREPARE_TEST_CHADO);
+    // Open connection to Chado.
+    $this->connection = $this->getTestSchema(ChadoTestKernelBase::PREPARE_TEST_CHADO);
 
     // Ensure we can access file_managed related functionality from Drupal.
     // ... users need access to system.action config?
@@ -80,16 +127,16 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
 
     // We need to mock the logger to test the progress reporting.
     $container = \Drupal::getContainer();
-    $mock_logger = $this->getMockBuilder(\Drupal\tripal\Services\TripalLogger::class)
-      ->onlyMethods(['notice','error'])
+    $mock_logger = $this->getMockBuilder(TripalLogger::class)
+      ->onlyMethods(['notice', 'error'])
       ->getMock();
     $mock_logger->method('notice')
-       ->willReturnCallback(function($message, $context, $options) {
+      ->willReturnCallback(function ($message, $context, $options) {
          print str_replace(array_keys($context), $context, $message);
          return NULL;
-       });
+      });
     $mock_logger->method('error')
-      ->willReturnCallback(function($message, $context, $options) {
+      ->willReturnCallback(function ($message, $context, $options) {
         print str_replace(array_keys($context), $context, $message);
         return NULL;
       });
@@ -97,7 +144,7 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     $this->logger = $mock_logger;
 
     $this->config_factory = \Drupal::configFactory();
-    $this->importer = new \Drupal\trpcultivate_germplasm\Plugin\TripalImporter\GermplasmAccessionImporter(
+    $this->importer = new GermplasmAccessionImporter(
       [],
       'trpcultivate-germplasm-accession',
       $this->definitions,
@@ -115,17 +162,17 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     $this->importer->setCVterm('subtaxa', $subtaxa_cvterm_id);
     $this->importer->setCVterm('institute_code', 10);
     $this->importer->setCVterm('institute_name', 11);
-    $this->importer->setCVterm('country_of_origin_code',12);
+    $this->importer->setCVterm('country_of_origin_code', 12);
     $this->importer->setCVterm('biological_status_of_accession_code', 13);
     $this->importer->setCVterm('breeding_method_DbId', 14);
     $this->importer->setCVterm('pedigree', 15);
     $this->importer->setCVterm('synonym', 16);
     $this->importer->setCVterm('stock_relationship_type_synonym', 17);
 
-    // Create the stock_synonym table
+    // Create the stock_synonym table.
     $this->createStockSynonymTable();
 
-    // Insert our organism
+    // Insert our organism.
     $subtaxa_cvterm_id = $this->importer->getCVterm('subtaxa');
     $this->organism_id = $this->connection->insert('1:organism')
       ->fields([
@@ -136,19 +183,18 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
       ])
       ->execute();
 
-    // Insert an external db
-    $db_id = $this->connection->insert('1:db')
-    ->fields([
-      'name' => 'TestDB',
-    ])
-    ->execute();
+    // Insert an external db.
+    $this->connection->insert('1:db')
+      ->fields([
+        'name' => 'TestDB',
+      ])
+      ->execute();
   }
 
   /**
-   * Tests focusing on the Germplasm Accession Importer run() function
-   * using a simple example file that only populates required columns
+   * Tests focusing on the Germplasm Accession Importer run() function.
    *
-   * @group germ_accession_importer
+   * Using a simple example file that only populates required columns.
    */
   #[Group('germ_accession_importer')]
   public function testGermplasmAccessionImporterRunSimple() {
@@ -166,23 +212,23 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     $printed_output = ob_get_clean();
     $this->assertStringContainsString('Inserting "Test2".', $printed_output, "Did not get the expected output when running the run() method on simple_example.txt.");
 
-    // Now check the db for our 2 new stocks
+    // Now check the db for our 2 new stocks.
     $stock_query = $this->connection->select('1:stock', 's')
       ->fields('s', ['organism_id', 'name', 'uniquename', 'type_id']);
     $stock_record = $stock_query->execute()->fetchAll();
 
-    // Stock: Test1
+    // Stock: Test1.
     $this->assertEquals($stock_record[0]->organism_id, $this->organism_id, "The inserted organism ID and the selected organism ID for stock Test1 don't match.");
     $this->assertEquals($stock_record[0]->name, 'Test1', "The inserted stock.name and the selected name for stock Test1 don't match.");
     $this->assertEquals($stock_record[0]->uniquename, 'T1', "The inserted stock.uniquename and the selected uniquename for stock Test1 don't match.");
     $this->assertEquals($stock_record[0]->type_id, 9, "The inserted type_id and the selected type_id for stock Test1 don't match.");
-    // Stock: Test2
+    // Stock: Test2.
     $this->assertEquals($stock_record[1]->organism_id, $this->organism_id, "The inserted organism ID and the selected organism ID for stock Test2 don't match.");
     $this->assertEquals($stock_record[1]->name, 'Test2', "The inserted stock.name and the selected name for stock Test2 don't match.");
     $this->assertEquals($stock_record[1]->uniquename, 'T2', "The inserted stock.uniquename and the selected uniquename for stock Test2 don't match.");
     $this->assertEquals($stock_record[1]->type_id, 9, "The inserted type_id and the selected type_id for stock Test2 don't match.");
 
-    // Make sure that the stockprop and synonyms table are empty
+    // Make sure that the stockprop and synonyms table are empty.
     $stockprop_count_query = $this->connection->select('1:stockprop', 'sp')
       ->countQuery()->execute()->fetchField();
     $this->assertEquals(0, $stockprop_count_query, "The row count of the stockprop table is not empty, despite there be no stock properties to insert from simple_example.txt.");
@@ -193,10 +239,9 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
   }
 
   /**
-   * Tests focusing on the Germplasm Accession Importer run() function
-   * using a file where some required columns are missing
+   * Tests focusing on the Germplasm Accession Importer run() function.
    *
-   * @group germ_accession_importer
+   * Using a file where some required columns are missing.
    */
   #[Group('germ_accession_importer')]
   public function testGermplasmAccessionImporterRunMissing() {
@@ -210,13 +255,14 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     $this->importer->createImportJob($run_args, $file_details);
     $this->importer->prepareFiles();
 
-    // Need a try-catch since errors in this file will trigger the error flag exception
+    // Need a try-catch since errors in this file will trigger the error
+    // flag exception.
     $exception_caught = FALSE;
     try {
       ob_start();
       tripal_run_importer_run($this->importer, $this->logger);
     }
-    catch ( \Exception $e ) {
+    catch (\Exception $e) {
       $exception_caught = TRUE;
     }
     $printed_output = ob_get_clean();
@@ -224,17 +270,16 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     $this->assertStringContainsString('Column 2 is required and cannot be empty for line # 7', $printed_output, "Did not get the expected output regarding line #7 when running the run() method on missing_required_example.txt.");
     $this->assertStringContainsString('Insufficient number of columns detected (<4) for line # 8', $printed_output, "Did not get the expected output regarding line #8 when running the run() method on missing_required_example.txt.");
 
-    // Double check that neither germplasm made it to the database
+    // Double check that neither germplasm made it to the database.
     $stock_count_query = $this->connection->select('1:stock', 's')
       ->countQuery()->execute()->fetchField();
     $this->assertEquals(0, $stock_count_query, "The row count of the stock table is not empty, despite expecting to skip stocks in missing_required_example.txt.");
   }
 
   /**
-   * Tests focusing on the Germplasm Accession Importer run() function
-   * using a more complicated file where some optional columns are specified
+   * Tests focusing on the Germplasm Accession Importer run() function.
    *
-   * @group germ_accession_importer
+   * Using a more complicated file where some optional columns are specified.
    */
   #[Group('germ_accession_importer')]
   public function testGermplasmAccessionImporterRunComplex() {
@@ -252,8 +297,7 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
 
     // --------------------------------------------------------------------
     // 1. Insert one of the synonyms in our test file into the database as
-    // a stock. This way we can ensure a stock_relationship record is created
-
+    // a stock. This way we can ensure a stock_relationship record is created.
     $stock_id_of_synonym = $this->connection->insert('1:stock')
       ->fields([
         'organism_id' => $this->organism_id,
@@ -272,13 +316,12 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
 
     // --------------------------------------------------------------------
     // 2. Check that the stock properties inserted correctly
-
-    // Count the number of stock properties in the database
+    // Count the number of stock properties in the database.
     $stockprop_count_query = $this->connection->select('1:stockprop', 'sp')
       ->countQuery()->execute()->fetchField();
     $this->assertEquals(2, $stockprop_count_query, "The row count of the stockprop table after inserting 2 stock properties values is not correct.");
 
-    // Grab the stock ID
+    // Grab the stock ID.
     $stock_query = $this->connection->select('1:stock', 's')
       ->fields('s', ['stock_id'])
       ->condition('name', 'Test5');
@@ -297,18 +340,17 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
 
     // --------------------------------------------------------------------
     // 3. Check on our synonyms
-
-    // Count number of synonyms in the synonym table
+    // Count number of synonyms in the synonym table.
     $synonym_count_query = $this->connection->select('1:synonym', 'sy')
       ->countQuery()->execute()->fetchField();
     $this->assertEquals(3, $synonym_count_query, "Expected there to be 3 synonyms in the synonym table after inserting stock Test5.");
 
-    // Count the number of records in stock_synonym
+    // Count the number of records in stock_synonym.
     $stock_synonym_count_query = $this->connection->select('1:stock_synonym', 'ssy')
       ->countQuery()->execute()->fetchField();
     $this->assertEquals(3, $stock_synonym_count_query, "Expected there to be 3 records in the stock_synonym table after inserting stock Test5.");
 
-    // Count the number of records in stock_relationship
+    // Count the number of records in stock_relationship.
     $stock_relationship_count_query = $this->connection->select('1:stock_relationship', 'sr')
       ->countQuery()->execute()->fetchField();
     $this->assertEquals(1, $stock_relationship_count_query, "Expected there to be 1 record in the stock_relationship table after inserting stock Test5.");
@@ -322,18 +364,17 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
   }
 
   /**
-   * Tests focusing on the Germplasm Accession Importer run() function
-   * using an example file that should specifically cause an exception
-   * to occur due to the following cases:
-   *   1. A non-existant organism in the database
-   *   2. Attempt to insert a duplicate stock accession
+   * Tests focusing on the Germplasm Accession Importer run() function.
    *
-   * @group germ_accession_importer
+   * Using an example file that should specifically cause an exception
+   * to occur due to the following cases:
+   *   1. A non-existant organism in the database.
+   *   2. Attempt to insert a duplicate stock accession.
    */
   #[Group('germ_accession_importer')]
   public function testGermplasmAccessionImporterRunIncomplete() {
 
-    // Test for a non-existant file
+    // Test for a non-existant file.
     $non_existant_file = __DIR__ . '/does_not_exist.txt';
 
     $genus = 'Sally';
@@ -346,7 +387,8 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     $exception_caught = FALSE;
     try {
       tripal_run_importer_run($this->importer, $this->logger);
-    } catch ( \Exception $e ) {
+    }
+    catch (\Exception $e) {
       $exception_caught = TRUE;
     }
     $this->assertStringContainsString("File does not exist:", $e->getMessage(), "Expected an exception message that file \"does_not_exist.txt\", does not, in fact, exist.");
@@ -354,7 +396,7 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
 
     $incomplete_example_file = __DIR__ . '/../../../Fixtures/incomplete_example.txt';
 
-    // Test for a non-existant organism
+    // Test for a non-existant organism.
     $genus = 'Sally';
     $run_args = ['genus_name' => $genus, 'schema_name' => $this->testSchemaName];
     $file_details = ['file_local' => $incomplete_example_file];
@@ -366,15 +408,17 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     ob_start();
     try {
       tripal_run_importer_run($this->importer, $this->logger);
-    } catch ( \Exception $e ) {
+    }
+    catch (\Exception $e) {
       $exception_caught = TRUE;
     }
     $printed_output = ob_get_clean();
     $this->assertStringContainsString("Could not find an organism", $printed_output, "Expected an error that an organism in the file 'incomplete_example.txt' could not be found in the database.");
     $this->assertTrue($exception_caught, "Did not catch exception for trying to insert germplasm with a non-existant organism.");
 
-    // Test for existing organism, but try to enter 2 germplasm with the same name but separate accession numbers
-    // Note: File used is still incomplete_example.txt
+    // Test for existing organism, but try to enter 2 germplasm with the same
+    // name but separate accession numbers.
+    // Note: File used is still incomplete_example.txt.
     $genus = 'Tripalus';
     $run_args = ['genus_name' => $genus, 'schema_name' => $this->testSchemaName];
 
@@ -385,7 +429,8 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     ob_start();
     try {
       tripal_run_importer_run($this->importer, $this->logger);
-    } catch ( \Exception $e ) {
+    }
+    catch (\Exception $e) {
       $exception_caught = TRUE;
     }
     $printed_output = ob_get_clean();
@@ -393,9 +438,10 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     $this->assertTrue($exception_caught, "Did not catch exception for trying to insert duplicate stock accession numbers.");
 
     // Now query stock table to ensure the database transaction was
-    // successfully rolled back
+    // successfully rolled back.
     $stock_count_query = $this->connection->select('1:stock', 's')
       ->countQuery()->execute()->fetchField();
     $this->assertEquals(0, $stock_count_query, 'The chado.stock table is not empty despite a database rollback being triggered by an error.');
   }
+
 }
