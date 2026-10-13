@@ -556,7 +556,7 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
     );
 
     // Assert admin notes were incorporated into the description section.
-    $expected_notes = 'The order of the above columns is important and your file must include a header!';
+    $expected_notes = 'The order/spelling of your columns matches the above list.';
 
     $this->assertStringContainsString(
       $expected_notes,

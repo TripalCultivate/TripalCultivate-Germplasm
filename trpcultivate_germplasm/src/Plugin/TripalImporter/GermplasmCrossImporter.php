@@ -433,13 +433,19 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       'cv.name' => 'schema',
       'dbxref.accession' => 'additionalType',
     ]);
+    if (empty($additionalType_cvterm)) {
+      $this->service_Messenger->addError($this->t('The cvterm "additionalType" could not be found in the database. Please check with your administrator to ensure cross types of type "additionalType" are present in the database before importing germplasm cross data.'));
+    }
+
     $additionalType_cvterm_id = $additionalType_cvterm[0]->getValue('cvterm.cvterm_id');
-    // Grab all the valid cross types from the stockprop table.
+    // Grab all the valid cross types from the stockprop table. Germplasm
+    // cross types such as "single" and "double" are stored in the stockprop
+    // table with the type "additionalType".
     $valid_cross_types_query = $this->chado_connection->select('1:stockprop', 'sp')
       ->fields('sp', ['value'])
       ->condition('sp.type_id', $additionalType_cvterm_id, '=')
       ->distinct();
-    $valid_cross_types = $valid_cross_types_query->execute()->fetchAllKeyed(0, 0);
+    $valid_cross_types = $valid_cross_types_query->execute()->fetchCol();
     if (!$valid_cross_types) {
       $this->service_Messenger->addError($this->t('No cross types were found in the database. Please contact your administrator to add cross types to the database before importing germplasm cross data.'));
     }
@@ -511,12 +517,12 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     $programs_query->orderBy('db.name')
       ->distinct();
 
-    $all_programs = $programs_query->execute()->fetchAllKeyed(0, 0);
+    $all_programs = $programs_query->execute()->fetchCol();
 
     // If there is only one program, it should be the default.
     $default_program = '';
-    if ($all_programs && count($all_programs) == 1) {
-      $default_program = array_keys($all_programs)[0];
+    if (count($all_programs) == 1) {
+      $default_program = $all_programs[0];
     }
     // If there are no programs, let the user know that one or more needs to be
     // added to the database before importing germplasm cross data.
@@ -531,7 +537,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       '#description' => $this->t('The program ID of the germplasm being imported.'),
       '#empty_value' => '',
       '#empty_option' => '- Select -',
-      '#options' => $all_programs,
+      '#options' => array_combine($all_programs, $all_programs),
       '#default_value' => $default_program,
       '#weight' => -98,
       '#required' => TRUE,
@@ -1260,7 +1266,15 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       ->generateFile($importer_id, $column_headers, $file_extensions);
 
     // Additional notes to the headers.
-    $notes = $this->t('The order of the above columns is important and your file must include a header!');
+    $notes = [
+      '#theme' => 'item_list',
+      '#items' => [
+        $this->t('Your file includes a header row.'),
+        $this->t('The order/spelling of your columns matches the above list.'),
+        $this->t('For all required columns, each row contains a value.'),
+      ],
+      '#attributes' => ['class' => ['importer-notes-list']],
+    ];
 
     // Render the header and notes/lists in a template and use the file link as
     // the value to href attribute of the link to download a template file.
