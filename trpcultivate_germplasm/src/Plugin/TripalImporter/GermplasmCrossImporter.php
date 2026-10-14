@@ -1138,15 +1138,16 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     $cross_values = [
       'stock.name' => $cross_number,
       'stock.uniquename' => $cross_number,
-      'stock.type_id' => $cross_cvterm[0]->getValue('cvterm_id'),
+      'stock.type_id' => $cross_cvterm[0]->getValue('cvterm.cvterm_id'),
       'organism.genus' => $genus,
       'organism.species' => $species,
     ];
     // Insert our cross. If this cross already exists, an error will be thrown.
-    $cross_buddy = $this->stock_buddy->insertStock($cross_values);
-
-    if (count($cross_buddy) == 0) {
-      throw new \Exception('ERROR: Unable to insert a cross with these values:\n' . print_r($values, TRUE));
+    try {
+      $cross_record = $this->stock_buddy->insertStock($cross_values);
+    }
+    catch (\Exception $e) {
+      throw new \Exception('ERROR: Unable to insert a cross with these values:\n' . print_r($values, TRUE) . '\n');
     }
 
     // Relate the maternal parent to this cross.
@@ -1189,7 +1190,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       throw new \Exception('ERROR: The relationship between paternal parent ' . $paternal_parent . ' and cross ' . $cross_number . ' already exists in the database, but the cross was only just inserted!');
     }
 
-    return $cross_buddy->getValue('stock_id');
+    return $cross_record->getValue('stock_id');
   }
 
   /**

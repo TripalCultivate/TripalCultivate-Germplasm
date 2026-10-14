@@ -233,7 +233,31 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
       $this->importer->run();
     }
     catch (\Exception $e) {
+      $this->fail('The Germplasm Cross Importer run() method threw an exception: ' . $e->getMessage());
     }
+
+    $numExpectedCrosses = 1;
+
+    // Check that our crosses were inserted.
+    if ($numExpectedCrosses > 0) {
+      // Grab our crosses.
+      /*
+      // Check that the parental relationships were inserted.
+      foreach ($crosses as $cross) {
+        $cross_id = $cross->getValue('stock.stock_id');
+        $maternal_parent = $this->chado_connection->select('stock_relationship', 'sr')
+          ->fields('sr')
+          ->execute();
+
+      }
+      */
+    }
+  }
+
+  /**
+   * Tests the Germplasm Cross Importer run() with files that should fail.
+   */
+  public function testRunWithFailingFiles() {
   }
 
 }
