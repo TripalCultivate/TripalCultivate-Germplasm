@@ -204,6 +204,41 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
       ->execute();
     $this->assertIsNumeric($dbprop_id,
           'We were not able to create the dbprop record for program "' . $program_name . '" for testing.');
+
+    // Grab the additionalType cvterm for use in the cross type of the parents.
+    $additionalType_cvterm = $cvterm_buddy->getCvterm([
+      'cvterm.name' => 'additionalType',
+      'cv.name' => 'schema',
+      'dbxref.accession' => 'additionalType',
+    ]);
+    $additionalType_cvterm_id = $additionalType_cvterm[0]->getValue('cvterm.cvterm_id');
+
+    // Insert the parent stocks.
+    $this->stock_buddy = $buddy_service->createInstance('chado_stock_buddy', []);
+    $parental_stocks = ['121S', '122S', '124S'];
+    foreach ($parental_stocks as $stock_name) {
+      $parental_stock = $this->stock_buddy->insertStock([
+        'stock.organism_id' => $organism_id,
+        'stock.name' => $stock_name,
+        'stock.dbxref_id' => 1,
+        'stock.uniquename' => 'STOCK:' . $stock_name,
+        'stock.description' => '',
+        'stock.type_id' => 1,
+        'stock.is_obsolete' => 'f',
+      ]);
+
+      // Insert the cross type as a stockprop record.
+      // @todo Update this to use the ChadoPropertyBuddy when Tripal issue #2565
+      // is resolved.
+      $this->chado_connection->insert('1:stockprop')
+        ->fields([
+          'stock_id' => $parental_stock->getValue('stock.stock_id'),
+          'type_id' => $additionalType_cvterm_id,
+          'value' => 'single',
+        ])
+        ->execute();
+    }
+
   }
 
   /**
@@ -246,9 +281,8 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
       foreach ($crosses as $cross) {
         $cross_id = $cross->getValue('stock.stock_id');
         $maternal_parent = $this->chado_connection->select('stock_relationship', 'sr')
-          ->fields('sr')
-          ->execute();
-
+        ->fields('sr')
+        ->execute();
       }
       */
     }

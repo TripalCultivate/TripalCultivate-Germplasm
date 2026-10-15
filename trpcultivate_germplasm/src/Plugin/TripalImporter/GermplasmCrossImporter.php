@@ -1154,7 +1154,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     // Note: We are not querying the parents with a type_id since they can be of
     // other types than their progeny (ex. variety).
     $maternal_parent_values = [
-      'stock.uniquename' => $maternal_parent,
+      'stock.name' => $maternal_parent,
       'organism.genus' => $genus,
       'organism.species' => $species,
     ];
@@ -1173,7 +1173,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
 
     // Relate the paternal parent to this cross.
     $paternal_parent_values = [
-      'stock.uniquename' => $paternal_parent,
+      'stock.name' => $paternal_parent,
       'organism.genus' => $genus,
       'organism.species' => $species,
     ];
@@ -1215,7 +1215,8 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
   public function insertCrossProperties($cross_id, $year, $season, $cross_type, $program_id, array $extra_props = []) {
 
     $buddy_service = \Drupal::service('tripal_chado.chado_buddy');
-    $property_buddy = $buddy_service->createInstance('chado_property_buddy', []);
+    // @todo Use the ChadoPropertyBuddy when Tripal issue #2565 is resolved.
+    //$property_buddy = $buddy_service->createInstance('chado_property_buddy', []);
   }
 
   /**
