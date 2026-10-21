@@ -12,3 +12,9 @@ terms:
   breeding_method_DbId: 0
   subtaxa: 0
   stock_relationship_type_synonym: 0
+  progeny: 0
+  maternal_parent: 0
+  paternal_parent: 0
+  crossing_block_year: 0
+  crossing_block_season: 0
+  cross_type: 0

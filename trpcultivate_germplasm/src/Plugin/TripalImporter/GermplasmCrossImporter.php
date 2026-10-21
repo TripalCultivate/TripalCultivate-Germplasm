@@ -189,6 +189,20 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
   protected Messenger $service_Messenger;
 
   /**
+   * List of cvterms needed by this importer.
+   *
+   * @var array
+   */
+  protected array $cvterms = [
+    'progeny',
+    'maternal_parent',
+    'paternal_parent',
+    'crossing_block_year',
+    'crossing_block_season',
+    'cross_type',
+  ];
+
+  /**
    * Used to reference the validation result summary in the form.
    *
    * @var string
