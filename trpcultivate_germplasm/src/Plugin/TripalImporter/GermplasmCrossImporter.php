@@ -17,6 +17,7 @@ use Drupal\tripal_chado\Database\ChadoConnection;
 use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoCvtermBuddy;
 use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoPropertyBuddy;
 use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoOrganismBuddy;
+use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoStockBuddy;
 use Drupal\tripal_chado\TripalImporter\ChadoImporterBase;
 use Drupal\trpcultivate\Plugin\Validators\ValidDataFile;
 use Drupal\trpcultivate\Plugin\Validators\EmptyCell;
@@ -146,6 +147,13 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
   protected ChadoOrganismBuddy $organism_buddy;
 
   /**
+   * An instance of the stock Chado Buddy.
+   *
+   * @var Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoStockBuddy
+   */
+  protected ChadoStockBuddy $stock_buddy;
+
+  /**
    * The TripalCultivate validator plugin manager.
    *
    * @var \Drupal\trpcultivate\TripalCultivateValidator\TripalCultivateValidatorManager
@@ -179,6 +187,20 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    * @var \Drupal\Core\Messenger\Messenger
    */
   protected Messenger $service_Messenger;
+
+  /**
+   * List of cvterms needed by this importer.
+   *
+   * @var array
+   */
+  protected array $cvterms = [
+    'progeny',
+    'maternal_parent',
+    'paternal_parent',
+    'crossing_block_year',
+    'crossing_block_season',
+    'cross_type',
+  ];
 
   /**
    * Used to reference the validation result summary in the form.
@@ -273,6 +295,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     $this->cvterm_buddy = $this->buddy_manager->createInstance('chado_cvterm_buddy', []);
     $this->property_buddy = $this->buddy_manager->createInstance('chado_property_buddy', []);
     $this->organism_buddy = $this->buddy_manager->createInstance('chado_organism_buddy', []);
+    $this->stock_buddy = $this->buddy_manager->createInstance('chado_stock_buddy', []);
     $this->service_validatorPluginManager = $service_validatorPluginManager;
     $this->service_entityTypeManager = $service_entityTypeManager;
     $this->service_FileTemplate = $service_FileTemplate;
@@ -1023,6 +1046,191 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    */
   public function run() {
 
+    // Get values provided by user in the form.
+    $genus = $this->arguments['run_args']['genus'];
+    $program_id = $this->arguments['run_args']['program_id'];
+    $file_id = $this->arguments['files'][0]['fid'];
+    // Load file object.
+    $file = $this->service_entityTypeManager->getStorage('file')->load($file_id);
+    // Get the mime type which is used to validate the file and split the rows.
+    $file_mime_type = $file->getMimeType();
+
+    // Headers.
+    // Only the header names are needed, so pull them out into a new array.
+    $headers = array_column($this->headers, 'name');
+    $headers_count = count($headers);
+
+    // Open and read file in this uri.
+    if ($file) {
+      $file_uri = $file->getFileUri();
+      $handle = fopen($file_uri, 'r');
+
+      if ($handle) {
+        // Line counter.
+        $line_no = 0;
+
+        while ($cur_line = fgets($handle)) {
+          if ($line_no > 0 && !empty(trim($cur_line))) {
+            // Split line.
+            $data_row = ImportValidationHelper::splitRowIntoColumns($cur_line, $file_mime_type);
+
+            // Grab the required columns.
+            $year = $data_row[0];
+            $season = $data_row[1];
+            $cross_number = $data_row[2];
+            $species = $data_row[3];
+            $maternal_parent = $data_row[4];
+            $paternal_parent = $data_row[5];
+            $cross_type = $data_row[6];
+
+            // @todo If we have more than 7 columns, these will be treated as
+            // extra stock properties in the future.
+            $extra_props = [];
+            if ($headers_count > 7) {
+              $extra_props = array_slice($data_row, 7);
+            }
+
+            // 1. Insert our cross into the database and create the parental
+            //    relationships.
+            $cross_id = $this->insertAndRelateCross($cross_number, $genus, $species, $maternal_parent, $paternal_parent);
+            // 2. Insert all cross properties (year, season, cross type,
+            //    program_id + any additional columns).
+            $this->insertCrossProperties($cross_id, $year, $season, $cross_type, $program_id, $extra_props);
+          }
+          // Next line.
+          $line_no++;
+        }
+      }
+    }
+
+    // Close the file.
+    fclose($handle);
+  }
+
+  /**
+   * Inserts a new cross into the database and returns the stock_id.
+   *
+   * Only inserts a cross if it does not already exist in the database (in which
+   * case, an error is thrown). Also creates the relationships between the cross
+   * and its parents.
+   *
+   * @param string $cross_number
+   *   The name of the cross to insert.
+   * @param string $genus
+   *   The genus of the cross.
+   * @param string $species
+   *   The species of the cross.
+   * @param string $maternal_parent
+   *   The name of the maternal parent of this cross.
+   * @param string $paternal_parent
+   *   The name of the paternal parent of this cross.
+   *
+   * @throws \Exception
+   *   - If the cross already exists in the database.
+   *   - If the cross could not be inserted.
+   *   - If the maternal or paternal parent does not exist in the database.
+   *   - If the maternal or paternal parent has multiple records in the
+   *     database.
+   *   - If a stock_relationship record already exists.
+   *
+   * @return int
+   *   The stock_id of the inserted cross.
+   */
+  public function insertAndRelateCross($cross_number, $genus, $species, $maternal_parent, $paternal_parent) {
+
+    $buddy_service = \Drupal::service('tripal_chado.chado_buddy');
+    $cvterm_buddy = $buddy_service->createInstance('chado_cvterm_buddy', []);
+
+    // Grab our cvterm for germplasm cross as a stock type.
+    // @todo Do we want this to be configurable in the future?
+    $cross_cvterm = $cvterm_buddy->getCvterm([
+      'db.name' => 'PBO',
+      'dbxref.accession' => '0000065',
+      'cvterm.name' => 'progeny',
+    ]);
+
+    $cross_values = [
+      'stock.name' => $cross_number,
+      'stock.uniquename' => $cross_number,
+      'stock.type_id' => $cross_cvterm[0]->getValue('cvterm.cvterm_id'),
+      'organism.genus' => $genus,
+      'organism.species' => $species,
+    ];
+    // Insert our cross. If this cross already exists, an error will be thrown.
+    try {
+      $cross_record = $this->stock_buddy->insertStock($cross_values);
+    }
+    catch (\Exception $e) {
+      throw new \Exception('ERROR: Unable to insert a cross with these values:\n' . print_r($values, TRUE) . '\n');
+    }
+
+    // Relate the maternal parent to this cross.
+    // Note: We are not querying the parents with a type_id since they can be of
+    // other types than their progeny (ex. variety).
+    $maternal_parent_values = [
+      'stock.name' => $maternal_parent,
+      'organism.genus' => $genus,
+      'organism.species' => $species,
+    ];
+
+    $maternal_relationship_values = [
+      'cvterm.name' => 'is_maternal_parent_of',
+      'cv.name' => 'stock_relationship',
+      'dbxref.accession' => 'is_maternal_parent_of',
+    ];
+
+    // If the maternal parent cannot be found, an error will be thrown.
+    $relate_maternal = $this->stock_buddy->relateStock($cross_values, $maternal_parent_values, $maternal_relationship_values);
+    if ($relate_maternal == 2) {
+      throw new \Exception('ERROR: The relationship between maternal parent ' . $maternal_parent . ' and cross ' . $cross_number . ' already exists in the database, but the cross was only just inserted!');
+    }
+
+    // Relate the paternal parent to this cross.
+    $paternal_parent_values = [
+      'stock.name' => $paternal_parent,
+      'organism.genus' => $genus,
+      'organism.species' => $species,
+    ];
+
+    $paternal_relationship_values = [
+      'cvterm.name' => 'is_paternal_parent_of',
+      'cv.name' => 'stock_relationship',
+      'dbxref.accession' => 'is_paternal_parent_of',
+    ];
+
+    // If the paternal parent cannot be found, an error will be thrown.
+    $relate_paternal = $this->stock_buddy->relateStock($cross_values, $paternal_parent_values, $paternal_relationship_values);
+    if ($relate_paternal == 2) {
+      throw new \Exception('ERROR: The relationship between paternal parent ' . $paternal_parent . ' and cross ' . $cross_number . ' already exists in the database, but the cross was only just inserted!');
+    }
+
+    return $cross_record->getValue('stock_id');
+  }
+
+  /**
+   * Inserts properties for a cross into the stockprop table.
+   *
+   * @param int $cross_id
+   *   The ID of the cross for which to insert properties.
+   * @param string $year
+   *   The year the cross was created.
+   * @param string $season
+   *   The season the cross was created.
+   * @param string $cross_type
+   *   The type of cross (ex. single, double, etc.).
+   * @param string $program_id
+   *   The program ID associated with this cross.
+   * @param array $extra_props
+   *   An array of additional properties to insert for this cross. Not currently
+   *   supported.
+   *
+   * @throws \Exception
+   */
+  public function insertCrossProperties($cross_id, $year, $season, $cross_type, $program_id, array $extra_props = []) {
+
+    $buddy_service = \Drupal::service('tripal_chado.chado_buddy');
+    // @todo Use the ChadoPropertyBuddy when Tripal issue #2565 is resolved.
+    //$property_buddy = $buddy_service->createInstance('chado_property_buddy', []);
   }
 
   /**
