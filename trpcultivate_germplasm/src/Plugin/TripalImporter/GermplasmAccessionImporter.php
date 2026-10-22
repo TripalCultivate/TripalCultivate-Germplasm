@@ -7,6 +7,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\tripal_chado\Database\ChadoConnection;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\Messenger\Messenger;
 use Drupal\tripal\Services\TripalFileRetriever;
 use Drupal\tripal\Services\TripalLogger;
@@ -15,6 +16,9 @@ use Drupal\tripal\TripalImporter\Attribute\TripalImporter;
 use Drupal\tripal_chado\ChadoBuddy\PluginManagers\ChadoBuddyPluginManager;
 use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoOrganismBuddy;
 
+/**
+ * Tripal Importer plugin for importing germplasm accessions into Chado.
+ */
 #[TripalImporter(
    id: 'trpcultivate-germplasm-accession',
    label: new TranslatableMarkup('Tripal Cultivate: Germplasm Accessions'),
@@ -32,9 +36,14 @@ use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoOrganismBuddy;
  )]
 class GermplasmAccessionImporter extends ChadoImporterBase {
 
+  use StringTranslationTrait;
+
   /**
-   * Used to track whether an error is logged during the import process. If it
-   * is set to TRUE, then the db transaction will not be committed.
+   * Used to track whether an error is logged during the import process.
+   *
+   * If it is set to TRUE, then the db transaction will not be committed.
+   *
+   * @var bool
    */
   protected $error_tracker = FALSE;
 
@@ -61,6 +70,8 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
 
   /**
    * An associative array of cvterms as the key and the cvterm_id as the value.
+   *
+   * @var array
    */
   protected $cvterms = [
     'accession',
@@ -72,23 +83,29 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     'breeding_method_DbId',
     'pedigree',
     'synonym',
-    'stock_relationship_type_synonym'
+    'stock_relationship_type_synonym',
   ];
 
   /**
    * Implements ContainerFactoryPluginInterface->create().
    *
-   * OVERRIDES create() from the parent, ChadoImporterBase.php, in order to introduce the
-   * config factory
+   * OVERRIDES create() from the parent, ChadoImporterBase.php, in order to
+   * introduce the config factory.
    *
-   * Since we have implemented the ContainerFactoryPluginInterface this static function
-   * will be called behind the scenes when a Plugin Manager uses createInstance(). Specifically
-   * this method is used to determine the parameters to pass to the contructor.
+   * Since we have implemented the ContainerFactoryPluginInterface this static
+   * function will be called behind the scenes when a Plugin Manager uses
+   * createInstance(). Specifically this method is used to determine the
+   * parameters to pass to the constructor.
    *
    * @param \Symfony\Component\DependencyInjection\ContainerInterface $container
+   *   The service container.
    * @param array $configuration
+   *   An associative array of configuration information about the plugin
+   *   instance.
    * @param string $plugin_id
+   *   The plugin_id for the plugin instance.
    * @param mixed $plugin_definition
+   *   The plugin implementation definition.
    *
    * @return static
    */
@@ -108,23 +125,36 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
   }
 
   /**
-   * Implements __contruct().
+   * Implements __construct().
    *
-   * OVERRIDES __construct() from the parent, ChadoImporterBase.php, in order to introduce
-   * the config factory
+   * OVERRIDES __construct() from the parent, ChadoImporterBase.php, in order
+   * to introduce the config factory.
    *
-   * Since we have implemented the ContainerFactoryPluginInterface, the constructor
-   * will be passed additional parameters added by the create() function. This allows
-   * our plugin to use dependency injection without our plugin manager service needing
-   * to worry about it.
+   * Since we have implemented the ContainerFactoryPluginInterface, the
+   * constructor will be passed additional parameters added by the create()
+   * function. This allows our plugin to use dependency injection without our
+   * plugin manager service needing to worry about it.
    *
    * @param array $configuration
+   *   An associative array of configuration information about the plugin.
    * @param string $plugin_id
+   *   The plugin_id for the plugin instance.
    * @param mixed $plugin_definition
+   *   The plugin implementation definition.
    * @param Drupal\tripal_chado\Database\ChadoConnection $connection
+   *   The Chado database connection service.
    * @param Drupal\tripal_chado\ChadoBuddy\PluginManagers\ChadoBuddyPluginManager $buddy_manager
    *   The ChadoBuddy plugin manager.
-   * @param
+   * @param Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   *   The config factory service.
+   * @param Drupal\Core\Messenger\Messenger $messenger
+   *   The messenger service.
+   * @param Drupal\tripal\Services\TripalLogger $logger
+   *   The tripal logger service.
+   * @param Drupal\tripal\Services\TripalFileRetriever $fileretriever
+   *   The tripal file retriever service.
+   * @param Drupal\tripal\TripalBackendPublish\PluginManager\TripalBackendPublishManager $publish_manager
+   *   The tripal backend publish manager service.
    */
   public function __construct(
     array $configuration,
@@ -155,7 +185,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
   }
 
   /**
-   * @{inheritdoc}
+   * {@inheritDoc}
    */
   public function describeUploadFileFormat() {
 
@@ -181,7 +211,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     ];
 
     $required_col = ['Germplasm Name', 'External Database', 'Accession Number', 'Germplasm Species'];
-    // @TODO: Make this red, but Drupal makes it difficult :)
+    // @todo Make this red, but Drupal makes it difficult :)
     $required_markup = '*';
 
     $output .= '<ol>';
@@ -199,27 +229,31 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
   }
 
   /**
-   * Set a cvterm with its cvterm_id
+   * Set a cvterm with its cvterm_id.
    *
    * @param string $key
-   *   A key used in the config settings.yml
+   *   A key used in the config settings.yml.
    * @param int $cvterm_id
-   * @return TRUE
+   *   The cvterm ID.
+   *
+   * @return true
+   *   Always returns TRUE.
    */
-  public function setCVterm($key, $cvterm_id) {
+  public function setCvterm($key, $cvterm_id) {
     $this->cvterms[$key] = $cvterm_id;
     return TRUE;
   }
 
   /**
-   * Get a cvterm ID, given a key that maps to the config settings.yml
+   * Get a cvterm ID, given a key that maps to the config settings.yml.
    *
    * @param string $key
-   *   The cvterm name
+   *   The cvterm name.
+   *
    * @return int
-   *   The cvterm ID
+   *   The cvterm ID.
    */
-  public function getCVterm($key) {
+  public function getCvterm($key) {
     return $this->cvterms[$key];
   }
 
@@ -229,12 +263,12 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
   public function form($form, &$form_state) {
     $form = parent::form($form, $form_state);
 
-    // Select the entire genus field and make sure it is sorted and distinct
+    // Select the entire genus field and make sure it is sorted and distinct.
     $genus_query = $this->connection->select('1:organism', 'o')
-      ->fields('o',['genus'])
+      ->fields('o', ['genus'])
       ->orderBy('genus')
       ->distinct();
-    $genus = $genus_query->execute()->fetchAllKeyed(0,0);
+    $genus = $genus_query->execute()->fetchAllKeyed(0, 0);
 
     $form['instructions'] = [
       '#weight' => -99,
@@ -247,48 +281,53 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     $form['genus_name'] = [
       '#weight' => -80,
       '#type' => 'select',
-      '#title' => t('Genus'),
+      '#title' => $this->t('Genus'),
       '#options' => $genus,
       '#required' => TRUE,
-      '#description' => t('Select the genus of the germplasm accessions in your file. If your file consists of multiple genus, it is best practice to separate it into one file per genus and upload each one individually.'),
+      '#description' => $this->t('Select the genus of the germplasm accessions in your file. If your file consists of multiple genus, it is best practice to separate it into one file per genus and upload each one individually.'),
     ];
 
     return $form;
   }
 
   /**
+   * {@inheritDoc}
+   *
    * @see TripalImporter::formValidate()
    */
-  public function formValidate($form, &$form_state){
+  public function formValidate($form, &$form_state) {
     // Nothing to validate since the genus field is set to "required".
   }
 
   /**
    * Checks if our terms have been set already from the config file.
+   *
    * This is helpful for automated test functionality where terms are
-   * set there using our setCVterm() function.
-   * If not already set, then the value of the term is set using setCVterm()
+   * set there using our setCvterm() function.
+   * If not already set, then the value of the term is set using setCvterm()
    * here.
    */
-  public function setUpCVterms(){
+  public function setUpCvterms() {
 
     $germplasm_config = $this->config_factory->get('trpcultivate_germplasm.settings');
     // Iterate through our cvterms
-    // If it hasn't been set before, set it now
+    // If it hasn't been set before, set it now.
     foreach ($this->cvterms as $term => $value) {
       if (!isset($value)) {
         $terms_string = 'terms.' . $term;
-        $this->setCVterm($term, $germplasm_config->get($terms_string));
+        $this->setCvterm($term, $germplasm_config->get($terms_string));
       }
     }
   }
 
   /**
+   * {@inheritDoc}
+   *
    * @see TripalImporter::run()
    */
-  public function run(){
+  public function run() {
 
-    // Grabbing our arguments from the form
+    // Grabbing our arguments from the form.
     $arguments = $this->getArguments();
 
     // The path to the uploaded file is always made available using the
@@ -298,40 +337,40 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     $file_path = $arguments['files'][0]['file_path'];
     if (!file_exists($file_path)) {
       throw new \Exception(
-        t("File does not exist: @file", ['@file' => $file_path])
+        "File does not exist: $file_path"
       );
     }
 
-    // Grab the genus name
+    // Grab the genus name.
     $genus_name = $arguments['run_args']['genus_name'];
 
-    // Make sure our CVterms are all set
-    $this->setUpCVterms();
+    // Make sure our CVterms are all set.
+    $this->setUpCvterms();
 
-    // Check if the stock_synonym table exists before moving forward
+    // Check if the stock_synonym table exists before moving forward.
     if (!$this->connection->schema()->tableExists('stock_synonym')) {
       throw new \Exception(
-        t("Could not find stock_synonym table in the current database schema.")
+        "Could not find stock_synonym table in the current database schema."
       );
     }
 
-    // Set up the ability to track progress so we can report it to the user
+    // Set up the ability to track progress so we can report it to the user.
     $filesize = filesize($file_path);
     $this->setTotalItems($filesize);
     $this->setItemsHandled(0);
     $bytes_read = 0;
     $line_count = 0;
 
-    // Open the file and start iterating through each line
-    $GERMPLASM_FILE = fopen($file_path, 'r');
-    if(!$GERMPLASM_FILE) {
+    // Open the file and start iterating through each line.
+    $germplasm_file = fopen($file_path, 'r');
+    if (!$germplasm_file) {
       throw new \Exception(
-        t("Could not open file: @file", ['@file' => $file_path])
+        "Could not open file: $file_path"
       );
     }
 
-    while (!feof($GERMPLASM_FILE)){
-      $current_line = fgets($GERMPLASM_FILE);
+    while (!feof($germplasm_file)) {
+      $current_line = fgets($germplasm_file);
       $line_count++;
 
       // Calculate how many bytes we have read from the file and let the
@@ -340,33 +379,42 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       $bytes_read += mb_strlen($current_line);
       $this->setItemsHandled($bytes_read);
 
-      // Check for empty lines, comment lines and a header line
+      // Check for empty lines, comment lines and a header line.
       $current_line = trim($current_line);
-      if ($current_line == '') continue;
-      if (preg_match('/^#/', $current_line)) continue;
-      if (preg_match('/^Germplasm/i', $current_line)) continue;
+      if ($current_line == '') {
+        continue;
+      }
+      if (preg_match('/^#/', $current_line)) {
+        continue;
+      }
+      if (preg_match('/^Germplasm/i', $current_line)) {
+        continue;
+      }
 
-      // Split our columns into an array for easier processing
+      // Split our columns into an array for easier processing.
       $germplasm_columns = explode("\t", $current_line);
       $num_columns = count($germplasm_columns);
-      if (count($germplasm_columns) < 4) {
+      if ($num_columns < 4) {
         $this->logger->error("Insufficient number of columns detected (<4) for line # @line", ['@line' => $line_count]);
         $this->error_tracker = TRUE;
-				// Continue to next line since we already know this will cascade into
-				// further errors
-				continue;
+        // Continue to next line since we already know this will cascade into
+        // further errors.
+        continue;
       }
 
       // Collect our values from our current line into variables
-      // Since the 1st 4 columns are required, make sure there are values there
-      for($i=0; $i<4; $i++) {
-        $column = $i+1;
+      // Since the 1st 4 columns are required, make sure there are values there.
+      for ($i = 0; $i < 4; $i++) {
+        $column = $i + 1;
         if ($germplasm_columns[$i] == '') {
-          $this->logger->error("Column @column is required and cannot be empty for line # @line", ['@column' => $column, '@line' => $line_count]);
+          $this->logger->error("Column @column is required and cannot be empty for line # @line", [
+            '@column' => $column,
+            '@line' => $line_count,
+          ]);
           $this->error_tracker = TRUE;
-					// Continue to next line since we already know this will cascade into
-					// further errors
-					continue 2;
+          // Continue to next line since we already know this will cascade into
+          // further errors.
+          continue 2;
         }
       }
       $germplasm_name = $germplasm_columns[0];
@@ -380,45 +428,46 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
         'country_of_origin_code' => $germplasm_columns[7] ?? '',
         'biological_status_of_accession_code' => $germplasm_columns[8] ?? '',
         'breeding_method_DbId' => $germplasm_columns[9] ?? '',
-        'pedigree' => $germplasm_columns[10] ?? ''
+        'pedigree' => $germplasm_columns[10] ?? '',
       ];
       $synonyms = $germplasm_columns[11] ?? '';
 
-      // Here we are calling 5 separate functions to check for and insert various
-      // parts of the input file. Everything is wrapped in a try-catch to ensure
-      // a useful error message can be passed onto the user and that all errors
-      // that the file encounters can be reported at one time and not committed
-      // to the database.
+      // Here we are calling 5 separate functions to check for and insert
+      // various parts of the input file. Everything is wrapped in a try-catch
+      // to ensure a useful error message can be passed onto the user and that
+      // all errors that the file encounters can be reported at one time and
+      // not committed to the database.
       try {
-        // STEP 1: Pull out the organism ID for the current germplasm
-        $organism_id = $this->getOrganismID($genus_name, $germplasm_species, $germplasm_subtaxa);
+        // STEP 1: Pull out the organism ID for the current germplasm.
+        $organism_id = $this->getOrganismId($genus_name, $germplasm_species, $germplasm_subtaxa);
 
-        // STEP 2: Check/Insert this germplasm into the Chado stock table
+        // STEP 2: Check/Insert this germplasm into the Chado stock table.
         if ($organism_id) {
-          $stock_id = $this->getStockID($germplasm_name, $accession_number, $organism_id);
+          $stock_id = $this->getStockId($germplasm_name, $accession_number, $organism_id);
         }
 
-        if (isset($stock_id) && ($stock_id != null)) {
-          // STEP 3: Load the external database info into Chado dbxref table
-          $dbxref_id = $this->getDbxrefID($external_database, $stock_id, $accession_number);
+        if (isset($stock_id) && ($stock_id != NULL)) {
+          // STEP 3: Load the external database info into Chado dbxref table.
+          $this->getDbxrefId($external_database, $stock_id, $accession_number);
 
-          // STEP 4: Load stock properties
-          $load_props = $this->loadStockProperties($stock_id, $stock_properties);
+          // STEP 4: Load stock properties.
+          $this->loadStockProperties($stock_id, $stock_properties);
 
-          // STEP 5: Load synonyms
-          $load_synonyms = $this->loadSynonyms($stock_id, $synonyms, $organism_id);
+          // STEP 5: Load synonyms.
+          $this->loadSynonyms($stock_id, $synonyms, $organism_id);
         }
-      } catch ( \Exception $e ) {
-        $this->logger->error("An unusual error occurred when processing germplasm \"@germplasm\". Here is the stack trace: \n" . $e->getMessage() . "\n", ['@germplasm' => $germplasm_name] );
+      }
+      catch (\Exception $e) {
+        $this->logger->error("An unusual error occurred when processing germplasm \"@germplasm\". Here is the stack trace: \n" . $e->getMessage() . "\n", ['@germplasm' => $germplasm_name]);
         $this->error_tracker = TRUE;
       }
     }
-    // Check the error flag
-    // If true, throw an exception explaining that nothing will be added to the database
-    // unless errors are resolved
+    // Check the error flag.
+    // If true, throw an exception explaining that nothing will be added to the
+    // database unless errors are resolved.
     if ($this->error_tracker) {
       throw new \Exception(
-        t("The database transaction was not commited due to the presence of one or more errors. Please fix all errors and try the import again.")
+        "The database transaction was not commited due to the presence of one or more errors. Please fix all errors and try the import again."
       );
     }
     else {
@@ -427,9 +476,10 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
   }
 
   /**
-   * Checks if an organism exists in Chado and returns the primary key,
-   * otherwise throws an error if the organism does not exist or there
-   * are multiple matches
+   * Checks if an organism exists in Chado and returns the primary key.
+   *
+   * Otherwise throws an error if the organism does not exist or there
+   * are multiple matches.
    *
    * @param string $genus_name
    *   The genus of the organism.
@@ -438,11 +488,12 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
    * @param string $germplasm_subtaxa
    *   Optional. Must consist of two strings, one of the subtaxon type
    *   followed by the name. For example: "subspecies chadoii".
+   *
    * @return int|false
    *   The value of the primary key for the organism record in Chado.
    *   If no single primary key can be retrieved, then FALSE is returned.
    */
-  public function getOrganismID($genus_name, $germplasm_species, $germplasm_subtaxa) {
+  public function getOrganismId($genus_name, $germplasm_species, $germplasm_subtaxa) {
 
     $organism_name = $genus_name . ' ' . $germplasm_species;
     if ($germplasm_subtaxa) {
@@ -453,44 +504,47 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     if (!$organism_array) {
       $this->logger->error("Could not find an organism \"@organism_name\" in the database.", ['@organism_name' => $organism_name]);
       $this->error_tracker = TRUE;
-      return false;
+      return FALSE;
     }
     // We also want to check if we were given only one value back, as there is
-    // potential to retrieve multiple organism IDs
+    // potential to retrieve multiple organism IDs.
     if (is_array($organism_array) && (count($organism_array) > 1)) {
       $this->logger->error("Found more than one organism ID for \"@organism_name\" when only 1 was expected.", ['@organism_name' => $organism_name]);
       $this->error_tracker = TRUE;
-      return false;
+      return FALSE;
     }
 
     return $organism_array[0]->getValue('organism.organism_id');
   }
 
   /**
-   * Checks if a stock exists in Chado and if not, inserts it and returns the primary
-   * key in the stock table. If the stock already exists, logs an error
+   * Checks if a stock exists in Chado.
+   *
+   * If the stock does not exist, insert it and returns the primary
+   * key in the stock table. If the stock already exists, logs an error.
    *
    * @param string $germplasm_name
    *   The name of the germplasm.
    * @param string $accession_number
    *   A unique identifier for the germplasm accession.
    * @param int $organism_id
-   *   The primary key of the stock's organism in the organism table
+   *   The primary key of the stock's organism in the organism table.
+   *
    * @return int|false
-   *   The value of the primary key for the stock record in Chado. If the stock already
-   *   exists and does not match the accession number or type, or it cannot be inserted,
-   *   then FALSE is returned.
+   *   The value of the primary key for the stock record in Chado. If the stock
+   *   already exists and does not match the accession number or type, or it
+   *   cannot be inserted, then FALSE is returned.
    */
-  public function getStockID($germplasm_name, $accession_number, $organism_id) {
+  public function getStockId($germplasm_name, $accession_number, $organism_id) {
 
-    $accession_type_id = $this->getCVterm('accession');
+    $accession_type_id = $this->getCvterm('accession');
 
     // First query the stock table:
     // 1. Using a regular condition to ensure the organism_id is a match
-    // 2. Create an OR condition group to look for records that match germplasm name OR
-    //    the uniquename. Since the unique constraint is organism_id/uniquename/type_id,
-    //    we have to make sure this combo doesn't already exist with a different germplasm
-    //    name.
+    // 2. Create an OR condition group to look for records that match germplasm
+    //    name OR the uniquename. Since the unique constraint is
+    //    organism_id/uniquename/type_id, we have to make sure this combo
+    //    doesn't already exist with a different germplasm name.
     $query = $this->connection->select('1:stock', 's')
       ->fields('s', ['stock_id', 'name', 'uniquename', 'type_id'])
       ->condition('s.organism_id', $organism_id, '=');
@@ -499,60 +553,76 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       ->condition('s.name', $germplasm_name, '=')
       ->condition('s.uniquename', $accession_number, '=');
 
-    // Now add the OR condition group to the query
+    // Now add the OR condition group to the query.
     $query->condition($orGroup);
     $record = $query->execute()->fetchAll();
 
-    // We may have retrieved 1+ records that share the germplasm name and/or 1+ records that
-    // share the accession_number. In this case, throw an error since there's no way to
-    // enter a new record with a unique organism_id/uniquename/type_id combo in this scenario
-    if (sizeof($record) >= 2) {
+    // We may have retrieved 1+ records that share the germplasm name and/or 1+
+    // records that share the accession_number. In this case, throw an error
+    // since there's no way to enter a new record with a unique
+    // organism_id/uniquename/type_id combo in this scenario.
+    if (count($record) >= 2) {
       $stock_string_array = [];
       foreach ($record as $stock_hit) {
         $stock_string = $stock_hit->name . " (uniquename=" . $stock_hit->uniquename . "; stock_id=" . $stock_hit->stock_id . ")";
         array_push($stock_string_array, $stock_string);
       }
 
-      $this->logger->error("Found more than one stock ID for \"@germplasm_name\" and/or \"@accession\". The existing stocks are: @stock_list", ['@germplasm_name' => $germplasm_name, '@accession' => $accession_number, '@stock_list' => implode(", ", $stock_string_array)]);
+      $this->logger->error("Found more than one stock ID for \"@germplasm_name\" and/or \"@accession\". The existing stocks are: @stock_list", [
+        '@germplasm_name' => $germplasm_name,
+        '@accession' => $accession_number,
+        '@stock_list' => implode(", ", $stock_string_array),
+      ]);
       $this->error_tracker = TRUE;
-      return false;
+      return FALSE;
     }
 
-    elseif (sizeof($record) == 1) {
-      // Handle the situation where a stock record exists
-      // Here we are individually checking that our uniquename, name and type_id all match
-      // what is in the input file. This is to provide an informative error message if one
-      // of these don't match. In the future, we may want to handle each case differently.
-      // For example, some groups may want to allow the same germplasm name but a different
-      // type_id to be allowed.
-      // 1. Check the uniquename matches the accession_number column in the file
+    elseif (count($record) == 1) {
+      // Handle the situation where a stock record exists.
+      // Here we are individually checking that our uniquename, name and type_id
+      // all match what is in the input file. This is to provide an informative
+      // error message if one of these don't match. In the future, we may want
+      // to handle each case differently.
+      // For example, some groups may want to allow the same germplasm name but
+      // a different type_id to be allowed.
+      // 1. Check the uniquename matches the accession_number column in file.
       if ($accession_number != $record[0]->uniquename) {
-        $this->logger->error("A stock already exists for \"@germplasm_name\" but with an accession of \"@accession\" which does not match the input file.", ['@germplasm_name' => $germplasm_name, '@accession' => $record[0]->uniquename]);
+        $this->logger->error("A stock already exists for \"@germplasm_name\" but with an accession of \"@accession\" which does not match the input file.", [
+          '@germplasm_name' => $germplasm_name,
+          '@accession' => $record[0]->uniquename,
+        ]);
         $this->error_tracker = TRUE;
-        return false;
+        return FALSE;
       }
       // 2. Check that our germplasm name matches
       if ($germplasm_name != $record[0]->name) {
-        $this->logger->error("A stock already exists for accession \"@accession\" but with a germplasm name of \"@germplasm_name\" which does not match the input file.", ['@germplasm_name' => $record[0]->name, '@accession' => $accession_number]);
+        $this->logger->error("A stock already exists for accession \"@accession\" but with a germplasm name of \"@germplasm_name\" which does not match the input file.", [
+          '@germplasm_name' => $record[0]->name,
+          '@accession' => $accession_number,
+        ]);
         $this->error_tracker = TRUE;
-        return false;
+        return FALSE;
       }
       // 3. Check the type_id is of type accession
       if ($accession_type_id != $record[0]->type_id) {
-        $this->logger->error("A stock already exists for \"@germplasm_name\" but with a type ID of \"@type\" which is not of type \"accession\".", ['@germplasm_name' => $germplasm_name, '@type' => $accession_type_id]);
+        $this->logger->error("A stock already exists for \"@germplasm_name\" but with a type ID of \"@type\" which is not of type \"accession\".", [
+          '@germplasm_name' => $germplasm_name,
+          '@type' => $accession_type_id,
+        ]);
         $this->error_tracker = TRUE;
-        return false;
+        return FALSE;
       }
-      // Confirmed that the selected record matches what's in the upload file, so return the stock_id
+      // Confirmed that the selected record matches what's in the upload file,
+      // so return the stock_id.
       return $record[0]->stock_id;
     }
-    // Confirmed that a stock record doesn't yet exist, so now we create one
+    // Confirmed that a stock record doesn't yet exist, so now we create one.
     else {
       $values = [
         'organism_id' => $organism_id,
         'name' => $germplasm_name,
         'uniquename' => $accession_number,
-        'type_id' => $accession_type_id
+        'type_id' => $accession_type_id,
       ];
 
       $this->logger->notice("Inserting \"@germplasm_name\".", ['@germplasm_name' => $germplasm_name]);
@@ -561,21 +631,23 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
         ->fields($values)
         ->execute();
 
-      // If the primary key is available, then the insert worked and we can return it
+      // If the primary key is available, then the insert worked and we can
+      // return it.
       if ($result) {
         return $result;
       }
       else {
         $this->logger->error("Insertion of \"@germplasm_name\" failed.", ['@germplasm_name' => $germplasm_name]);
         $this->error_tracker = TRUE;
-        return false;
+        return FALSE;
       }
     }
   }
 
   /**
-   * Checks if a dbxref exists in Chado and if not, inserts it. Then, updates
-   * the stock table to include the dbxref_id. Returns the primary
+   * Checks if a dbxref exists in Chado and if not, inserts it.
+   *
+   * Then, updates the stock table to include the dbxref_id. Returns the primary
    * key in the dbxref table.
    *
    * @param string $external_database
@@ -584,10 +656,11 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
    *   The value of the primary key for the stock record in Chado.
    * @param string $accession_number
    *   A unique identifier for the germplasm accession.
+   *
    * @return int|false
    *   The value of the primary key for the dbxref record in Chado.
    */
-  public function getDbxrefID($external_database, $stock_id, $accession_number) {
+  public function getDbxrefId($external_database, $stock_id, $accession_number) {
     // -------------------------------------------------
     // Check if the external database exists in chado.db
     // If not, report an error
@@ -597,19 +670,19 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     $db_query->condition('db.name', $external_database, '=');
     $db_record = $db_query->execute()->fetchAll();
 
-    if (sizeof($db_record) >= 2) {
+    if (count($db_record) >= 2) {
       $this->logger->error("Found more than one db ID for \"@external_db\".", ['@external_db' => $external_database]);
       $this->error_tracker = TRUE;
-      return false;
+      return FALSE;
     }
 
-    elseif (sizeof($db_record) == 0) {
+    elseif (count($db_record) == 0) {
       $this->logger->error("Unable to find \"@external_db\" in chado.db.", ['@external_db' => $external_database]);
       $this->error_tracker = TRUE;
-      return false;
+      return FALSE;
     }
 
-    // Confirmed that a single record of this external database exists
+    // Confirmed that a single record of this external database exists.
     $db_id = $db_record[0]->db_id;
 
     // -------------------------------------------------
@@ -622,29 +695,29 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       ->condition('dbx.db_id', $db_id, '=');
     $dbx_record = $dbx_query->execute()->fetchAll();
 
-    if (sizeof($dbx_record) >= 2) {
+    if (count($dbx_record) >= 2) {
       $this->logger->error("Found more than one dbxref ID for \"@accession\".", ['@accession' => $accession_number]);
       $this->error_tracker = TRUE;
-      return false;
+      return FALSE;
     }
-    elseif (sizeof($dbx_record) == 1) {
+    elseif (count($dbx_record) == 1) {
       $dbxref_id = $dbx_record[0]->dbxref_id;
     }
-    // Couldn't find the dbxref_id for this accession, so insert it
+    // Couldn't find the dbxref_id for this accession, so insert it.
     else {
       $values = [
         'db_id' => $db_id,
-        'accession' => $accession_number
+        'accession' => $accession_number,
       ];
       $result = $this->connection->insert('1:dbxref')
         ->fields($values)
         ->execute();
 
-      // If the primary key is not available, then the insert failed
+      // If the primary key is not available, then the insert failed.
       if (!$result) {
         $this->logger->error("Insertion of \"@accession\" into chado.dbxref failed.", ['@accession' => $accession_number]);
         $this->error_tracker = TRUE;
-        return false;
+        return FALSE;
       }
       else {
         $dbxref_id = $result;
@@ -666,38 +739,49 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
         ->condition('stock_id', $stock_id, '=')
         ->execute();
 
-      // Since update queries return the number of rows affected, check that only one row was changed
+      // Since update queries return the number of rows affected, check that
+      // only one row was changed.
       if ($update_stock != 1) {
-        $this->logger->error("An attempt to update the dbxref_id of \"@stock\" reported that \"@number\" rows were affected.", ['@stock' => $accession_number, '@number' => $update_stock]);
+        $this->logger->error("An attempt to update the dbxref_id of \"@stock\" reported that \"@number\" rows were affected.", [
+          '@stock' => $accession_number,
+          '@number' => $update_stock,
+        ]);
         $this->error_tracker = TRUE;
-        return false;
+        return FALSE;
       }
       else {
         return $dbxref_id;
       }
     }
-    // Otherwise, the correct dbxref_id might already be set so we're good to go
+    // Otherwise, the correct dbxref_id might already be set,
+    // so we're good to go.
     elseif ($stock_record[0]->dbxref_id == $dbxref_id) {
       return $dbxref_id;
     }
-    // OR, it is something entirely different - so report an error
+    // OR, it is something entirely different - so report an error.
     else {
-      $this->logger->error("There is already a primary dbxref_id for stock ID \"@stock\" that does not match the external database and accession provided in the file (@external_db:@accession).", ['@stock' => $stock_id, '@external_db' => $external_database, '@accession' => $accession_number]);
+      $this->logger->error("There is already a primary dbxref_id for stock ID \"@stock\" that does not match the external database and accession provided in the file (@external_db:@accession).", [
+        '@stock' => $stock_id,
+        '@external_db' => $external_database,
+        '@accession' => $accession_number,
+      ]);
       $this->error_tracker = TRUE;
-      return false;
+      return FALSE;
     }
 
   }
 
   /**
    * Checks each property within an array and inserts them into chado.stockprop.
+   *
    * Returns true if the insert was successful.
    *
    * @param int $stock_id
    *   The value of the primary key for the stock record in Chado.
    * @param array $stock_properties
-   *   An array of optional properties to be attached to a stock
-   * @return boolean
+   *   An array of optional properties to be attached to a stock.
+   *
+   * @return bool
    *   Returns true if inserting all the properties was successful,
    *   including if there are no properties
    */
@@ -705,91 +789,100 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
 
     foreach ($stock_properties as $property => $prop_value) {
 
-      // Skip if the value of this property is empty
-      if (($prop_value !== '0') && empty($prop_value)) { continue; }
-      // Lookup the CV term
-      $cvterm_id = $this->getCVterm($property);
+      // Skip if the value of this property is empty.
+      if (($prop_value !== '0') && empty($prop_value)) {
+        continue;
+      }
+      // Lookup the CV term.
+      $cvterm_id = $this->getCvterm($property);
       if ($cvterm_id) {
-        // Try to lookup the stockprop_id in Chado
+        // Try to lookup the stockprop_id in Chado.
         $stockprop_query = $this->connection->select('1:stockprop', 'sp')
           ->fields('sp', ['stockprop_id', 'value', 'rank'])
           ->condition('sp.stock_id', $stock_id, '=')
           ->condition('sp.type_id', $cvterm_id, '=');
         $stockprop_record = $stockprop_query->execute()->fetchAll();
-        // If one or more record(s) exists for this stock, check if one is the same as in
-        // the file. If not, then add it but increase the rank by 1
-        if (sizeof($stockprop_record) >= 1) {
+        // If one or more record(s) exists for this stock, check if one is the
+        // same as in the file. If not, then add it but increase the rank by 1.
+        if (count($stockprop_record) >= 1) {
           $maxrank = 0;
           foreach ($stockprop_record as $record) {
-            $found = false;
+            $found = FALSE;
             if ($record->value == $prop_value) {
-              $found = true;
+              $found = TRUE;
               break;
             }
             else {
               $rank = $record->rank;
-              if ($rank > $maxrank) { $maxrank = $rank; }
+              if ($rank > $maxrank) {
+                $maxrank = $rank;
+              }
             }
           }
-          if ($found == false) {
-            // Insert this property into the stockprop table and increment the max rank by one
+          if ($found == FALSE) {
+            // Insert this property into the stockprop table and increment the
+            // max rank by one.
             $values = [
               'stock_id' => $stock_id,
               'type_id' => $cvterm_id,
               'value' => $prop_value,
-              'rank' => ++$maxrank
+              'rank' => ++$maxrank,
             ];
             $result = $this->connection->insert('1:stockprop')
               ->fields($values)
               ->execute();
 
-            // If the primary key is not available, then the insert failed
+            // If the primary key is not available, then the insert failed.
             if (!$result) {
               $this->logger->error("Insertion of stock property \"@property\" into chado.stockprop failed.", ['@property' => $property]);
               $this->error_tracker = TRUE;
-              return false;
+              return FALSE;
             }
           }
         }
 
-        // If no records exist, then insert the property as normal
+        // If no records exist, then insert the property as normal.
         else {
           $values = [
             'stock_id' => $stock_id,
             'type_id' => $cvterm_id,
-            'value' => $prop_value
+            'value' => $prop_value,
           ];
           $result = $this->connection->insert('1:stockprop')
             ->fields($values)
             ->execute();
 
-          // If the primary key is not available, then the insert failed
+          // If the primary key is not available, then the insert failed.
           if (!$result) {
             $this->logger->error("Insertion of stock property \"@property\" into chado.stockprop failed.", ['@property' => $property]);
             $this->error_tracker = TRUE;
-            return false;
+            return FALSE;
           }
         }
       }
       else {
         $this->logger->error("Unable to retrieve the cvterm_id of property \"@property\"", ['@property' => $property]);
         $this->error_tracker = TRUE;
-        return false;
+        return FALSE;
       }
     }
   }
 
   /**
-   * Loads each synonym into the chado.synonym and chado.stock_synonym
-   * tables. Returns true if the insert was successful.
+   * Loads each synonym into the chado.synonym and chado.stock_synonym tables.
+   *
+   * Returns true if the insert was successful.
    *
    * @param int $stock_id
    *   The value of the primary key for the stock record in Chado.
-   * @param string $stock_properties
+   * @param string $synonyms
    *   The name that is a synonym of the current germplasm. Multiple
    *   synonyms may be specified, in which case they are expected to
    *   be separated using a comma or semicolon.
-   * @return boolean
+   * @param int $organism_id
+   *   The primary key of the stock's organism in the organism table.
+   *
+   * @return bool
    *   Returns true if inserting all the properties was successful,
    *   including if there are no properties
    */
@@ -797,45 +890,48 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
 
     if ($synonyms) {
       // Separate out multiple synonyms if we have them by either
-      // semicolons or commas. Whitespace is optional
+      // semicolons or commas. Whitespace is optional.
       $all_synonyms = preg_split("/[;,]\s*/", $synonyms);
 
       foreach ($all_synonyms as $synonym) {
         $synonym = trim($synonym);
-        $synonym_type_id = $this->getCVterm('synonym');
+        $synonym_type_id = $this->getCvterm('synonym');
 
-        // Check for and load any synonyms to chado.synonym
+        // Check for and load any synonyms to chado.synonym.
         $synonym_query = $this->connection->select('1:synonym', 's')
           ->fields('s', ['synonym_id'])
           ->condition('s.name', $synonym, '=')
           ->condition('s.type_id', $synonym_type_id, '=');
         $synonym_ids = $synonym_query->execute()->fetchCol();
 
-        // Make sure there aren't 2 or more records for this synonym
-        if (sizeof($synonym_ids) >= 2) {
-          $this->logger->error("Found more than one synonym for \"@synonym\" in chado.synonym (synonym_ids @ids).", ['@synonym' => $synonym, '@ids' => implode(', ', $synonym_ids)]);
+        // Make sure there aren't 2 or more records for this synonym.
+        if (count($synonym_ids) >= 2) {
+          $this->logger->error("Found more than one synonym for \"@synonym\" in chado.synonym (synonym_ids @ids).", [
+            '@synonym' => $synonym,
+            '@ids' => implode(', ', $synonym_ids),
+          ]);
           $this->error_tracker = TRUE;
-          return false;
+          return FALSE;
         }
-        elseif (sizeof($synonym_ids) == 1) {
+        elseif (count($synonym_ids) == 1) {
           $synonym_id = $synonym_ids[0];
         }
-        // Can't find a synonym in the chado.synonym table, so insert it
+        // Can't find a synonym in the chado.synonym table, so insert it.
         else {
           $values = [
             'name' => $synonym,
             'type_id' => $synonym_type_id,
-            'synonym_sgml' => ''
+            'synonym_sgml' => '',
           ];
           $result = $this->connection->insert('1:synonym')
             ->fields($values)
             ->execute();
 
-          // If the primary key is not available, then the insert failed
+          // If the primary key is not available, then the insert failed.
           if (!$result) {
             $this->logger->error("Insertion of \"@synonym\" into chado.synonym failed.", ['@synonym' => $synonym]);
             $this->error_tracker = TRUE;
-            return false;
+            return FALSE;
           }
           else {
             $synonym_id = $result;
@@ -852,39 +948,46 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
         $synonym_stock_record = $synonym_stock_query->execute()->fetchAll();
 
         // Make sure there aren't 2 or more records
-        // Should not be possible due to a unique constraint
-        if (sizeof($synonym_stock_record) >= 2) {
-          $this->logger->error("Found more than one stock-synonym connection for stock ID \"@stock\" and synonym \"@synonym\" in chado.stock_synonym.", ['@stock' => $stock_id, '@synonym' => $synonym]);
+        // Should not be possible due to a unique constraint.
+        if (count($synonym_stock_record) >= 2) {
+          $this->logger->error("Found more than one stock-synonym connection for stock ID \"@stock\" and synonym \"@synonym\" in chado.stock_synonym.", [
+            '@stock' => $stock_id,
+            '@synonym' => $synonym,
+          ]);
           $this->error_tracker = TRUE;
-          return false;
+          return FALSE;
         }
-        // If 1 result was returned, just ignore it and move on
-
-        // Otherwise, create it
-        elseif (sizeof($synonym_stock_record) == 0) {
+        // If 1 result was returned, just ignore it and move on.
+        // Otherwise, create it.
+        elseif (count($synonym_stock_record) == 0) {
           $values = [
-              'synonym_id' => $synonym_id,
-              'stock_id'=> $stock_id,
-              'pub_id'=> '1', // Set to the NULL publication and hopefully someone will update it later :)
+            'synonym_id' => $synonym_id,
+            'stock_id' => $stock_id,
+          // Set to the NULL publication and hopefully someone will update it
+          // later :)
+            'pub_id' => '1',
           ];
           $result = $this->connection->insert('1:stock_synonym')
             ->fields($values)
             ->execute();
 
-          // If the primary key is not available, then the insert failed
+          // If the primary key is not available, then the insert failed.
           if (!$result) {
-            $this->logger->error("Insertion of stock ID \"@stock\" and synonym \"@synonym\" into chado.stock_synonym failed.", ['@stock' => $stock_id, '@synonym' => $synonym]);
+            $this->logger->error("Insertion of stock ID \"@stock\" and synonym \"@synonym\" into chado.stock_synonym failed.", [
+              '@stock' => $stock_id,
+              '@synonym' => $synonym,
+            ]);
             $this->error_tracker = TRUE;
-            return false;
+            return FALSE;
           }
         }
 
         // ------------------------------------------------------------------------
-        // Lastly, check if our synonym name is in the stock table. If yes, THEN create
-        // a stock_relationship to connect these 2 stocks (ie: the current stock and the
-        // stock matching the name of the synonym).
+        // Lastly, check if our synonym name is in the stock table. If yes, THEN
+        // create a stock_relationship to connect these 2 stocks (ie: the
+        // current stock and the stock matching the name of the synonym).
         // ------------------------------------------------------------------------
-        $stock_relationship_type_id = $this->getCVterm('stock_relationship_type_synonym');
+        $stock_relationship_type_id = $this->getCvterm('stock_relationship_type_synonym');
 
         $stock_query = $this->connection->select('1:stock', 'st')
           ->fields('st', ['stock_id'])
@@ -892,12 +995,13 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
           ->condition('st.organism_id', $organism_id, '=');
         $stock_record = $stock_query->execute()->fetchAll();
 
-        // Make sure there aren't 2 or more records
-        if (sizeof($stock_record) >= 2) {
+        // Make sure there aren't 2 or more records.
+        if (count($stock_record) >= 2) {
           $this->logger->notice("Found more than one match for synonym name \"@synonym\" in chado.stock.", ['@synonym' => $synonym]);
         }
-        elseif (sizeof($stock_record) == 1) {
-          // Query the stock_relationship table to see if this relationship already exists
+        elseif (count($stock_record) == 1) {
+          // Query the stock_relationship table to see if this relationship
+          // already exists.
           $stock_id_of_synonym = $stock_record[0]->stock_id;
           $stock_relationship_query = $this->connection->select('1:stock_relationship', 'str')
             ->fields('str', ['stock_relationship_id'])
@@ -905,43 +1009,52 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
             ->condition('str.object_id', $stock_id, '=')
             ->condition('type_id', $stock_relationship_type_id, '=');
           $stock_relationship_record = $stock_relationship_query->execute()->fetchAll();
-          // If 2+ relationships exist, then report an error
-          if (sizeof($stock_relationship_record) >= 2) {
-            $this->logger->error("Found more than one stock relationship for synonym name \"@synonym\" and stock ID \"@stock\" in chado.stock_relationship.", ['@synonym' => $synonym, '@stock' => $stock_id]);
+          // If 2+ relationships exist, then report an error.
+          if (count($stock_relationship_record) >= 2) {
+            $this->logger->error("Found more than one stock relationship for synonym name \"@synonym\" and stock ID \"@stock\" in chado.stock_relationship.", [
+              '@synonym' => $synonym,
+              '@stock' => $stock_id,
+            ]);
             $this->error_tracker = TRUE;
-            return false;
+            return FALSE;
           }
-          // If 1 result, carry on
-
-          // If no results, create the stock relationship
-          if (sizeof($stock_relationship_record) == 0) {
+          // If 1 result, carry on.
+          // If no results, create the stock relationship.
+          if (count($stock_relationship_record) == 0) {
             $values = [
               'subject_id' => $stock_id_of_synonym,
               'type_id' => $stock_relationship_type_id,
-              'object_id' => $stock_id
+              'object_id' => $stock_id,
             ];
             $result = $this->connection->insert('1:stock_relationship')
               ->fields($values)
               ->execute();
 
-            // If the primary key is not available, then the insert failed
+            // If the primary key is not available, then the insert failed.
             if (!$result) {
-              $this->logger->error("Insertion of stock ID \"@stock\" and stock ID of its synonym \"@sid_synonym\" into chado.stock_relationship failed.", ['@stock' => $stock_id, '@sid_synonym' => $stock_id_of_synonym]);
+              $this->logger->error("Insertion of stock ID \"@stock\" and stock ID of its synonym \"@sid_synonym\" into chado.stock_relationship failed.", [
+                '@stock' => $stock_id,
+                '@sid_synonym' => $stock_id_of_synonym,
+              ]);
               $this->error_tracker = TRUE;
-              return false;
+              return FALSE;
             }
           }
         }
         else {
-          $this->logger->notice("Synonym \"@synonym\" was not found in the stock table, so no stock_relationship was made with stock ID \"@stock\".", ['@synonym' => $synonym, '@stock' => $stock_id]);
+          $this->logger->notice("Synonym \"@synonym\" was not found in the stock table, so no stock_relationship was made with stock ID \"@stock\".", [
+            '@synonym' => $synonym,
+            '@stock' => $stock_id,
+          ]);
         }
       }
       // Cycled through all the synonyms by this point, and if false hasn't been
-      // returned, then return true
-      return true;
+      // returned, then return true.
+      return TRUE;
     }
   }
-  /*
+
+  /**
    * {@inheritdoc}
    */
   public function postRun() {
@@ -949,9 +1062,12 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
   }
 
   /**
+   * {@inheritDoc}
+   *
    * @see TripalImporter::formSubmit()
    */
   public function formSubmit($form, &$form_state) {
 
   }
+
 }
