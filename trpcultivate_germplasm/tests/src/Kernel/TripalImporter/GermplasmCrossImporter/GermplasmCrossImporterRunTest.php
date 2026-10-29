@@ -53,6 +53,13 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
   protected ChadoConnection $chado_connection;
 
   /**
+   * The config factory service.
+   *
+   * @var \Drupal\Core\Config\ConfigFactoryInterface
+   */
+  protected $config_factory;
+
+  /**
    * An instance of the organism Chado Buddy.
    *
    * @var Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoOrganismBuddy
@@ -147,6 +154,7 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
       ->getPath();
 
     $buddy_manager = $container->get('tripal_chado.chado_buddy');
+    $this->config_factory = \Drupal::configFactory();
 
     $this->importer = new GermplasmCrossImporter(
       [],
@@ -154,6 +162,7 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
       $this->definitions,
       $this->chado_connection,
       $buddy_manager,
+      $this->config_factory,
       $container->get('plugin.manager.trpcultivate_validator'),
       $container->get('trpcultivate.template_generator'),
       $container->get('entity_type.manager'),
@@ -164,8 +173,17 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
       $container->get('tripal.backend_publish'),
     );
 
-    // Insert an organism.
+    // Configure our cvterms.
     $buddy_service = \Drupal::service('tripal_chado.chado_buddy');
+    $cvterm_buddy = $buddy_service->createInstance('chado_cvterm_buddy', []);
+    $progeny_cvterm_id = $cvterm_buddy->getCvterm([
+      'cvterm.name' => 'progeny',
+      'cv.name' => 'PBO',
+      'dbxref.accession' => '0000065',
+    ]);
+    $this->importer->setCvtermId('progeny', $progeny_cvterm_id);
+
+    // Insert an organism.
     $this->organism_buddy = $buddy_service->createInstance('chado_organism_buddy', []);
     $organism_record = $this->organism_buddy->insertOrganism([
       'organism.genus' => 'Tripalus',
@@ -176,7 +194,6 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
 
     // Insert a Program ID.
     // Use a CVterm ChadoBuddy to get the cvterm_id for inserting Program IDs.
-    $cvterm_buddy = $buddy_service->createInstance('chado_cvterm_buddy', []);
     $cvterm_record = $cvterm_buddy->getCvterm([
       'cv.name' => 'rdfs',
       'cvterm.name' => 'type',
@@ -279,12 +296,12 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
       /*
       // Check that the parental relationships were inserted.
       foreach ($crosses as $cross) {
-        $cross_id = $cross->getValue('stock.stock_id');
-        $maternal_parent = $this->chado_connection->select('stock_relationship', 'sr')
-        ->fields('sr')
-        ->execute();
+      $cross_id = $cross->getValue('stock.stock_id');
+      $maternal_parent = $this->chado_connection->select('stock_relationship', 'sr')
+      ->fields('sr')
+      ->execute();
       }
-      */
+       */
     }
   }
 

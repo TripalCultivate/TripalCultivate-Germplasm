@@ -2,6 +2,7 @@
 
 namespace Drupal\trpcultivate_germplasm\Plugin\TripalImporter;
 
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManager;
 use Drupal\Core\Messenger\Messenger;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
@@ -126,6 +127,13 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
   protected ChadoBuddyPluginManager $buddy_manager;
 
   /**
+   * The service for retreiving configuration values.
+   *
+   * @var \Drupal\Core\Config\ConfigFactoryInterface
+   */
+  protected $config_factory;
+
+  /**
    * An instance of the cvterm Chado Buddy.
    *
    * @var \Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoCvtermBuddy
@@ -248,6 +256,8 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    *   The connection to the Chado database.
    * @param Drupal\tripal_chado\ChadoBuddy\PluginManagers\ChadoBuddyPluginManager $buddy_manager
    *   The ChadoBuddy plugin manager.
+   * @param Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   *   The config factory service.
    * @param Drupal\trpcultivate\TripalCultivateValidator\TripalCultivateValidatorManager $service_validatorPluginManager
    *   The TripalCultivate validator plugin manager.
    * @param Drupal\trpcultivate\Service\TripalCultivateFileTemplateService $service_FileTemplate
@@ -271,6 +281,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     mixed $plugin_definition,
     ChadoConnection $chado_connection,
     ChadoBuddyPluginManager $buddy_manager,
+    ConfigFactoryInterface $config_factory,
     TripalCultivateValidatorManager $service_validatorPluginManager,
     TripalCultivateFileTemplateService $service_FileTemplate,
     EntityTypeManager $service_entityTypeManager,
@@ -292,6 +303,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     );
     $this->chado_connection = $chado_connection;
     $this->buddy_manager = $buddy_manager;
+    $this->config_factory = $config_factory;
     $this->cvterm_buddy = $this->buddy_manager->createInstance('chado_cvterm_buddy', []);
     $this->property_buddy = $this->buddy_manager->createInstance('chado_property_buddy', []);
     $this->organism_buddy = $this->buddy_manager->createInstance('chado_organism_buddy', []);
@@ -323,6 +335,55 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       $container->get('tripal.fileretriever'),
       $container->get('tripal.backend_publish'),
     );
+  }
+
+  /**
+   * Set a cvterm with its cvterm_id.
+   *
+   * @param string $key
+   *   A key used in the config settings.yml.
+   * @param int $cvterm_id
+   *   The cvterm ID.
+   *
+   * @return true
+   *   Always returns TRUE.
+   */
+  public function setCvtermId($key, $cvterm_id) {
+    $this->cvterms[$key] = $cvterm_id;
+    return TRUE;
+  }
+
+  /**
+   * Get a cvterm ID, given a key that maps to the config settings.yml.
+   *
+   * @param string $key
+   *   The cvterm name.
+   *
+   * @return int
+   *   The cvterm ID.
+   */
+  public function getCvtermId($key) {
+    return $this->cvterms[$key];
+  }
+
+  /**
+   * Checks if our terms have been set already from the config file.
+   *
+   * This is helpful for automated test functionality where terms are
+   * set there using our setCvterm() function.
+   * If not already set, then the value of the term is set using setCvterm()
+   * here.
+   */
+  public function setUpCvterms() {
+    $germplasm_config = $this->config_factory->get('trpcultivate_germplasm.settings');
+    // Iterate through our cvterms
+    // If it hasn't been set before, set it now.
+    foreach ($this->cvterms as $term => $value) {
+      if (!isset($value)) {
+        $terms_string = 'terms.' . $term;
+        $this->setCvterm($term, $germplasm_config->get($terms_string));
+      }
+    }
   }
 
   /**
@@ -1046,6 +1107,9 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    */
   public function run() {
 
+    // Make sure our CVterms are all set.
+    $this->setUpCvterms();
+
     // Get values provided by user in the form.
     $genus = $this->arguments['run_args']['genus'];
     $program_id = $this->arguments['run_args']['program_id'];
@@ -1138,21 +1202,13 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    */
   public function insertAndRelateCross($cross_number, $genus, $species, $maternal_parent, $paternal_parent) {
 
-    $buddy_service = \Drupal::service('tripal_chado.chado_buddy');
-    $cvterm_buddy = $buddy_service->createInstance('chado_cvterm_buddy', []);
-
     // Grab our cvterm for germplasm cross as a stock type.
-    // @todo Do we want this to be configurable in the future?
-    $cross_cvterm = $cvterm_buddy->getCvterm([
-      'db.name' => 'PBO',
-      'dbxref.accession' => '0000065',
-      'cvterm.name' => 'progeny',
-    ]);
+    $cross_cvterm = $this->getCvtermId('progeny');
 
     $cross_values = [
       'stock.name' => $cross_number,
       'stock.uniquename' => $cross_number,
-      'stock.type_id' => $cross_cvterm[0]->getValue('cvterm.cvterm_id'),
+      'stock.type_id' => $cross_cvterm,
       'organism.genus' => $genus,
       'organism.species' => $species,
     ];
@@ -1161,7 +1217,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       $cross_record = $this->stock_buddy->insertStock($cross_values);
     }
     catch (\Exception $e) {
-      throw new \Exception('ERROR: Unable to insert a cross with these values:\n' . print_r($values, TRUE) . '\n');
+      throw new \Exception('ERROR: Unable to insert a cross with these values:\n' . print_r($cross_values, TRUE) . '\n');
     }
 
     // Relate the maternal parent to this cross.
@@ -1230,7 +1286,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
 
     $buddy_service = \Drupal::service('tripal_chado.chado_buddy');
     // @todo Use the ChadoPropertyBuddy when Tripal issue #2565 is resolved.
-    //$property_buddy = $buddy_service->createInstance('chado_property_buddy', []);
+    // $property_buddy = $buddy_service->createInstance('chado_property_buddy', []);
   }
 
   /**
