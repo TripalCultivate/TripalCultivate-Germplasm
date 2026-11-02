@@ -370,8 +370,8 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    * Checks if our terms have been set already from the config file.
    *
    * This is helpful for automated test functionality where terms are
-   * set there using our setCvterm() function.
-   * If not already set, then the value of the term is set using setCvterm()
+   * set there using our setCvtermId() function.
+   * If not already set, then the value of the term is set using setCvtermId()
    * here.
    */
   public function setUpCvterms() {
@@ -381,7 +381,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     foreach ($this->cvterms as $term => $value) {
       if (!isset($value)) {
         $terms_string = 'terms.' . $term;
-        $this->setCvterm($term, $germplasm_config->get($terms_string));
+        $this->setCvtermId($term, $germplasm_config->get($terms_string));
       }
     }
   }

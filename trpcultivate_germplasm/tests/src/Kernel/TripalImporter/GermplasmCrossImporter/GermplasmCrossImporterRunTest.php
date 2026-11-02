@@ -176,11 +176,12 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
     // Configure our cvterms.
     $buddy_service = \Drupal::service('tripal_chado.chado_buddy');
     $cvterm_buddy = $buddy_service->createInstance('chado_cvterm_buddy', []);
-    $progeny_cvterm_id = $cvterm_buddy->getCvterm([
+    $progeny_cvterm_record = $cvterm_buddy->getCvterm([
       'cvterm.name' => 'progeny',
       'cv.name' => 'PBO',
       'dbxref.accession' => '0000065',
     ]);
+    $progeny_cvterm_id = $progeny_cvterm_record[0]->getValue('cvterm.cvterm_id');
     $this->importer->setCvtermId('progeny', $progeny_cvterm_id);
 
     // Insert an organism.
