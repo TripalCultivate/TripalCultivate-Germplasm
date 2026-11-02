@@ -176,13 +176,45 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
     // Configure our cvterms.
     $buddy_service = \Drupal::service('tripal_chado.chado_buddy');
     $cvterm_buddy = $buddy_service->createInstance('chado_cvterm_buddy', []);
-    $progeny_cvterm_record = $cvterm_buddy->getCvterm([
-      'cvterm.name' => 'progeny',
-      'cv.name' => 'PBO',
-      'dbxref.accession' => '0000065',
-    ]);
-    $progeny_cvterm_id = $progeny_cvterm_record[0]->getValue('cvterm.cvterm_id');
-    $this->importer->setCvtermId('progeny', $progeny_cvterm_id);
+    $cvterm_values = [
+      'progeny' => [
+        'cvterm.name' => 'progeny',
+        'cv.name' => 'PBO',
+        'dbxref.accession' => '0000065',
+      ],
+      'maternal_parent' => [
+        'cvterm.name' => 'maternal parent',
+        'cv.name' => 'TRPC',
+        'dbxref.accession' => '0022',
+      ],
+      'paternal_parent' => [
+        'cvterm.name' => 'paternal parent',
+        'cv.name' => 'TRPC',
+        'dbxref.accession' => '0023',
+      ],
+      'crossing_block_year' => [
+        'cvterm.name' => 'Crossing Block Year',
+        'cv.name' => 'TRPC',
+        'dbxref.accession' => '0047',
+      ],
+      'crossing_block_season' => [
+        'cvterm.name' => 'Crossing Block Season',
+        'cv.name' => 'TRPC',
+        'dbxref.accession' => '0046',
+      ],
+      'cross_type' => [
+        'cvterm.name' => 'additionalType',
+        'cv.name' => 'schema',
+        'dbxref.accession' => 'additionalType',
+      ],
+    ];
+    foreach ($cvterm_values as $cvterm => $values) {
+      //print("Setting cvterm $cvterm\n");
+      $cvterm_record = $cvterm_buddy->getCVterm($values);
+      //print_r($cvterm_record);
+      $cvterm_id = $cvterm_record[0]->getValue('cvterm.cvterm_id');
+      $this->importer->setCvtermId($cvterm, $cvterm_id);
+    }
 
     // Insert an organism.
     $this->organism_buddy = $buddy_service->createInstance('chado_organism_buddy', []);
@@ -223,14 +255,6 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
     $this->assertIsNumeric($dbprop_id,
           'We were not able to create the dbprop record for program "' . $program_name . '" for testing.');
 
-    // Grab the additionalType cvterm for use in the cross type of the parents.
-    $additionalType_cvterm = $cvterm_buddy->getCvterm([
-      'cvterm.name' => 'additionalType',
-      'cv.name' => 'schema',
-      'dbxref.accession' => 'additionalType',
-    ]);
-    $additionalType_cvterm_id = $additionalType_cvterm[0]->getValue('cvterm.cvterm_id');
-
     // Insert the parent stocks.
     $this->stock_buddy = $buddy_service->createInstance('chado_stock_buddy', []);
     $parental_stocks = ['121S', '122S', '124S'];
@@ -251,7 +275,7 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
       $this->chado_connection->insert('1:stockprop')
         ->fields([
           'stock_id' => $parental_stock->getValue('stock.stock_id'),
-          'type_id' => $additionalType_cvterm_id,
+          'type_id' => $this->importer->getCvtermId('cross_type'),
           'value' => 'single',
         ])
         ->execute();

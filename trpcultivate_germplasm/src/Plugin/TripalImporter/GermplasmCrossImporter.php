@@ -1230,9 +1230,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     ];
 
     $maternal_relationship_values = [
-      'cvterm.name' => 'is_maternal_parent_of',
-      'cv.name' => 'stock_relationship',
-      'dbxref.accession' => 'is_maternal_parent_of',
+      'cvterm.cvterm_id' => $this->getCvtermId('maternal_parent'),
     ];
 
     // If the maternal parent cannot be found, an error will be thrown.
@@ -1249,9 +1247,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     ];
 
     $paternal_relationship_values = [
-      'cvterm.name' => 'is_paternal_parent_of',
-      'cv.name' => 'stock_relationship',
-      'dbxref.accession' => 'is_paternal_parent_of',
+      'cvterm.cvterm_id' => $this->getCvtermId('paternal_parent'),
     ];
 
     // If the paternal parent cannot be found, an error will be thrown.
