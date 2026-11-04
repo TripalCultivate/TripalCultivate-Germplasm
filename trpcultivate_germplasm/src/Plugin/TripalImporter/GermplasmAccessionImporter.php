@@ -199,8 +199,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       'Germplasm Name' => 'Name of this germplasm accession (e.g. CDC Redberry)',
       'External Database' => 'The institution who assigned the accession. (e.g. KnowPulse Germplasm)',
       'Accession Number' => 'A unique identifier for the accession (e.g. KP:GERM58)',
-      'Germplasm Species' => 'The species of the accession (e.g. culinaris)',
-      'Germplasm Subtaxa' => 'The rank below species is specified first, followed by the name (e.g. var. medullare)',
+      'Scientific Name' => 'The scientific name of the organism associated with the accession (A combination of Genus + Species + Infraspecific type + Infraspecific name)',
       'Institute Code' => 'The code for the Institute that bred the material (e.g. CUAC)',
       'Institute Name' => 'The name of the Institute that bred the material (e.g. "Crop Development Center, University of Saskatchewan")',
       'Country of Origin Code' => '3-letter ISO 3166-1 code of the country in which the sample was originally sourced (e.g. 124)',
@@ -210,7 +209,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       'Synonyms' => 'Any synonyms of the accession, separated by a comma. (e.g. Redberry)',
     ];
 
-    $required_col = ['Germplasm Name', 'External Database', 'Accession Number', 'Germplasm Species'];
+    $required_col = ['Germplasm Name', 'External Database', 'Accession Number', 'Scientific Name'];
     // @todo Make this red, but Drupal makes it difficult :)
     $required_markup = '*';
 
@@ -420,17 +419,29 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       $germplasm_name = $germplasm_columns[0];
       $external_database = $germplasm_columns[1];
       $accession_number = $germplasm_columns[2];
-      $germplasm_species = $germplasm_columns[3];
-      $germplasm_subtaxa = $germplasm_columns[4] ?? '';
+      $scientific_name = $germplasm_columns[3];
       $stock_properties = [
-        'institute_code' => $germplasm_columns[5] ?? '',
-        'institute_name' => $germplasm_columns[6] ?? '',
-        'country_of_origin_code' => $germplasm_columns[7] ?? '',
-        'biological_status_of_accession_code' => $germplasm_columns[8] ?? '',
-        'breeding_method_DbId' => $germplasm_columns[9] ?? '',
-        'pedigree' => $germplasm_columns[10] ?? '',
+        'institute_code' => $germplasm_columns[4] ?? '',
+        'institute_name' => $germplasm_columns[5] ?? '',
+        'country_of_origin_code' => $germplasm_columns[6] ?? '',
+        'biological_status_of_accession_code' => $germplasm_columns[7] ?? '',
+        'breeding_method_DbId' => $germplasm_columns[8] ?? '',
+        'pedigree' => $germplasm_columns[9] ?? '',
       ];
-      $synonyms = $germplasm_columns[11] ?? '';
+      $synonyms = $germplasm_columns[10] ?? '';
+
+      $genus_from_file = explode(' ', $scientific_name)[0];
+      if ($genus_from_file != $genus_name) {
+        $this->logger->error("The genus \"@genus_from_file\" from the scientific name \"@scientific_name\" does not match the selected genus \"@genus_name\".", [
+          '@genus_from_file' => $genus_from_file,
+          '@scientific_name' => $scientific_name,
+          '@genus_name' => $genus_name,
+        ]);
+        $this->error_tracker = TRUE;
+        // Continue to next line since we already know this will cascade into
+        // further errors.
+        continue;
+      }
 
       // Here we are calling 5 separate functions to check for and insert
       // various parts of the input file. Everything is wrapped in a try-catch
@@ -439,7 +450,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       // not committed to the database.
       try {
         // STEP 1: Pull out the organism ID for the current germplasm.
-        $organism_id = $this->getOrganismId($genus_name, $germplasm_species, $germplasm_subtaxa);
+        $organism_id = $this->getOrganismId($scientific_name);
 
         // STEP 2: Check/Insert this germplasm into the Chado stock table.
         if ($organism_id) {
@@ -481,35 +492,25 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
    * Otherwise throws an error if the organism does not exist or there
    * are multiple matches.
    *
-   * @param string $genus_name
-   *   The genus of the organism.
-   * @param string $germplasm_species
-   *   The species of the organism.
-   * @param string $germplasm_subtaxa
-   *   Optional. Must consist of two strings, one of the subtaxon type
-   *   followed by the name. For example: "subspecies chadoii".
+   * @param string $scientific_name
+   *   The scientific name of the organism.
    *
    * @return int|false
    *   The value of the primary key for the organism record in Chado.
    *   If no single primary key can be retrieved, then FALSE is returned.
    */
-  public function getOrganismId($genus_name, $germplasm_species, $germplasm_subtaxa) {
-
-    $organism_name = $genus_name . ' ' . $germplasm_species;
-    if ($germplasm_subtaxa) {
-      $organism_name = $organism_name . ' ' . $germplasm_subtaxa;
-    }
-    $organism_array = $this->organism_buddy->getOrganismFromScientificName($organism_name);
+  public function getOrganismId($scientific_name) {
+    $organism_array = $this->organism_buddy->getOrganismFromScientificName($scientific_name);
 
     if (!$organism_array) {
-      $this->logger->error("Could not find an organism \"@organism_name\" in the database.", ['@organism_name' => $organism_name]);
+      $this->logger->error("Could not find an organism \"@organism_name\" in the database.", ['@organism_name' => $scientific_name]);
       $this->error_tracker = TRUE;
       return FALSE;
     }
     // We also want to check if we were given only one value back, as there is
     // potential to retrieve multiple organism IDs.
     if (is_array($organism_array) && (count($organism_array) > 1)) {
-      $this->logger->error("Found more than one organism ID for \"@organism_name\" when only 1 was expected.", ['@organism_name' => $organism_name]);
+      $this->logger->error("Found more than one organism ID for \"@organism_name\" when only 1 was expected.", ['@organism_name' => $scientific_name]);
       $this->error_tracker = TRUE;
       return FALSE;
     }
