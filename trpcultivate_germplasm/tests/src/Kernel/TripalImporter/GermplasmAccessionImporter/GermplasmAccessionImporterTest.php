@@ -218,12 +218,12 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
       ])
       ->execute();
 
-    $grabbed_organism_id = $this->importer->getOrganismId('Tripalus', 'databasica', 'subspecies chadoii');
+    $grabbed_organism_id = $this->importer->getOrganismId('Tripalus databasica subspecies chadoii');
     $this->assertEquals($grabbed_organism_id, $organism_id, "The organism ID grabbed by the importer does not match the one that was inserted into the database.");
 
     // Try an organism that does not currently exist.
     ob_start();
-    $this->importer->getOrganismId('Nullus', 'organismus', '');
+    $this->importer->getOrganismId('Nullus organismus');
     $printed_output = ob_get_clean();
     $this->assertEquals('Could not find an organism "Nullus organismus" in the database.', $printed_output,
       "Did not get the expected error message when testing for a non-existant organism.");
