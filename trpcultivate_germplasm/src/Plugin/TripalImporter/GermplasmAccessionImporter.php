@@ -2,6 +2,7 @@
 
 namespace Drupal\trpcultivate_germplasm\Plugin\TripalImporter;
 
+use Drupal\Core\Render\Renderer;
 use Drupal\tripal_chado\TripalImporter\ChadoImporterBase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\tripal_chado\Database\ChadoConnection;
@@ -15,6 +16,7 @@ use Drupal\tripal\TripalBackendPublish\PluginManager\TripalBackendPublishManager
 use Drupal\tripal\TripalImporter\Attribute\TripalImporter;
 use Drupal\tripal_chado\ChadoBuddy\PluginManagers\ChadoBuddyPluginManager;
 use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoOrganismBuddy;
+use Drupal\trpcultivate\Service\TripalCultivateFileTemplateService;
 
 /**
  * Tripal Importer plugin for importing germplasm accessions into Chado.
@@ -37,6 +39,85 @@ use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoOrganismBuddy;
 class GermplasmAccessionImporter extends ChadoImporterBase {
 
   use StringTranslationTrait;
+
+  /**
+   * Headers required by this importer.
+   *
+   * @var array
+   *
+   * The following keys are required:
+   * - 'name': The column header name as it should appear in the input file.
+   * - 'description': A user-friendly description of the header that will be
+   *   displayed to the user through the form.
+   * - 'type': one of "required" or "optional" to indicate whether the column
+   *   needs to have values present or not.
+   *
+   * NOTE: Order MUST reflect the desired order of headers in the input file.
+   */
+  protected array $headers = [
+    [
+      'name' => 'Germplasm Name',
+      'description' => 'Name of this germplasm accession (e.g. CDC Redberry)',
+      'type' => 'required',
+    ],
+    [
+      'name' => 'External Database',
+      'description' => 'The institution who assigned the accession. (e.g. KnowPulse Germplasm)',
+      'type' => 'required',
+    ],
+    [
+      'name' => 'Accession Number',
+      'description' => 'A unique identifier for the accession (e.g. KP:GERM58)',
+      'type' => 'required',
+    ],
+    [
+      'name' => 'Scientific Name',
+      'description' => 'The scientific name of the organism associated with the accession (A combination of Genus + Species + Infraspecific type + Infraspecific name)',
+      'type' => 'required',
+    ],
+    [
+      'name' => 'Institute Code',
+      'description' => 'The code for the Institute that bred the material (e.g. CUAC)',
+      'type' => 'optional',
+    ],
+    [
+      'name' => 'Institute Name',
+      'description' => 'The name of the Institute that bred the material (e.g. "Crop Development Center, University of Saskatchewan")',
+      'type' => 'optional',
+    ],
+    [
+      'name' => 'Country of Origin Code',
+      'description' => '3-letter ISO 3166-1 code of the country in which the sample was originally sourced (e.g. 124)',
+      'type' => 'optional',
+    ],
+    [
+      'name' => 'Biological Status of Accession',
+      'description' => 'The 3 digit code representing the biological status of the accession (e.g. 410)',
+      'type' => 'optional',
+    ],
+    [
+      'name' => 'Breeding Method',
+      'description' => 'The unique identifier for the breeding method used to create this germplasm (e.g. "Recurrent selection")',
+      'type' => 'optional',
+    ],
+    [
+      'name' => 'Pedigree',
+      'description' => 'The cross name and optional selection history (e.g. 1049F^3/819-5R)',
+      'type' => 'optional',
+    ],
+    [
+      'name' => 'Synonyms',
+      'description' => 'Any synonyms of the accession, separated by a comma. (e.g. Redberry)',
+      'type' => 'optional',
+    ],
+  ];
+
+  /**
+   * A Database query interface for querying Chado using Tripal DBX.
+   *
+   * @var Drupal\tripal_chado\Database\ChadoConnection
+   */
+  protected ChadoConnection $chado_connection;
 
   /**
    * Used to track whether an error is logged during the import process.
@@ -69,21 +150,35 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
   protected ChadoOrganismBuddy $organism_buddy;
 
   /**
+   * The Drupal Renderer.
+   *
+   * @var \Drupal\Core\Render\Renderer
+   */
+  protected Renderer $service_Renderer;
+
+  /**
+   * The TripalCultivate File Template Service.
+   *
+   * @var \Drupal\trpcultivate\Service\TripalCultivateFileTemplateService
+   */
+  protected TripalCultivateFileTemplateService $service_FileTemplate;
+
+  /**
    * An associative array of cvterms as the key and the cvterm_id as the value.
    *
    * @var array
    */
   protected $cvterms = [
-    'accession',
-    'subtaxa',
-    'institute_code',
-    'institute_name',
-    'country_of_origin_code',
-    'biological_status_of_accession_code',
-    'breeding_method_DbId',
-    'pedigree',
-    'synonym',
-    'stock_relationship_type_synonym',
+    'accession' => NULL,
+    'subtaxa' => NULL,
+    'institute_code' => NULL,
+    'institute_name' => NULL,
+    'country_of_origin_code' => NULL,
+    'biological_status_of_accession_code' => NULL,
+    'breeding_method_DbId' => NULL,
+    'pedigree' => NULL,
+    'synonym' => NULL,
+    'stock_relationship_type_synonym' => NULL,
   ];
 
   /**
@@ -117,6 +212,8 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       $container->get('tripal_chado.database'),
       $container->get('tripal_chado.chado_buddy'),
       $container->get('config.factory'),
+      $container->get('trpcultivate.template_generator'),
+      $container->get('renderer'),
       $container->get('messenger'),
       $container->get('tripal.logger'),
       $container->get('tripal.fileretriever'),
@@ -141,12 +238,16 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
    *   The plugin_id for the plugin instance.
    * @param mixed $plugin_definition
    *   The plugin implementation definition.
-   * @param Drupal\tripal_chado\Database\ChadoConnection $connection
+   * @param Drupal\tripal_chado\Database\ChadoConnection $chado_connection
    *   The Chado database connection service.
    * @param Drupal\tripal_chado\ChadoBuddy\PluginManagers\ChadoBuddyPluginManager $buddy_manager
    *   The ChadoBuddy plugin manager.
    * @param Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The config factory service.
+   * @param Drupal\trpcultivate\Service\TripalCultivateFileTemplateService $service_FileTemplate
+   *   The service used to generate the termplate file.
+   * @param Drupal\Core\Render\Renderer $renderer
+   *   The Drupal renderer service.
    * @param Drupal\Core\Messenger\Messenger $messenger
    *   The messenger service.
    * @param Drupal\tripal\Services\TripalLogger $logger
@@ -160,9 +261,11 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     array $configuration,
     $plugin_id,
     $plugin_definition,
-    ChadoConnection $connection,
+    ChadoConnection $chado_connection,
     ChadoBuddyPluginManager $buddy_manager,
     ConfigFactoryInterface $config_factory,
+    TripalCultivateFileTemplateService $service_FileTemplate,
+    Renderer $renderer,
     Messenger $messenger,
     TripalLogger $logger,
     TripalFileRetriever $fileretriever,
@@ -172,60 +275,87 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       $configuration,
       $plugin_id,
       $plugin_definition,
-      $connection,
+      $chado_connection,
       $messenger,
       $logger,
       $fileretriever,
       $publish_manager,
     );
-
+    $this->chado_connection = $chado_connection;
     $this->config_factory = $config_factory;
     $this->buddy_manager = $buddy_manager;
     $this->organism_buddy = $this->buddy_manager->createInstance('chado_organism_buddy', []);
+    $this->service_FileTemplate = $service_FileTemplate;
+    $this->service_Renderer = $renderer;
   }
 
   /**
-   * {@inheritDoc}
+   * Describe the upload format including column descriptions + template file.
+   *
+   * Class TripalImporterBase is the parent class of this method and additional
+   * documentation is available in reference link below.
+   *
+   * NOTE: This method supports full HTML markup output.
+   *
+   * All relevant information relating to expected column headers and usage
+   * notes are laid out using the theme 'importer_header'. This is rendered
+   * using the referenced TWIG file below.
+   *
+   * A template geneartor service is utilized to provide a downloadable file
+   * template, pre-configured to contain all headers required. The link to
+   * this template file is also formatted using the theme 'importer_header'.
+   *
+   * @return string
+   *   The fully rendered HTML string produced by the 'importer_header' theme
+   *   with the pertinent variables supplied by this method.
+   *
+   * @see Drupal\tripal\TripalImporter\TripalImporterBase::describeUploadFileFormat()
+   * @see templates\trpcultivate-phenotypes-template-importer-header.html.twig
    */
   public function describeUploadFileFormat() {
+    // A template file has been generated and is ready for download.
+    $importer_id = $this->plugin_definition['id'];
 
-    $file_types = $this->plugin_definition['file_types'];
+    // Only the header names are needed for making the template file, so pull
+    // them out into a new array.
+    $column_headers = array_column($this->headers, 'name');
 
-    $output = "The input file should be a tab separated file (<b>" . implode(', ', $file_types) . "</b>) with the following columns. ";
-    $output .= "For more detailed information on this format including links to lookup various codes, please see ";
-    $output .= '<a href="https://tripalcultivate.github.io/docs/docs/curation/germplasm-data/germplasm-accessions-importer">the official documentation</a>.';
+    // File types 'file_types' annotation definition of this importer.
+    // The first item in the definition list will be used as the primary
+    // file extension of the template file.
+    // File MIME type and delimiter are based on mapping information defined
+    // in the validator base and file types validator trait.
+    $file_extensions = $this->plugin_definition['file_types'];
 
-    $columns = [
-      'Germplasm Name' => 'Name of this germplasm accession (e.g. CDC Redberry)',
-      'External Database' => 'The institution who assigned the accession. (e.g. KnowPulse Germplasm)',
-      'Accession Number' => 'A unique identifier for the accession (e.g. KP:GERM58)',
-      'Germplasm Species' => 'The species of the accession (e.g. culinaris)',
-      'Germplasm Subtaxa' => 'The rank below species is specified first, followed by the name (e.g. var. medullare)',
-      'Institute Code' => 'The code for the Institute that bred the material (e.g. CUAC)',
-      'Institute Name' => 'The name of the Institute that bred the material (e.g. "Crop Development Center, University of Saskatchewan")',
-      'Country of Origin Code' => '3-letter ISO 3166-1 code of the country in which the sample was originally sourced (e.g. 124)',
-      'Biological Status of Accession' => 'The 3 digit code representing the biological status of the accession (e.g. 410)',
-      'Breeding Method' => 'The unique identifier for the breeding method used to create this germplasm (e.g. "Recurrent selection")',
-      'Pedigree' => 'The cross name and optional selection history (e.g. 1049F^3/819-5R)',
-      'Synonyms' => 'Any synonyms of the accession, separated by a comma. (e.g. Redberry)',
+    $file_link = $this->service_FileTemplate
+      ->generateFile($importer_id, $column_headers, $file_extensions);
+
+    // Additional notes to the headers.
+    $notes = [
+      '#theme' => 'item_list',
+      '#items' => [
+        $this->t('Your file includes a header row.'),
+        $this->t('The order/spelling of your columns matches the above list.'),
+        $this->t('For all required columns, each row contains a value.'),
+      ],
+      '#attributes' => ['class' => ['importer-notes-list']],
     ];
 
-    $required_col = ['Germplasm Name', 'External Database', 'Accession Number', 'Germplasm Species'];
-    // @todo Make this red, but Drupal makes it difficult :)
-    $required_markup = '*';
+    // Render the header and notes/lists in a template and use the file link as
+    // the value to href attribute of the link to download a template file.
+    $supported_file_extensions = implode(', ', $file_extensions);
 
-    $output .= '<ol>';
-    foreach ($columns as $title => $definition) {
-      if (in_array($title, $required_col)) {
-        $output .= '<li><b>' . $title . $required_markup . '</b>: ' . $definition . '</li>';
-      }
-      else {
-        $output .= '<li><b>' . $title . '</b>: ' . $definition . '</li>';
-      }
-    }
-    $output .= '</ol>';
+    $build = [
+      '#theme' => 'describe_header_window',
+      '#data' => [
+        'headers' => $this->headers,
+        'file_extensions' => $supported_file_extensions,
+        'notes' => $notes,
+        'template_file' => $file_link,
+      ],
+    ];
 
-    return $output;
+    return $this->service_Renderer->renderInIsolation($build);
   }
 
   /**
@@ -264,7 +394,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     $form = parent::form($form, $form_state);
 
     // Select the entire genus field and make sure it is sorted and distinct.
-    $genus_query = $this->connection->select('1:organism', 'o')
+    $genus_query = $this->chado_connection->select('1:organism', 'o')
       ->fields('o', ['genus'])
       ->orderBy('genus')
       ->distinct();
@@ -348,7 +478,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     $this->setUpCvterms();
 
     // Check if the stock_synonym table exists before moving forward.
-    if (!$this->connection->schema()->tableExists('stock_synonym')) {
+    if (!$this->chado_connection->schema()->tableExists('stock_synonym')) {
       throw new \Exception(
         "Could not find stock_synonym table in the current database schema."
       );
@@ -420,17 +550,29 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       $germplasm_name = $germplasm_columns[0];
       $external_database = $germplasm_columns[1];
       $accession_number = $germplasm_columns[2];
-      $germplasm_species = $germplasm_columns[3];
-      $germplasm_subtaxa = $germplasm_columns[4] ?? '';
+      $scientific_name = $germplasm_columns[3];
       $stock_properties = [
-        'institute_code' => $germplasm_columns[5] ?? '',
-        'institute_name' => $germplasm_columns[6] ?? '',
-        'country_of_origin_code' => $germplasm_columns[7] ?? '',
-        'biological_status_of_accession_code' => $germplasm_columns[8] ?? '',
-        'breeding_method_DbId' => $germplasm_columns[9] ?? '',
-        'pedigree' => $germplasm_columns[10] ?? '',
+        'institute_code' => $germplasm_columns[4] ?? '',
+        'institute_name' => $germplasm_columns[5] ?? '',
+        'country_of_origin_code' => $germplasm_columns[6] ?? '',
+        'biological_status_of_accession_code' => $germplasm_columns[7] ?? '',
+        'breeding_method_DbId' => $germplasm_columns[8] ?? '',
+        'pedigree' => $germplasm_columns[9] ?? '',
       ];
-      $synonyms = $germplasm_columns[11] ?? '';
+      $synonyms = $germplasm_columns[10] ?? '';
+
+      $genus_from_file = explode(' ', $scientific_name)[0];
+      if ($genus_from_file != $genus_name) {
+        $this->logger->error("The genus \"@genus_from_file\" from the scientific name \"@scientific_name\" does not match the selected genus \"@genus_name\".", [
+          '@genus_from_file' => $genus_from_file,
+          '@scientific_name' => $scientific_name,
+          '@genus_name' => $genus_name,
+        ]);
+        $this->error_tracker = TRUE;
+        // Continue to next line since we already know this will cascade into
+        // further errors.
+        continue;
+      }
 
       // Here we are calling 5 separate functions to check for and insert
       // various parts of the input file. Everything is wrapped in a try-catch
@@ -439,7 +581,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       // not committed to the database.
       try {
         // STEP 1: Pull out the organism ID for the current germplasm.
-        $organism_id = $this->getOrganismId($genus_name, $germplasm_species, $germplasm_subtaxa);
+        $organism_id = $this->getOrganismId($scientific_name);
 
         // STEP 2: Check/Insert this germplasm into the Chado stock table.
         if ($organism_id) {
@@ -481,35 +623,25 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
    * Otherwise throws an error if the organism does not exist or there
    * are multiple matches.
    *
-   * @param string $genus_name
-   *   The genus of the organism.
-   * @param string $germplasm_species
-   *   The species of the organism.
-   * @param string $germplasm_subtaxa
-   *   Optional. Must consist of two strings, one of the subtaxon type
-   *   followed by the name. For example: "subspecies chadoii".
+   * @param string $scientific_name
+   *   The scientific name of the organism.
    *
    * @return int|false
    *   The value of the primary key for the organism record in Chado.
    *   If no single primary key can be retrieved, then FALSE is returned.
    */
-  public function getOrganismId($genus_name, $germplasm_species, $germplasm_subtaxa) {
-
-    $organism_name = $genus_name . ' ' . $germplasm_species;
-    if ($germplasm_subtaxa) {
-      $organism_name = $organism_name . ' ' . $germplasm_subtaxa;
-    }
-    $organism_array = $this->organism_buddy->getOrganismFromScientificName($organism_name);
+  public function getOrganismId($scientific_name) {
+    $organism_array = $this->organism_buddy->getOrganismFromScientificName($scientific_name);
 
     if (!$organism_array) {
-      $this->logger->error("Could not find an organism \"@organism_name\" in the database.", ['@organism_name' => $organism_name]);
+      $this->logger->error("Could not find an organism \"@organism_name\" in the database.", ['@organism_name' => $scientific_name]);
       $this->error_tracker = TRUE;
       return FALSE;
     }
     // We also want to check if we were given only one value back, as there is
     // potential to retrieve multiple organism IDs.
     if (is_array($organism_array) && (count($organism_array) > 1)) {
-      $this->logger->error("Found more than one organism ID for \"@organism_name\" when only 1 was expected.", ['@organism_name' => $organism_name]);
+      $this->logger->error("Found more than one organism ID for \"@organism_name\" when only 1 was expected.", ['@organism_name' => $scientific_name]);
       $this->error_tracker = TRUE;
       return FALSE;
     }
@@ -545,7 +677,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     //    name OR the uniquename. Since the unique constraint is
     //    organism_id/uniquename/type_id, we have to make sure this combo
     //    doesn't already exist with a different germplasm name.
-    $query = $this->connection->select('1:stock', 's')
+    $query = $this->chado_connection->select('1:stock', 's')
       ->fields('s', ['stock_id', 'name', 'uniquename', 'type_id'])
       ->condition('s.organism_id', $organism_id, '=');
 
@@ -627,7 +759,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
 
       $this->logger->notice("Inserting \"@germplasm_name\".", ['@germplasm_name' => $germplasm_name]);
 
-      $result = $this->connection->insert('1:stock')
+      $result = $this->chado_connection->insert('1:stock')
         ->fields($values)
         ->execute();
 
@@ -665,7 +797,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     // Check if the external database exists in chado.db
     // If not, report an error
     // -------------------------------------------------
-    $db_query = $this->connection->select('1:db', 'db')
+    $db_query = $this->chado_connection->select('1:db', 'db')
       ->fields('db', ['db_id']);
     $db_query->condition('db.name', $external_database, '=');
     $db_record = $db_query->execute()->fetchAll();
@@ -689,7 +821,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     // Check if the dbxref for this stock already exists
     // If not, insert it
     // -------------------------------------------------
-    $dbx_query = $this->connection->select('1:dbxref', 'dbx')
+    $dbx_query = $this->chado_connection->select('1:dbxref', 'dbx')
       ->fields('dbx', ['dbxref_id']);
     $dbx_query->condition('dbx.accession', $accession_number, '=')
       ->condition('dbx.db_id', $db_id, '=');
@@ -709,7 +841,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
         'db_id' => $db_id,
         'accession' => $accession_number,
       ];
-      $result = $this->connection->insert('1:dbxref')
+      $result = $this->chado_connection->insert('1:dbxref')
         ->fields($values)
         ->execute();
 
@@ -728,13 +860,13 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     // Update the stock table to include the dbxref_id
     // After making sure a different one doesn't already exist (throw an error)
     // ------------------------------------------------------------------------
-    $stock_query = $this->connection->select('1:stock', 's')
+    $stock_query = $this->chado_connection->select('1:stock', 's')
       ->fields('s', ['dbxref_id']);
     $stock_query->condition('s.stock_id', $stock_id, '=');
     $stock_record = $stock_query->execute()->fetchAll();
 
     if ($stock_record[0]->dbxref_id == "") {
-      $update_stock = $this->connection->update('1:stock')
+      $update_stock = $this->chado_connection->update('1:stock')
         ->fields(['dbxref_id' => $dbxref_id])
         ->condition('stock_id', $stock_id, '=')
         ->execute();
@@ -797,7 +929,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       $cvterm_id = $this->getCvterm($property);
       if ($cvterm_id) {
         // Try to lookup the stockprop_id in Chado.
-        $stockprop_query = $this->connection->select('1:stockprop', 'sp')
+        $stockprop_query = $this->chado_connection->select('1:stockprop', 'sp')
           ->fields('sp', ['stockprop_id', 'value', 'rank'])
           ->condition('sp.stock_id', $stock_id, '=')
           ->condition('sp.type_id', $cvterm_id, '=');
@@ -828,7 +960,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
               'value' => $prop_value,
               'rank' => ++$maxrank,
             ];
-            $result = $this->connection->insert('1:stockprop')
+            $result = $this->chado_connection->insert('1:stockprop')
               ->fields($values)
               ->execute();
 
@@ -848,7 +980,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
             'type_id' => $cvterm_id,
             'value' => $prop_value,
           ];
-          $result = $this->connection->insert('1:stockprop')
+          $result = $this->chado_connection->insert('1:stockprop')
             ->fields($values)
             ->execute();
 
@@ -898,7 +1030,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
         $synonym_type_id = $this->getCvterm('synonym');
 
         // Check for and load any synonyms to chado.synonym.
-        $synonym_query = $this->connection->select('1:synonym', 's')
+        $synonym_query = $this->chado_connection->select('1:synonym', 's')
           ->fields('s', ['synonym_id'])
           ->condition('s.name', $synonym, '=')
           ->condition('s.type_id', $synonym_type_id, '=');
@@ -923,7 +1055,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
             'type_id' => $synonym_type_id,
             'synonym_sgml' => '',
           ];
-          $result = $this->connection->insert('1:synonym')
+          $result = $this->chado_connection->insert('1:synonym')
             ->fields($values)
             ->execute();
 
@@ -941,7 +1073,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
         // Create a synonym-stock connection via chado.stock_synonym
         // ------------------------------------------------------------------------
         // First check if this stock-synonym connection already exists
-        $synonym_stock_query = $this->connection->select('1:stock_synonym', 'ss')
+        $synonym_stock_query = $this->chado_connection->select('1:stock_synonym', 'ss')
           ->fields('ss', ['stock_synonym_id'])
           ->condition('ss.synonym_id', $synonym_id, '=')
           ->condition('ss.stock_id', $stock_id, '=');
@@ -967,7 +1099,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
           // later :)
             'pub_id' => '1',
           ];
-          $result = $this->connection->insert('1:stock_synonym')
+          $result = $this->chado_connection->insert('1:stock_synonym')
             ->fields($values)
             ->execute();
 
@@ -989,7 +1121,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
         // ------------------------------------------------------------------------
         $stock_relationship_type_id = $this->getCvterm('stock_relationship_type_synonym');
 
-        $stock_query = $this->connection->select('1:stock', 'st')
+        $stock_query = $this->chado_connection->select('1:stock', 'st')
           ->fields('st', ['stock_id'])
           ->condition('st.name', $synonym, '=')
           ->condition('st.organism_id', $organism_id, '=');
@@ -1003,7 +1135,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
           // Query the stock_relationship table to see if this relationship
           // already exists.
           $stock_id_of_synonym = $stock_record[0]->stock_id;
-          $stock_relationship_query = $this->connection->select('1:stock_relationship', 'str')
+          $stock_relationship_query = $this->chado_connection->select('1:stock_relationship', 'str')
             ->fields('str', ['stock_relationship_id'])
             ->condition('str.subject_id', $stock_id_of_synonym, '=')
             ->condition('str.object_id', $stock_id, '=')
@@ -1026,7 +1158,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
               'type_id' => $stock_relationship_type_id,
               'object_id' => $stock_id,
             ];
-            $result = $this->connection->insert('1:stock_relationship')
+            $result = $this->chado_connection->insert('1:stock_relationship')
               ->fields($values)
               ->execute();
 

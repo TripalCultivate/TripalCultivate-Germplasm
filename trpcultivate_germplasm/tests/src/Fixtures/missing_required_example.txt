@@ -3,6 +3,6 @@
 # header
 # lines
 
-Germplasm Name  External Database Accession Number  Germplasm Species Germplasm Subtaxa Institute Code  Institute Name  Country of Origin Code  Biological Status of Accession  Breeding Method Pedigree  Synonyms
-Test4		T4	databasica	subspecies chadoii
+Germplasm Name  External Database Accession Number  Scientific Name Institute Code  Institute Name  Country of Origin Code  Biological Status of Accession  Breeding Method Pedigree  Synonyms
+Test4		T4	Tripalus databasica subspecies chadoii
 Test3	TestDB

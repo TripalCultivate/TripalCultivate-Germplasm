@@ -37,6 +37,7 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     'file',
     'tripal',
     'tripal_chado',
+    'trpcultivate',
     'trpcultivate_germplasm',
   ];
 
@@ -151,6 +152,8 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
       $this->connection,
       $container->get('tripal_chado.chado_buddy'),
       $this->config_factory,
+      $container->get('trpcultivate.template_generator'),
+      $container->get('renderer'),
       $container->get('messenger'),
       $container->get('tripal.logger'),
       $container->get('tripal.fileretriever'),
@@ -413,7 +416,7 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
       $exception_caught = TRUE;
     }
     $printed_output = ob_get_clean();
-    $this->assertStringContainsString("Could not find an organism", $printed_output, "Expected an error that an organism in the file 'incomplete_example.txt' could not be found in the database.");
+    $this->assertStringContainsString('The genus "Tripalus" from the scientific name "Tripalus databasica subspecies chadoii" does not match the selected genus "Sally".', $printed_output, "Expected an error that an organism in the file 'incomplete_example.txt' could not be found in the database.");
     $this->assertTrue($exception_caught, "Did not catch exception for trying to insert germplasm with a non-existant organism.");
 
     // Test for existing organism, but try to enter 2 germplasm with the same
