@@ -113,6 +113,13 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
   ];
 
   /**
+   * A Database query interface for querying Chado using Tripal DBX.
+   *
+   * @var Drupal\tripal_chado\Database\ChadoConnection
+   */
+  protected ChadoConnection $chado_connection;
+
+  /**
    * Used to track whether an error is logged during the import process.
    *
    * If it is set to TRUE, then the db transaction will not be committed.
@@ -231,7 +238,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
    *   The plugin_id for the plugin instance.
    * @param mixed $plugin_definition
    *   The plugin implementation definition.
-   * @param Drupal\tripal_chado\Database\ChadoConnection $connection
+   * @param Drupal\tripal_chado\Database\ChadoConnection $chado_connection
    *   The Chado database connection service.
    * @param Drupal\tripal_chado\ChadoBuddy\PluginManagers\ChadoBuddyPluginManager $buddy_manager
    *   The ChadoBuddy plugin manager.
@@ -254,7 +261,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     array $configuration,
     $plugin_id,
     $plugin_definition,
-    ChadoConnection $connection,
+    ChadoConnection $chado_connection,
     ChadoBuddyPluginManager $buddy_manager,
     ConfigFactoryInterface $config_factory,
     TripalCultivateFileTemplateService $service_FileTemplate,
@@ -268,13 +275,13 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       $configuration,
       $plugin_id,
       $plugin_definition,
-      $connection,
+      $chado_connection,
       $messenger,
       $logger,
       $fileretriever,
       $publish_manager,
     );
-
+    $this->chado_connection = $chado_connection;
     $this->config_factory = $config_factory;
     $this->buddy_manager = $buddy_manager;
     $this->organism_buddy = $this->buddy_manager->createInstance('chado_organism_buddy', []);
@@ -307,7 +314,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
    */
   public function describeUploadFileFormat() {
     // A template file has been generated and is ready for download.
-    $importer_id = $this->pluginDefinition['id'];
+    $importer_id = $this->plugin_definition['id'];
 
     // Only the header names are needed for making the template file, so pull
     // them out into a new array.
@@ -387,7 +394,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     $form = parent::form($form, $form_state);
 
     // Select the entire genus field and make sure it is sorted and distinct.
-    $genus_query = $this->connection->select('1:organism', 'o')
+    $genus_query = $this->chado_connection->select('1:organism', 'o')
       ->fields('o', ['genus'])
       ->orderBy('genus')
       ->distinct();
@@ -471,7 +478,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     $this->setUpCvterms();
 
     // Check if the stock_synonym table exists before moving forward.
-    if (!$this->connection->schema()->tableExists('stock_synonym')) {
+    if (!$this->chado_connection->schema()->tableExists('stock_synonym')) {
       throw new \Exception(
         "Could not find stock_synonym table in the current database schema."
       );
@@ -670,7 +677,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     //    name OR the uniquename. Since the unique constraint is
     //    organism_id/uniquename/type_id, we have to make sure this combo
     //    doesn't already exist with a different germplasm name.
-    $query = $this->connection->select('1:stock', 's')
+    $query = $this->chado_connection->select('1:stock', 's')
       ->fields('s', ['stock_id', 'name', 'uniquename', 'type_id'])
       ->condition('s.organism_id', $organism_id, '=');
 
@@ -752,7 +759,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
 
       $this->logger->notice("Inserting \"@germplasm_name\".", ['@germplasm_name' => $germplasm_name]);
 
-      $result = $this->connection->insert('1:stock')
+      $result = $this->chado_connection->insert('1:stock')
         ->fields($values)
         ->execute();
 
@@ -790,7 +797,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     // Check if the external database exists in chado.db
     // If not, report an error
     // -------------------------------------------------
-    $db_query = $this->connection->select('1:db', 'db')
+    $db_query = $this->chado_connection->select('1:db', 'db')
       ->fields('db', ['db_id']);
     $db_query->condition('db.name', $external_database, '=');
     $db_record = $db_query->execute()->fetchAll();
@@ -814,7 +821,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     // Check if the dbxref for this stock already exists
     // If not, insert it
     // -------------------------------------------------
-    $dbx_query = $this->connection->select('1:dbxref', 'dbx')
+    $dbx_query = $this->chado_connection->select('1:dbxref', 'dbx')
       ->fields('dbx', ['dbxref_id']);
     $dbx_query->condition('dbx.accession', $accession_number, '=')
       ->condition('dbx.db_id', $db_id, '=');
@@ -834,7 +841,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
         'db_id' => $db_id,
         'accession' => $accession_number,
       ];
-      $result = $this->connection->insert('1:dbxref')
+      $result = $this->chado_connection->insert('1:dbxref')
         ->fields($values)
         ->execute();
 
@@ -853,13 +860,13 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     // Update the stock table to include the dbxref_id
     // After making sure a different one doesn't already exist (throw an error)
     // ------------------------------------------------------------------------
-    $stock_query = $this->connection->select('1:stock', 's')
+    $stock_query = $this->chado_connection->select('1:stock', 's')
       ->fields('s', ['dbxref_id']);
     $stock_query->condition('s.stock_id', $stock_id, '=');
     $stock_record = $stock_query->execute()->fetchAll();
 
     if ($stock_record[0]->dbxref_id == "") {
-      $update_stock = $this->connection->update('1:stock')
+      $update_stock = $this->chado_connection->update('1:stock')
         ->fields(['dbxref_id' => $dbxref_id])
         ->condition('stock_id', $stock_id, '=')
         ->execute();
@@ -922,7 +929,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       $cvterm_id = $this->getCvterm($property);
       if ($cvterm_id) {
         // Try to lookup the stockprop_id in Chado.
-        $stockprop_query = $this->connection->select('1:stockprop', 'sp')
+        $stockprop_query = $this->chado_connection->select('1:stockprop', 'sp')
           ->fields('sp', ['stockprop_id', 'value', 'rank'])
           ->condition('sp.stock_id', $stock_id, '=')
           ->condition('sp.type_id', $cvterm_id, '=');
@@ -953,7 +960,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
               'value' => $prop_value,
               'rank' => ++$maxrank,
             ];
-            $result = $this->connection->insert('1:stockprop')
+            $result = $this->chado_connection->insert('1:stockprop')
               ->fields($values)
               ->execute();
 
@@ -973,7 +980,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
             'type_id' => $cvterm_id,
             'value' => $prop_value,
           ];
-          $result = $this->connection->insert('1:stockprop')
+          $result = $this->chado_connection->insert('1:stockprop')
             ->fields($values)
             ->execute();
 
@@ -1023,7 +1030,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
         $synonym_type_id = $this->getCvterm('synonym');
 
         // Check for and load any synonyms to chado.synonym.
-        $synonym_query = $this->connection->select('1:synonym', 's')
+        $synonym_query = $this->chado_connection->select('1:synonym', 's')
           ->fields('s', ['synonym_id'])
           ->condition('s.name', $synonym, '=')
           ->condition('s.type_id', $synonym_type_id, '=');
@@ -1048,7 +1055,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
             'type_id' => $synonym_type_id,
             'synonym_sgml' => '',
           ];
-          $result = $this->connection->insert('1:synonym')
+          $result = $this->chado_connection->insert('1:synonym')
             ->fields($values)
             ->execute();
 
@@ -1066,7 +1073,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
         // Create a synonym-stock connection via chado.stock_synonym
         // ------------------------------------------------------------------------
         // First check if this stock-synonym connection already exists
-        $synonym_stock_query = $this->connection->select('1:stock_synonym', 'ss')
+        $synonym_stock_query = $this->chado_connection->select('1:stock_synonym', 'ss')
           ->fields('ss', ['stock_synonym_id'])
           ->condition('ss.synonym_id', $synonym_id, '=')
           ->condition('ss.stock_id', $stock_id, '=');
@@ -1092,7 +1099,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
           // later :)
             'pub_id' => '1',
           ];
-          $result = $this->connection->insert('1:stock_synonym')
+          $result = $this->chado_connection->insert('1:stock_synonym')
             ->fields($values)
             ->execute();
 
@@ -1114,7 +1121,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
         // ------------------------------------------------------------------------
         $stock_relationship_type_id = $this->getCvterm('stock_relationship_type_synonym');
 
-        $stock_query = $this->connection->select('1:stock', 'st')
+        $stock_query = $this->chado_connection->select('1:stock', 'st')
           ->fields('st', ['stock_id'])
           ->condition('st.name', $synonym, '=')
           ->condition('st.organism_id', $organism_id, '=');
@@ -1128,7 +1135,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
           // Query the stock_relationship table to see if this relationship
           // already exists.
           $stock_id_of_synonym = $stock_record[0]->stock_id;
-          $stock_relationship_query = $this->connection->select('1:stock_relationship', 'str')
+          $stock_relationship_query = $this->chado_connection->select('1:stock_relationship', 'str')
             ->fields('str', ['stock_relationship_id'])
             ->condition('str.subject_id', $stock_id_of_synonym, '=')
             ->condition('str.object_id', $stock_id, '=')
@@ -1151,7 +1158,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
               'type_id' => $stock_relationship_type_id,
               'object_id' => $stock_id,
             ];
-            $result = $this->connection->insert('1:stock_relationship')
+            $result = $this->chado_connection->insert('1:stock_relationship')
               ->fields($values)
               ->execute();
 
