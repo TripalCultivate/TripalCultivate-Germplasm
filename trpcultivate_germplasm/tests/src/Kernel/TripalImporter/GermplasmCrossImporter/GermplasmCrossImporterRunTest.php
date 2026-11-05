@@ -171,10 +171,6 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
     );
 
     // Configure our cvterms.
-    // @todo Get rid of the buddy here and then call
-    // $this->getCvtermID(db.name, dbxref.accession) in the loop
-    $buddy_service = \Drupal::service('tripal_chado.chado_buddy');
-    $cvterm_buddy = $buddy_service->createInstance('chado_cvterm_buddy', []);
     $cvterm_values = [
       'progeny' => [
         'cvterm.name' => 'progeny',
@@ -208,41 +204,34 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
       ],
     ];
     foreach ($cvterm_values as $cvterm => $values) {
-      $cvterm_record = $cvterm_buddy->getCVterm($values);
-      $cvterm_id = $cvterm_record[0]->getValue('cvterm.cvterm_id');
+      $cvterm_id = $this->getCVtermID($values['db.name'], $values['dbxref.accession']);
       $this->importer->setCvtermId($cvterm, $cvterm_id);
     }
 
     // Insert an organism.
-    $this->organism_buddy = $buddy_service->createInstance('chado_organism_buddy', []);
-    $organism_record = $this->organism_buddy->insertOrganism([
-      'organism.genus' => 'Tripalus',
-      'organism.species' => 'databasica',
-    ]);
-    $organism_id = $organism_record->getValue('organism.organism_id');
+    $organism_id = $this->chado_connection->insert('1:organism')
+      ->fields([
+        'genus' => 'Tripalus',
+        'species' => 'databasica',
+      ])
+      ->execute();
     $this->assertIsNumeric($organism_id, 'We were not able to create an organism for testing');
 
     // Insert a Program ID.
-    // Use a CVterm ChadoBuddy to get the cvterm_id for inserting Program IDs.
-    $cvterm_record = $cvterm_buddy->getCvterm([
-      'cv.name' => 'rdfs', // same as db.name
-      'cvterm.name' => 'type', // same as dbxref.accession
-    ]);
-    $cvterm_id = $cvterm_record[0]->getValue('cvterm.cvterm_id');
+    $cvterm_id = $this->getCVtermID('rdfs', 'type');
     $this->assertIsNumeric($cvterm_id,
     'We were not able to get the cvterm_id we need for creating Program ID dbprop records.');
 
     // Use a dbxref buddy to get the db_id for inserting Program IDs.
     $program_name = 'Test Program';
-    $dbxref_buddy = $buddy_service->createInstance('chado_dbxref_buddy', []);
-    $program_record = $dbxref_buddy->insertDb([
-      'db.name' => $program_name,
-    ]);
-    $program_record_id = $program_record->getValue('db.db_id');
+    $program_record_id = $this->chado_connection->insert('1:db')
+      ->fields([
+        'name' => $program_name,
+      ])
+      ->execute();
     $this->assertIsNumeric($program_record_id,
       'We were not able to create the program "' . $program_name . '" in the db table for testing.');
     // Create the dbprop record and link it to the db record.
-    // DO NOT CHANGE TO A BUDDY
     $dbprop_id = $this->chado_connection->insert('1:dbprop')
       ->fields([
         'db_id' => $program_record_id,
@@ -254,25 +243,24 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
           'We were not able to create the dbprop record for program "' . $program_name . '" for testing.');
 
     // Insert the parent stocks.
-    $this->stock_buddy = $buddy_service->createInstance('chado_stock_buddy', []);
     $parental_stocks = ['121S', '122S', '124S'];
     foreach ($parental_stocks as $stock_name) {
-      $parental_stock = $this->stock_buddy->insertStock([
-        'stock.organism_id' => $organism_id,
-        'stock.name' => $stock_name,
-        'stock.dbxref_id' => 1,
-        'stock.uniquename' => 'STOCK:' . $stock_name,
-        'stock.description' => '',
-        'stock.type_id' => 1,
-        'stock.is_obsolete' => 'f',
-      ]);
+      $parental_stock_id = $this->chado_connection->insert('1:stock')
+        ->fields([
+          'organism_id' => $organism_id,
+          'name' => $stock_name,
+          'dbxref_id' => 1,
+          'uniquename' => 'STOCK:' . $stock_name,
+          'description' => '',
+          'type_id' => 1,
+          'is_obsolete' => 'f',
+        ])
+        ->execute();
 
       // Insert the cross type as a stockprop record.
-      // @todo Update this to use the ChadoPropertyBuddy when Tripal issue #2565
-      // is resolved.
       $this->chado_connection->insert('1:stockprop')
         ->fields([
-          'stock_id' => $parental_stock->getValue('stock.stock_id'),
+          'stock_id' => $parental_stock_id,
           'type_id' => $this->importer->getCvtermId('cross_type'),
           'value' => 'single',
         ])
