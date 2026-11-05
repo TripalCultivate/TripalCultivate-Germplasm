@@ -35,6 +35,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     'file',
     'tripal',
     'tripal_chado',
+    'tripal_layout',
     'trpcultivate',
     'trpcultivate_germplasm',
   ];
@@ -98,7 +99,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
 
     // Ensure we can access file_managed related functionality from Drupal.
     // ... users need access to system.action config?
-    $this->installConfig(['system', 'trpcultivate_germplasm']);
+    $this->installConfig(['system', 'trpcultivate_germplasm', 'trpcultivate']);
     // ... managed files are associated with a user.
     $this->installEntitySchema('user');
     // ... Finally the file module + tables itself.
