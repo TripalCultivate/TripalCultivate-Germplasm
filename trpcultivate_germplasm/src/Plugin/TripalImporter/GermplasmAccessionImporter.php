@@ -162,16 +162,16 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
    * @var array
    */
   protected $cvterms = [
-    'accession',
-    'subtaxa',
-    'institute_code',
-    'institute_name',
-    'country_of_origin_code',
-    'biological_status_of_accession_code',
-    'breeding_method_DbId',
-    'pedigree',
-    'synonym',
-    'stock_relationship_type_synonym',
+    'accession' => NULL,
+    'subtaxa' => NULL,
+    'institute_code' => NULL,
+    'institute_name' => NULL,
+    'country_of_origin_code' => NULL,
+    'biological_status_of_accession_code' => NULL,
+    'breeding_method_DbId' => NULL,
+    'pedigree' => NULL,
+    'synonym' => NULL,
+    'stock_relationship_type_synonym' => NULL,
   ];
 
   /**
