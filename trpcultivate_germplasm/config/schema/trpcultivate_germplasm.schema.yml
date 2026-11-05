@@ -1,47 +1,81 @@
 trpcultivate_germplasm.settings:
   type: config_object
-  label: 'Germplasm Package Configuration'
+  label: 'Tripal Cultivate Germplasm Configuration'
   mapping:
-    terms:
+    germplasm:
       type: mapping
-      label: 'Package default terms'
+      label: 'Germplasm Default CV terms'
       mapping:
-        accession:
-          type: integer
-          label: 'The cvterm ID of the accession for a germplasm'
-        genus:
-          type: integer
-          label: 'The cvterm ID of the genus of a germplasm'
-        species:
-          type: integer
-          label: 'The cvterm ID of the species of a germplasm'
-        name:
-          type: integer
-          label: 'The cvterm ID of the name of a germplasm'
-        institute_code:
-          type: integer
-          label: 'The cvterm ID of the institute code where the germplasm was bred'
-        institute_name:
-          type: integer
-          label: 'The cvterm ID of the institute name where the germplasm was bred'
-        pedigree:
-          type: integer
-          label: 'The cvterm ID of the pedigree information for a germplasm'
-        country_of_origin_code:
-          type: integer
-          label: 'The cvterm ID of the country of origin of a germplasm'
-        synonym:
-          type: integer
-          label: 'The cvterm ID of a synonym of a germplasm name'
-        biological_status_of_accession_code:
-          type: integer
-          label: 'The cvterm ID of the biological status of a germplasm accession'
-        breeding_method_DbId:
-          type: integer
-          label: 'The cvterm ID of the germplasm breeding method'
-        subtaxa:
-          type: integer
-          label: 'The cvterm ID of the subtaxa of a germplasm'
-        stock_relationship_type_synonym:
-          type: integer
-          label: 'The cvterm ID of the stock_relationship synonym'
+        germplasm_accession:
+          type: mapping
+          label: 'Germplasm accession import default terms'
+          mapping:
+            terms:
+              type: mapping
+              label: 'Package default terms'
+              mapping:
+                accession:
+                  type: integer
+                  label: 'The cvterm ID of the accession for a germplasm'
+                genus:
+                  type: integer
+                  label: 'The cvterm ID of the genus of a germplasm'
+                species:
+                  type: integer
+                  label: 'The cvterm ID of the species of a germplasm'
+                name:
+                  type: integer
+                  label: 'The cvterm ID of the name of a germplasm'
+                institute_code:
+                  type: integer
+                  label: 'The cvterm ID of the institute code where the germplasm was bred'
+                institute_name:
+                  type: integer
+                  label: 'The cvterm ID of the institute name where the germplasm was bred'
+                pedigree:
+                  type: integer
+                  label: 'The cvterm ID of the pedigree information for a germplasm'
+                country_of_origin_code:
+                  type: integer
+                  label: 'The cvterm ID of the country of origin of a germplasm'
+                synonym:
+                  type: integer
+                  label: 'The cvterm ID of a synonym of a germplasm name'
+                biological_status_of_accession_code:
+                  type: integer
+                  label: 'The cvterm ID of the biological status of a germplasm accession'
+                breeding_method_DbId:
+                  type: integer
+                  label: 'The cvterm ID of the germplasm breeding method'
+                subtaxa:
+                  type: integer
+                  label: 'The cvterm ID of the subtaxa of a germplasm'
+                stock_relationship_type_synonym:
+                  type: integer
+                  label: 'The cvterm ID of the stock_relationship synonym'
+        germplasm_cross:
+          type: mapping
+          label: 'Germplasm cross import default terms'
+          mapping:
+            terms:
+              type: mapping
+              label: 'Package default terms'
+              mapping:
+                progeny:
+                  type: integer
+                  label: 'The cvterm ID of a germplasm cross'
+                maternal_parent:
+                  type: integer
+                  label: 'The cvterm ID of the maternal parent of a germplasm cross'
+                paternal_parent:
+                  type: integer
+                  label: 'The cvterm ID of the paternal parent of a germplasm cross'
+                crossing_block_year:
+                  type: integer
+                  label: 'The cvterm ID of the year a germplasm cross was made'
+                crossing_block_season:
+                  type: integer
+                  label: 'The cvterm ID of the season a germplasm cross was made'
+                cross_type:
+                  type: integer
+                  label: 'The cvterm ID of the cross type for a germplasm cross'
