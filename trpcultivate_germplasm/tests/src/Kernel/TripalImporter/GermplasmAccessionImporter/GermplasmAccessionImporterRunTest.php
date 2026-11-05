@@ -37,6 +37,7 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
     'file',
     'tripal',
     'tripal_chado',
+    'trpcultivate',
     'trpcultivate_germplasm',
   ];
 
@@ -151,6 +152,8 @@ class GermplasmAccessionImporterRunTest extends ChadoTestKernelBase {
       $this->connection,
       $container->get('tripal_chado.chado_buddy'),
       $this->config_factory,
+      $container->get('trpcultivate.template_generator'),
+      $container->get('renderer'),
       $container->get('messenger'),
       $container->get('tripal.logger'),
       $container->get('tripal.fileretriever'),

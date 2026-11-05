@@ -2,6 +2,7 @@
 
 namespace Drupal\trpcultivate_germplasm\Plugin\TripalImporter;
 
+use Drupal\Core\Render\Renderer;
 use Drupal\tripal_chado\TripalImporter\ChadoImporterBase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\tripal_chado\Database\ChadoConnection;
@@ -15,6 +16,7 @@ use Drupal\tripal\TripalBackendPublish\PluginManager\TripalBackendPublishManager
 use Drupal\tripal\TripalImporter\Attribute\TripalImporter;
 use Drupal\tripal_chado\ChadoBuddy\PluginManagers\ChadoBuddyPluginManager;
 use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoOrganismBuddy;
+use Drupal\trpcultivate\Service\TripalCultivateFileTemplateService;
 
 /**
  * Tripal Importer plugin for importing germplasm accessions into Chado.
@@ -37,6 +39,78 @@ use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoOrganismBuddy;
 class GermplasmAccessionImporter extends ChadoImporterBase {
 
   use StringTranslationTrait;
+
+  /**
+   * Headers required by this importer.
+   *
+   * @var array
+   *
+   * The following keys are required:
+   * - 'name': The column header name as it should appear in the input file.
+   * - 'description': A user-friendly description of the header that will be
+   *   displayed to the user through the form.
+   * - 'type': one of "required" or "optional" to indicate whether the column
+   *   needs to have values present or not.
+   *
+   * NOTE: Order MUST reflect the desired order of headers in the input file.
+   */
+  protected array $headers = [
+    [
+      'name' => 'Germplasm Name',
+      'description' => 'Name of this germplasm accession (e.g. CDC Redberry)',
+      'type' => 'required',
+    ],
+    [
+      'name' => 'External Database',
+      'description' => 'The institution who assigned the accession. (e.g. KnowPulse Germplasm)',
+      'type' => 'required',
+    ],
+    [
+      'name' => 'Accession Number',
+      'description' => 'A unique identifier for the accession (e.g. KP:GERM58)',
+      'type' => 'required',
+    ],
+    [
+      'name' => 'Scientific Name',
+      'description' => 'The scientific name of the organism associated with the accession (A combination of Genus + Species + Infraspecific type + Infraspecific name)',
+      'type' => 'required',
+    ],
+    [
+      'name' => 'Institute Code',
+      'description' => 'The code for the Institute that bred the material (e.g. CUAC)',
+      'type' => 'optional',
+    ],
+    [
+      'name' => 'Institute Name',
+      'description' => 'The name of the Institute that bred the material (e.g. "Crop Development Center, University of Saskatchewan")',
+      'type' => 'optional',
+    ],
+    [
+      'name' => 'Country of Origin Code',
+      'description' => '3-letter ISO 3166-1 code of the country in which the sample was originally sourced (e.g. 124)',
+      'type' => 'optional',
+    ],
+    [
+      'name' => 'Biological Status of Accession',
+      'description' => 'The 3 digit code representing the biological status of the accession (e.g. 410)',
+      'type' => 'optional',
+    ],
+    [
+      'name' => 'Breeding Method',
+      'description' => 'The unique identifier for the breeding method used to create this germplasm (e.g. "Recurrent selection")',
+      'type' => 'optional',
+    ],
+    [
+      'name' => 'Pedigree',
+      'description' => 'The cross name and optional selection history (e.g. 1049F^3/819-5R)',
+      'type' => 'optional',
+    ],
+    [
+      'name' => 'Synonyms',
+      'description' => 'Any synonyms of the accession, separated by a comma. (e.g. Redberry)',
+      'type' => 'optional',
+    ],
+  ];
 
   /**
    * Used to track whether an error is logged during the import process.
@@ -67,6 +141,20 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
    * @var Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoOrganismBuddy
    */
   protected ChadoOrganismBuddy $organism_buddy;
+
+  /**
+   * The Drupal Renderer.
+   *
+   * @var \Drupal\Core\Render\Renderer
+   */
+  protected Renderer $service_Renderer;
+
+  /**
+   * The TripalCultivate File Template Service.
+   *
+   * @var \Drupal\trpcultivate\Service\TripalCultivateFileTemplateService
+   */
+  protected TripalCultivateFileTemplateService $service_FileTemplate;
 
   /**
    * An associative array of cvterms as the key and the cvterm_id as the value.
@@ -117,6 +205,8 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       $container->get('tripal_chado.database'),
       $container->get('tripal_chado.chado_buddy'),
       $container->get('config.factory'),
+      $container->get('trpcultivate.template_generator'),
+      $container->get('renderer'),
       $container->get('messenger'),
       $container->get('tripal.logger'),
       $container->get('tripal.fileretriever'),
@@ -147,6 +237,10 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
    *   The ChadoBuddy plugin manager.
    * @param Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The config factory service.
+   * @param Drupal\trpcultivate\Service\TripalCultivateFileTemplateService $service_FileTemplate
+   *   The service used to generate the termplate file.
+   * @param Drupal\Core\Render\Renderer $renderer
+   *   The Drupal renderer service.
    * @param Drupal\Core\Messenger\Messenger $messenger
    *   The messenger service.
    * @param Drupal\tripal\Services\TripalLogger $logger
@@ -163,6 +257,8 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     ChadoConnection $connection,
     ChadoBuddyPluginManager $buddy_manager,
     ConfigFactoryInterface $config_factory,
+    TripalCultivateFileTemplateService $service_FileTemplate,
+    Renderer $renderer,
     Messenger $messenger,
     TripalLogger $logger,
     TripalFileRetriever $fileretriever,
@@ -182,49 +278,77 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     $this->config_factory = $config_factory;
     $this->buddy_manager = $buddy_manager;
     $this->organism_buddy = $this->buddy_manager->createInstance('chado_organism_buddy', []);
+    $this->service_FileTemplate = $service_FileTemplate;
+    $this->service_Renderer = $renderer;
   }
 
   /**
-   * {@inheritDoc}
+   * Describe the upload format including column descriptions + template file.
+   *
+   * Class TripalImporterBase is the parent class of this method and additional
+   * documentation is available in reference link below.
+   *
+   * NOTE: This method supports full HTML markup output.
+   *
+   * All relevant information relating to expected column headers and usage
+   * notes are laid out using the theme 'importer_header'. This is rendered
+   * using the referenced TWIG file below.
+   *
+   * A template geneartor service is utilized to provide a downloadable file
+   * template, pre-configured to contain all headers required. The link to
+   * this template file is also formatted using the theme 'importer_header'.
+   *
+   * @return string
+   *   The fully rendered HTML string produced by the 'importer_header' theme
+   *   with the pertinent variables supplied by this method.
+   *
+   * @see Drupal\tripal\TripalImporter\TripalImporterBase::describeUploadFileFormat()
+   * @see templates\trpcultivate-phenotypes-template-importer-header.html.twig
    */
   public function describeUploadFileFormat() {
+    // A template file has been generated and is ready for download.
+    $importer_id = $this->pluginDefinition['id'];
 
-    $file_types = $this->plugin_definition['file_types'];
+    // Only the header names are needed for making the template file, so pull
+    // them out into a new array.
+    $column_headers = array_column($this->headers, 'name');
 
-    $output = "The input file should be a tab separated file (<b>" . implode(', ', $file_types) . "</b>) with the following columns. ";
-    $output .= "For more detailed information on this format including links to lookup various codes, please see ";
-    $output .= '<a href="https://tripalcultivate.github.io/docs/docs/curation/germplasm-data/germplasm-accessions-importer">the official documentation</a>.';
+    // File types 'file_types' annotation definition of this importer.
+    // The first item in the definition list will be used as the primary
+    // file extension of the template file.
+    // File MIME type and delimiter are based on mapping information defined
+    // in the validator base and file types validator trait.
+    $file_extensions = $this->plugin_definition['file_types'];
 
-    $columns = [
-      'Germplasm Name' => 'Name of this germplasm accession (e.g. CDC Redberry)',
-      'External Database' => 'The institution who assigned the accession. (e.g. KnowPulse Germplasm)',
-      'Accession Number' => 'A unique identifier for the accession (e.g. KP:GERM58)',
-      'Scientific Name' => 'The scientific name of the organism associated with the accession (A combination of Genus + Species + Infraspecific type + Infraspecific name)',
-      'Institute Code' => 'The code for the Institute that bred the material (e.g. CUAC)',
-      'Institute Name' => 'The name of the Institute that bred the material (e.g. "Crop Development Center, University of Saskatchewan")',
-      'Country of Origin Code' => '3-letter ISO 3166-1 code of the country in which the sample was originally sourced (e.g. 124)',
-      'Biological Status of Accession' => 'The 3 digit code representing the biological status of the accession (e.g. 410)',
-      'Breeding Method' => 'The unique identifier for the breeding method used to create this germplasm (e.g. "Recurrent selection")',
-      'Pedigree' => 'The cross name and optional selection history (e.g. 1049F^3/819-5R)',
-      'Synonyms' => 'Any synonyms of the accession, separated by a comma. (e.g. Redberry)',
+    $file_link = $this->service_FileTemplate
+      ->generateFile($importer_id, $column_headers, $file_extensions);
+
+    // Additional notes to the headers.
+    $notes = [
+      '#theme' => 'item_list',
+      '#items' => [
+        $this->t('Your file includes a header row.'),
+        $this->t('The order/spelling of your columns matches the above list.'),
+        $this->t('For all required columns, each row contains a value.'),
+      ],
+      '#attributes' => ['class' => ['importer-notes-list']],
     ];
 
-    $required_col = ['Germplasm Name', 'External Database', 'Accession Number', 'Scientific Name'];
-    // @todo Make this red, but Drupal makes it difficult :)
-    $required_markup = '*';
+    // Render the header and notes/lists in a template and use the file link as
+    // the value to href attribute of the link to download a template file.
+    $supported_file_extensions = implode(', ', $file_extensions);
 
-    $output .= '<ol>';
-    foreach ($columns as $title => $definition) {
-      if (in_array($title, $required_col)) {
-        $output .= '<li><b>' . $title . $required_markup . '</b>: ' . $definition . '</li>';
-      }
-      else {
-        $output .= '<li><b>' . $title . '</b>: ' . $definition . '</li>';
-      }
-    }
-    $output .= '</ol>';
+    $build = [
+      '#theme' => 'describe_header_window',
+      '#data' => [
+        'headers' => $this->headers,
+        'file_extensions' => $supported_file_extensions,
+        'notes' => $notes,
+        'template_file' => $file_link,
+      ],
+    ];
 
-    return $output;
+    return $this->service_Renderer->renderInIsolation($build);
   }
 
   /**
