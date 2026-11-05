@@ -1256,7 +1256,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       throw new \Exception('ERROR: The relationship between paternal parent ' . $paternal_parent . ' and cross ' . $cross_number . ' already exists in the database, but the cross was only just inserted!');
     }
 
-    return $cross_record->getValue('stock_id');
+    return $cross_record->getValue('stock.stock_id');
   }
 
   /**
