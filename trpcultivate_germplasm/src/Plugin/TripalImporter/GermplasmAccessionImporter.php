@@ -72,7 +72,7 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
     ],
     [
       'name' => 'Scientific Name',
-      'description' => 'The scientific name of the organism associated with the accession (A combination of Genus + Species + Infraspecific type + Infraspecific name)',
+      'description' => 'The full scientific name of the germplasm accession (e.g. "Lens culinaris" or "Pisum sativum var. medullare")',
       'type' => 'required',
     ],
     [
