@@ -35,6 +35,8 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
     'file',
     'tripal',
     'tripal_chado',
+    'tripal_layout',
+    'trpcultivate',
     'trpcultivate_germplasm',
   ];
 
@@ -97,7 +99,7 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
 
     // Ensure we can access file_managed related functionality from Drupal.
     // ... users need access to system.action config?
-    $this->installConfig(['system', 'trpcultivate_germplasm']);
+    $this->installConfig(['system', 'trpcultivate_germplasm', 'trpcultivate']);
     // ... managed files are associated with a user.
     $this->installEntitySchema('user');
     // ... Finally the file module + tables itself.
@@ -130,6 +132,8 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
       $this->connection,
       $container->get('tripal_chado.chado_buddy'),
       $this->config_factory,
+      $container->get('trpcultivate.template_generator'),
+      $container->get('renderer'),
       $container->get('messenger'),
       $container->get('tripal.logger'),
       $container->get('tripal.fileretriever'),
@@ -218,12 +222,12 @@ class GermplasmAccessionImporterTest extends ChadoTestKernelBase {
       ])
       ->execute();
 
-    $grabbed_organism_id = $this->importer->getOrganismId('Tripalus', 'databasica', 'subspecies chadoii');
+    $grabbed_organism_id = $this->importer->getOrganismId('Tripalus databasica subspecies chadoii');
     $this->assertEquals($grabbed_organism_id, $organism_id, "The organism ID grabbed by the importer does not match the one that was inserted into the database.");
 
     // Try an organism that does not currently exist.
     ob_start();
-    $this->importer->getOrganismId('Nullus', 'organismus', '');
+    $this->importer->getOrganismId('Nullus organismus');
     $printed_output = ob_get_clean();
     $this->assertEquals('Could not find an organism "Nullus organismus" in the database.', $printed_output,
       "Did not get the expected error message when testing for a non-existant organism.");
