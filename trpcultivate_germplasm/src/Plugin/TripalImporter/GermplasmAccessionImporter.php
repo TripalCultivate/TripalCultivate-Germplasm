@@ -324,6 +324,8 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
   public function form($form, &$form_state) {
     $form = parent::form($form, $form_state);
 
+    $form['#attached']['library'][] = 'trpcultivate/describe-header-window';
+
     // Select the entire genus field and make sure it is sorted and distinct.
     $genus_query = $this->chado_connection->select('1:organism', 'o')
       ->fields('o', ['genus'])
@@ -347,6 +349,12 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
       '#required' => TRUE,
       '#description' => $this->t('Select the genus of the germplasm accessions in your file. If your file consists of multiple genus, it is best practice to separate it into one file per genus and upload each one individually.'),
     ];
+
+    // This importer does not support using file sources from existing field.
+    // #access: (bool) Whether the element is accessible or not; when FALSE,
+    // the element is not rendered and the user submitted value is not taken
+    // into consideration.
+    $form['file']['file_upload_existing']['#access'] = FALSE;
 
     return $form;
   }
@@ -388,6 +396,13 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
    */
   public function run() {
 
+    // Check if the stock_synonym table exists before moving forward.
+    if (!$this->chado_connection->schema()->tableExists('stock_synonym')) {
+      throw new \Exception(
+        "Could not find stock_synonym table in the current database schema."
+      );
+    }
+
     // Grabbing our arguments from the form.
     $arguments = $this->getArguments();
 
@@ -407,13 +422,6 @@ class GermplasmAccessionImporter extends ChadoImporterBase {
 
     // Make sure our CVterms are all set.
     $this->setUpCvterms();
-
-    // Check if the stock_synonym table exists before moving forward.
-    if (!$this->chado_connection->schema()->tableExists('stock_synonym')) {
-      throw new \Exception(
-        "Could not find stock_synonym table in the current database schema."
-      );
-    }
 
     // Set up the ability to track progress so we can report it to the user.
     $filesize = filesize($file_path);
