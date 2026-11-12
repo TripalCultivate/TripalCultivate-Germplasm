@@ -37,7 +37,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  */
 #[TripalImporter(
    id: 'trpcultivate-germplasm-cross-importer',
-   label: new TranslatableMarkup('Tripal Cultivate: Germplasm Cross Importer'),
+   label: new TranslatableMarkup('Tripal Cultivate: Germplasm Crosses'),
    description: new TranslatableMarkup('Creates germplasm cross pages associated with parental material through upload of a germplasm cross data file.'),
    file_types: ['tsv'],
    upload_description: new TranslatableMarkup('Please provide a data file.'),
@@ -326,6 +326,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
       $plugin_definition,
       $container->get('tripal_chado.database'),
       $container->get('tripal_chado.chado_buddy'),
+      $container->get('config.factory'),
       $container->get('plugin.manager.trpcultivate_validator'),
       $container->get('trpcultivate.template_generator'),
       $container->get('entity_type.manager'),
@@ -1304,7 +1305,7 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    * notes are laid out using the theme 'importer_header'. This is rendered
    * using the referenced TWIG file below.
    *
-   * A template geneartor service is utilized to provide a downloadable file
+   * A template generator service is utilized to provide a downloadable file
    * template, pre-configured to contain all headers required. The link to
    * this template file is also formatted using the theme 'importer_header'.
    *
