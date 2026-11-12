@@ -7,7 +7,6 @@ use Drupal\Tests\trpcultivate\Traits\TripalCultivateImporterTestTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tripal\Services\TripalLogger;
 use Drupal\tripal_chado\Database\ChadoConnection;
-use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoOrganismBuddy;
 use Drupal\tripal_chado\Plugin\ChadoBuddy\ChadoStockBuddy;
 use Drupal\trpcultivate_germplasm\Plugin\TripalImporter\GermplasmCrossImporter;
 use PHPUnit\Framework\Attributes\Group;
@@ -256,17 +255,18 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
           'is_obsolete' => 'f',
         ])
         ->execute();
+      $this->assertIsNumeric($parental_stock_id, 'We were not able to create the parental stock "' . $stock_name . '" for testing.');
 
       // Insert the cross type as a stockprop record.
-      $this->chado_connection->insert('1:stockprop')
+      $stockprop_id = $this->chado_connection->insert('1:stockprop')
         ->fields([
           'stock_id' => $parental_stock_id,
           'type_id' => $this->importer->getCvtermId('cross_type'),
           'value' => 'single',
         ])
         ->execute();
+      $this->assertIsNumeric($stockprop_id, 'We were not able to create the stockprop record for cross_type for parental stock "' . $stock_name . '" for testing.');
     }
-
   }
 
   /**
@@ -299,21 +299,41 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
       $this->fail('The Germplasm Cross Importer run() method threw an exception: ' . $e->getMessage());
     }
 
-    $numExpectedCrosses = 1;
+    // Grab our crosses.
+    $expected_crosses = [
+      [
+        'name' => '123S',
+        'genus' => 'Tripalus',
+        'maternal_parent' => '121S',
+        'paternal_parent' => '122S',
+      ],
+      [
+        'name' => '125S',
+        'genus' => 'Tripalus',
+        'maternal_parent' => '121S',
+        'paternal_parent' => '124S',
+      ],
+    ];
+    $number_of_stocks = count($expected_crosses);
+    $stock_query = $this->chado_connection->query('WITH last_stocks AS (
+      SELECT stock_id, organism_id, name, uniquename, type_id FROM {1:stock} ORDER BY stock_id DESC LIMIT :limit)
+      SELECT * FROM last_stocks ORDER BY stock_id ASC', [':limit' => $number_of_stocks])
+      ->fetchAll();
 
-    // Check that our crosses were inserted.
-    if ($numExpectedCrosses > 0) {
-      // Grab our crosses.
-      /*
-      // Check that the parental relationships were inserted.
-      foreach ($crosses as $cross) {
-      $cross_id = $cross->getValue('stock.stock_id');
-      $maternal_parent = $this->chado_connection->select('stock_relationship', 'sr')
-      ->fields('sr')
-      ->execute();
-      }
-       */
+    // Grab our parental relationships.
+    $relationship_query = $this->chado_connection->query('WITH last_stocks AS (
+      SELECT stock_relationship_id, subject_id, object_id, type_id FROM {1:stock_relationship} ORDER BY stock_relationship_id DESC LIMIT :limit)
+      SELECT * FROM last_stocks ORDER BY stock_relationship_id ASC', [':limit' => $number_of_stocks])
+      ->fetchAll();
+
+    foreach ($expected_crosses as $index => $expected_cross) {
+      $this->assertEquals(
+        $cross['name'],
+        $stock_query[$index]->name,
+        'The stock name for the cross ' . $expected_cross['name'] . ' does not match what we expected.'
+      );
     }
+
   }
 
   /**
@@ -334,10 +354,10 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
         'table_id' => 1,
         'name' => 'cv_root_mview',
         'query' => 'SELECT DISTINCT CVT.name, CVT.cvterm_id, CV.cv_id, CV.name FROM cvterm CVT
-  LEFT JOIN cvterm_relationship CVTR ON CVT.cvterm_id = CVTR.subject_id
-  INNER JOIN cvterm_relationship CVTR2 ON CVT.cvterm_id = CVTR2.object_id
-  INNER JOIN cv CV on CV.cv_id = CVT.cv_id
-  WHERE CVTR.subject_id is NULL and CVT.is_relationshiptype = 0 and CVT.is_obsolete = 0',
+          LEFT JOIN cvterm_relationship CVTR ON CVT.cvterm_id = CVTR.subject_id
+          INNER JOIN cvterm_relationship CVTR2 ON CVT.cvterm_id = CVTR2.object_id
+          INNER JOIN cv CV on CV.cv_id = CVT.cv_id
+          WHERE CVTR.subject_id is NULL and CVT.is_relationshiptype = 0 and CVT.is_obsolete = 0',
         'last_update' => 1234567890,
         'status' => 'test',
         'comment' => 'test',
@@ -347,11 +367,11 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
         'table_id' => 2,
         'name' => 'db2cv_mview',
         'query' => 'SELECT DISTINCT CV.cv_id, CV.name as cvname, DB.db_id, DB.name as dbname, COUNT(CVT.cvterm_id) as num_terms FROM cv CV
-  INNER JOIN cvterm CVT on CVT.cv_id = CV.cv_id
-  INNER JOIN dbxref DBX on DBX.dbxref_id = CVT.dbxref_id
-  INNER JOIN db DB on DB.db_id = DBX.db_id
-  WHERE CVT.is_relationshiptype = 0 and CVT.is_obsolete = 0
-  GROUP BY CV.cv_id, CV.name, DB.db_id, DB.name ORDER BY DB.name',
+          INNER JOIN cvterm CVT on CVT.cv_id = CV.cv_id
+          INNER JOIN dbxref DBX on DBX.dbxref_id = CVT.dbxref_id
+          INNER JOIN db DB on DB.db_id = DBX.db_id
+          WHERE CVT.is_relationshiptype = 0 and CVT.is_obsolete = 0
+          GROUP BY CV.cv_id, CV.name, DB.db_id, DB.name ORDER BY DB.name',
         'last_update' => 1234567890,
         'status' => 'test',
         'comment' => 'test',
