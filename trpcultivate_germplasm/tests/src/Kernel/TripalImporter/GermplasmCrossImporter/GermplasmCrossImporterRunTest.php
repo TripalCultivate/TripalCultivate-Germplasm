@@ -305,13 +305,17 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
         'name' => '123S',
         'genus' => 'Tripalus',
         'maternal_parent' => '121S',
+        'maternal_id' => 1,
         'paternal_parent' => '122S',
+        'paternal_id' => 2,
       ],
       [
         'name' => '125S',
         'genus' => 'Tripalus',
         'maternal_parent' => '121S',
+        'maternal_id' => 1,
         'paternal_parent' => '124S',
+        'paternal_id' => 3,
       ],
     ];
     $number_of_stocks = count($expected_crosses);
@@ -322,15 +326,42 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
 
     // Grab our parental relationships.
     $relationship_query = $this->chado_connection->query('WITH last_stocks AS (
-      SELECT stock_relationship_id, subject_id, object_id, type_id FROM {1:stock_relationship} ORDER BY stock_relationship_id DESC LIMIT :limit)
-      SELECT * FROM last_stocks ORDER BY stock_relationship_id ASC', [':limit' => $number_of_stocks])
+      SELECT stock_relationship_id, subject_id, object_id, type_id FROM {1:stock_relationship} ORDER BY stock_relationship_id DESC)
+      SELECT * FROM last_stocks ORDER BY stock_relationship_id ASC')
       ->fetchAll();
 
     foreach ($expected_crosses as $index => $expected_cross) {
       $this->assertEquals(
-        $cross['name'],
+        $expected_cross['name'],
         $stock_query[$index]->name,
         'The stock name for the cross ' . $expected_cross['name'] . ' does not match what we expected.'
+      );
+
+      // Since each cross has two parents, calculate the right index to use for
+      // the maternal stock_relationship record.
+      $rel_index = $index * 2;
+      $this->assertEquals(
+        $stock_query[$index]->stock_id,
+        $relationship_query[$rel_index]->subject_id,
+        'We expected ' . $expected_cross['name'] . ' to be the subject of the next maternal relationship, but it was not.',
+      );
+      $this->assertEquals(
+        $expected_cross['maternal_id'],
+        $relationship_query[$rel_index]->object_id,
+        'We expected the maternal parent for ' . $expected_cross['name'] . ' to be ' . $expected_cross['maternal_parent'] . ', but it was not.',
+      );
+
+      // Add one to the relationship index for the paternal record.
+      $rel_index = $rel_index + 1;
+      $this->assertEquals(
+        $stock_query[$index]->stock_id,
+        $relationship_query[$rel_index]->subject_id,
+        'We expected ' . $expected_cross['name'] . ' to be the subject of the next paternal relationship, but it was not.',
+      );
+      $this->assertEquals(
+        $expected_cross['paternal_id'],
+        $relationship_query[$rel_index]->object_id,
+        'We expected the paternal parent for ' . $expected_cross['name'] . ' to be ' . $expected_cross['paternal_parent'] . ', but it was not.',
       );
     }
 
