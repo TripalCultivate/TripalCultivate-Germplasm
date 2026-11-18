@@ -294,7 +294,7 @@ class GermplasmCrossImporterFormTest extends ChadoTestKernelBase {
   public function testCrossImporterForm(array $genus, array $programs) {
 
     $plugin_id = 'trpcultivate-germplasm-cross-importer';
-    $importer_label = 'Tripal Cultivate: Germplasm Cross Importer';
+    $importer_label = 'Tripal Cultivate: Germplasm Crosses';
 
     // Insert any organisms if available.
     if ($genus['organisms']) {
