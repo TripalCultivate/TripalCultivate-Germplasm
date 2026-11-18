@@ -1282,8 +1282,27 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
   public function insertCrossProperties($cross_id, $year, $season, $cross_type, $program_id, array $extra_props = []) {
 
     $buddy_service = \Drupal::service('tripal_chado.chado_buddy');
-    // @todo Use the ChadoPropertyBuddy when Tripal issue #2565 is resolved.
-    // $property_buddy = $buddy_service->createInstance('chado_property_buddy', []);
+    $property_buddy = $buddy_service->createInstance('chado_property_buddy', []);
+
+    $property_values = [
+      'crossing_block_year' => [
+        'stockprop.type_id' => $this->getCvtermId('crossing_block_year'),
+        'stockprop.value' => $year,
+      ],
+      'crossing_block_season' => [
+        'stockprop.type_id' => $this->getCvtermId('crossing_block_season'),
+        'stockprop.value' => $season,
+      ],
+      'cross_type' => [
+        'stockprop.type_id' => $this->getCvtermId('cross_type'),
+        'stockprop.value' => $cross_type,
+      ],
+    ];
+
+    foreach ($property_values as $property => $values) {
+      $property_buddy_record = $property_buddy->insertProperty('stock', $cross_id, $values);
+    }
+
   }
 
   /**
