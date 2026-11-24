@@ -308,6 +308,9 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
         'maternal_id' => 1,
         'paternal_parent' => '122S',
         'paternal_id' => 2,
+        'crossing_block_year' => '2021',
+        'crossing_block_season' => 'Winter',
+        'cross_type' => 'single',
       ],
       [
         'name' => '125S',
@@ -316,6 +319,9 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
         'maternal_id' => 1,
         'paternal_parent' => '124S',
         'paternal_id' => 3,
+        'crossing_block_year' => '2022',
+        'crossing_block_season' => 'Spring',
+        'cross_type' => 'single',
       ],
     ];
     $number_of_stocks = count($expected_crosses);
@@ -363,6 +369,35 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
         $relationship_query[$rel_index]->object_id,
         'We expected the paternal parent for ' . $expected_cross['name'] . ' to be ' . $expected_cross['paternal_parent'] . ', but it was not.',
       );
+
+      // Check that our stock has the expected properties.
+      $stockprop_query = $this->chado_connection->query('SELECT stockprop_id, stock_id, type_id, value FROM {1:stockprop}
+        WHERE stock_id = :stock_id ORDER BY stockprop_id ASC', [':stock_id' => $stock_query[$index]->stock_id])
+        ->fetchAll();
+
+      foreach ($stockprop_query as $stockprop) {
+        if ($stockprop->type_id == $this->importer->getCvtermId('crossing_block_year')) {
+          $this->assertEquals(
+            $expected_cross['crossing_block_year'],
+            $stockprop->value,
+            'The crossing block year for ' . $expected_cross['name'] . ' is ' . $stockprop->value . ', which does not match what we expected (' . $expected_cross['crossing_block_year'] . ').'
+          );
+        }
+        elseif ($stockprop->type_id == $this->importer->getCvtermId('crossing_block_season')) {
+          $this->assertEquals(
+            $expected_cross['crossing_block_season'],
+            $stockprop->value,
+            'The crossing block season for ' . $expected_cross['name'] . ' is ' . $stockprop->value . ', which does not match what we expected (' . $expected_cross['crossing_block_season'] . ').'
+          );
+        }
+        elseif ($stockprop->type_id == $this->importer->getCvtermId('cross_type')) {
+          $this->assertEquals(
+            $expected_cross['cross_type'],
+            $stockprop->value,
+            'The cross type for ' . $expected_cross['name'] . ' is ' . $stockprop->value . ', which does not match what we expected (' . $expected_cross['cross_type'] . ').'
+          );
+        }
+      }
     }
 
   }
