@@ -1157,10 +1157,10 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
 
             // 1. Insert our cross into the database and create the parental
             //    relationships.
-            $cross_id = $this->insertAndRelateCross($cross_number, $genus, $species, $maternal_parent, $paternal_parent);
+            $cross_id = $this->insertAndRelateCross($cross_number, $program_id, $genus, $species, $maternal_parent, $paternal_parent);
             // 2. Insert all cross properties (year, season, cross type,
             //    program_id + any additional columns).
-            $this->insertCrossProperties($cross_id, $year, $season, $cross_type, $program_id, $extra_props);
+            $this->insertCrossProperties($cross_id, $year, $season, $cross_type, $extra_props);
           }
           // Next line.
           $line_no++;
@@ -1181,6 +1181,8 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    *
    * @param string $cross_number
    *   The name of the cross to insert.
+   * @param string $program_id
+   *   The identifier of the breeding program this cross was made for.
    * @param string $genus
    *   The genus of the cross.
    * @param string $species
@@ -1201,17 +1203,19 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    * @return int
    *   The stock_id of the inserted cross.
    */
-  public function insertAndRelateCross($cross_number, $genus, $species, $maternal_parent, $paternal_parent) {
+  public function insertAndRelateCross($cross_number, $program_id, $genus, $species, $maternal_parent, $paternal_parent) {
 
     // Grab our cvterm for germplasm cross as a stock type.
     $cross_cvterm = $this->getCvtermId('progeny');
 
     $cross_values = [
       'stock.name' => $cross_number,
-      'stock.uniquename' => $cross_number,
+      'stock.uniquename' => "$program_id:$cross_number",
       'stock.type_id' => $cross_cvterm,
       'organism.genus' => $genus,
       'organism.species' => $species,
+      'dbxref.accession' => $cross_number,
+      'db.name' => $program_id,
     ];
     // Insert our cross. If this cross already exists, an error will be thrown.
     try {
@@ -1271,15 +1275,13 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
    *   The season the cross was created.
    * @param string $cross_type
    *   The type of cross (ex. single, double, etc.).
-   * @param string $program_id
-   *   The program ID associated with this cross.
    * @param array $extra_props
    *   An array of additional properties to insert for this cross. Not currently
    *   supported.
    *
    * @throws \Exception
    */
-  public function insertCrossProperties($cross_id, $year, $season, $cross_type, $program_id, array $extra_props = []) {
+  public function insertCrossProperties($cross_id, $year, $season, $cross_type, array $extra_props = []) {
 
     $buddy_service = \Drupal::service('tripal_chado.chado_buddy');
     $property_buddy = $buddy_service->createInstance('chado_property_buddy', []);
@@ -1300,9 +1302,13 @@ class GermplasmCrossImporter extends ChadoImporterBase implements ContainerFacto
     ];
 
     foreach ($property_values as $property => $values) {
-      $property_buddy_record = $property_buddy->insertProperty('stock', $cross_id, $values);
+      try {
+        $property_buddy_record = $property_buddy->insertProperty('stock', $cross_id, $values);
+      }
+      catch (\Exception $e) {
+        throw new \Exception('ERROR: Unable to insert a property for cross ID ' . $cross_id . ' with these values:\n' . print_r($values, TRUE) . '\n');
+      }
     }
-
   }
 
   /**

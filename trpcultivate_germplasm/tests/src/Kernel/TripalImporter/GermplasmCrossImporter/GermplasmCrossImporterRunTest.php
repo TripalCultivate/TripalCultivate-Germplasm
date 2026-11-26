@@ -303,6 +303,7 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
     $expected_crosses = [
       [
         'name' => '123S',
+        'program_id' => 'Test Program',
         'genus' => 'Tripalus',
         'maternal_parent' => '121S',
         'maternal_id' => 1,
@@ -314,6 +315,7 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
       ],
       [
         'name' => '125S',
+        'program_id' => 'Test Program',
         'genus' => 'Tripalus',
         'maternal_parent' => '121S',
         'maternal_id' => 1,
@@ -326,8 +328,9 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
     ];
     $number_of_stocks = count($expected_crosses);
     $stock_query = $this->chado_connection->query('WITH last_stocks AS (
-      SELECT stock_id, organism_id, name, uniquename, type_id FROM {1:stock} ORDER BY stock_id DESC LIMIT :limit)
-      SELECT * FROM last_stocks ORDER BY stock_id ASC', [':limit' => $number_of_stocks])
+      SELECT stock_id, organism_id, dbxref_id, name, uniquename, type_id FROM {1:stock} ORDER BY stock_id DESC LIMIT :limit)
+      SELECT * FROM last_stocks ORDER BY stock_id ASC',
+      [':limit' => $number_of_stocks])
       ->fetchAll();
 
     // Grab our parental relationships.
@@ -341,6 +344,28 @@ class GermplasmCrossImporterRunTest extends ChadoTestKernelBase {
         $expected_cross['name'],
         $stock_query[$index]->name,
         'The stock name for the cross ' . $expected_cross['name'] . ' does not match what we expected.'
+      );
+
+      // @todo Check that this stock's organism is the right genus. Ask Lacey
+      // for the correct query to do this.
+
+      // Check that the stock is associated with the correct Program ID.
+      $expected_uniquename = $expected_cross['program_id'] . ':' . $expected_cross['name'];
+      $this->assertEquals(
+        $expected_uniquename,
+        $stock_query[$index]->uniquename,
+        'The uniquename for stock ' . $expected_cross['name'] . ' was expected to be "' . $expected_uniquename . '", but it was not.'
+      );
+
+      // Double check the db.name for the stock.dbxref_id is the program ID.
+      $dbxref_query = $this->chado_connection->query('SELECT DBX.dbxref_id, DBX.db_id, DBX.accession, DB.name FROM {1:dbxref} DBX
+        INNER JOIN {1:db} DB on DBX.db_id = DB.db_id WHERE dbxref_id = :dbxref_id',
+        [':dbxref_id' => $stock_query[$index]->dbxref_id])
+        ->fetchAll();
+      $this->assertEquals(
+        $expected_cross['program_id'],
+        $dbxref_query[0]->name,
+        'The stock ' . $expected_cross['name'] . ' is not associated with the correct Program ID. We expected it to be associated with "' . $expected_cross['program_id'] . '", but it was not.'
       );
 
       // Since each cross has two parents, calculate the right index to use for
